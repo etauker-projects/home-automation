@@ -1,0 +1,16 @@
+{
+  "name": "@etauker/home-automation",
+  "version": "1.0.0",
+  "description": "Central hub for IoT and home automation.",
+  "scripts": {
+
+  },
+  "author": {
+    "name": "Tautvydas Kersulis",
+    "email": "etauker@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/etauker-projects/home-automation/issues"
+  },
+  "homepage": "https://github.com/etauker-projects/home-automation#readme"
+}
