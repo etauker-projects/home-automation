@@ -1,0 +1,9 @@
+# Note: committed as a WIP, never got it to work (swicthing do docker compose instead)
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: home-automation-storage
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: k8s.io/minikube-hostpath

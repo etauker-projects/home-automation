@@ -1,0 +1,50 @@
+# Note: committed as a WIP, never got it to work (swicthing do docker compose instead)
+
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: home-automation
+
+spec:
+  serviceName: home-automation
+  replicas: 1           # default=1
+
+  selector:
+    matchLabels:
+      app: home-automation
+
+  template:
+    metadata:
+      labels:
+        app: home-automation
+
+    spec:
+
+      # https://github.com/kubernetes/minikube/issues/14806
+      # minikube ssh docker pull ghcr.io/home-assistant/home-assistant:stable
+      containers:
+      - name: home-automation
+        image: ghcr.io/home-assistant/home-assistant:stable
+        # imagePullPolicy: Always
+        ports:
+        - containerPort: 8123
+          name: hass-ui
+
+        volumeMounts:
+        - name: data-volume
+          mountPath: /config
+        - name: local-time
+          mountPath: /etc/localtime
+
+        env:
+        - name: TZ
+          value: Europe/Dublin
+
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: home-automation-persistent-volume-claim
+      - name: local-time
+        hostPath:
+          path: /etc/localtime

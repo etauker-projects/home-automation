@@ -1,0 +1,16 @@
+# Note: committed as a WIP, never got it to work (swicthing do docker compose instead)
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: home-automation
+  labels:
+    app: home-automation
+spec:
+  selector:
+    app: home-automation
+  ports:
+  - port: 8123
+    nodePort: 31000
+    targetPort: 8123
+  type: LoadBalancer
