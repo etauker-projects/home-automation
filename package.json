@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Central hub for IoT and home automation.",
   "scripts": {
-
+      "start": "docker compose up",
+      "stop": "docker compose down"
   },
   "author": {
     "name": "Tautvydas Kersulis",

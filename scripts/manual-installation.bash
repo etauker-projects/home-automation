@@ -1,7 +1,7 @@
 #! env bash
 # Instructions based on: https://www.home-assistant.io/installation/raspberrypi#install-home-assistant-core
 
-echo "Script not automated, plesse run the steps manually"
+echo "Script not automated, please run the steps manually"
 exit 1
 
 sudo apt-get update && \

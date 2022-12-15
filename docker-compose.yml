@@ -1,24 +1,24 @@
 version: '3'
 
 services:
-  mosquitto:
-    container_name: eclipse-mosquitto
-    image: eclipse-mosquitto:latest
-    restart: unless-stopped
-    volumes:
-      - ./data/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./data/mosquitto/passwd:/mosquitto/config/passwd
-      - /etc/localtime:/etc/localtime:ro
-    ports:
-      - 1883:1883
-      - 9001:9001
-    # environment:
-    #   - TZ=Europe/Dublin
+  # mosquitto:
+  #   container_name: eclipse-mosquitto
+  #   image: eclipse-mosquitto:latest
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+  #     - ./data/mosquitto/passwd:/mosquitto/config/passwd
+  #     - /etc/localtime:/etc/localtime:ro
+  #   ports:
+  #     - 1883:1883
+  #     - 9001:9001
+  #   # environment:
+  #   #   - TZ=Europe/Dublin
 
   home-assistant:
     container_name: home-assistant
     image: "ghcr.io/home-assistant/home-assistant:stable"
-    depends_on: [ mosquitto ]
+    # depends_on: [ mosquitto ]
     restart: unless-stopped
     privileged: true
     volumes:
@@ -28,5 +28,3 @@ services:
       - 8123:8123
     environment:
       - TZ=Europe/Dublin
-    # env_file:
-    #   - .env # name of your environment file (at root directory)
