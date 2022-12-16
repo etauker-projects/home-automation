@@ -23,6 +23,6 @@ fi
 
 read_password
 
-file="/mosquitto/config/passwd.tmp"
-temp_file="/mosquitto/config/passwd"
-docker-compose run eclipse-mosquitto /bin/sh -c "touch $file && mosquitto_passwd -b $file $username $password && cat $file && rm $file" > $temp_file
+file="./data/mosquitto/passwd"
+temp_file="/tmp/passwd.tmp"
+docker run eclipse-mosquitto /bin/sh -c "touch $temp_file && mosquitto_passwd -b $temp_file $username $password && cat $temp_file && rm $temp_file" > $file
