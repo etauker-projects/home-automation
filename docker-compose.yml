@@ -26,3 +26,27 @@ services:
       - 8123:8123
     environment:
       - TZ=Europe/Dublin
+
+# TODO: implement
+#   glances:
+#     container_name: glances
+#     image: nicolargo/glances:latest-full
+#     restart: always
+#     pid: host
+#     volumes:
+#       # - ./data/glances/passwd:/root/.config/glances/glances.pwd
+#       # - ./data/glances/glances.conf:/glances/conf/glances.conf
+#       - /var/run/docker.sock:/var/run/docker.sock:ro
+
+#     ports:
+#       - 61208:61208
+#       - 61209:61209
+#     environment:
+#       - "GLANCES_OPT=-w --password"
+#     secrets:
+#       - source: glances_password
+#         target: /root/.config/glances/glances.pwd
+
+# secrets:
+#   glances_password:
+#     file: ./data/glances/passwd

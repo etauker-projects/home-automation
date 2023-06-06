@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Central hub for IoT and home automation.",
   "scripts": {
-    "setup": "sudo --preserve-env bash ./scripts/generate-password-file.sh && sudo apt-get install -y mosquitto-clients",
+    "setup": "sudo --preserve-env bash ./scripts/setup.sh",
     "start": "docker compose up --detach",
     "stop": "docker compose down"
   },
