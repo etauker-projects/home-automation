@@ -26,13 +26,17 @@ fi
 
 read_password
 
-config_dir="./data/mosquitto"
+config_dir="./data/mosquitto/config"
+data_dir="./data/mosquitto/data"
+log_dir="./data/mosquitto/log"
 password_file="passwd"
 config_file="mosquitto.conf"
 password_filepath="$config_dir/$password_file"
 config_filepath="$config_dir/$config_file"
 
 mkdir -p $config_dir
+mkdir -p $data_dir
+mkdir -p $log_dir
 touch $password_filepath
 touch $config_filepath
 
@@ -42,10 +46,16 @@ docker run eclipse-mosquitto /bin/sh -c "touch $temp_file && mosquitto_passwd -b
 cat  > $config_filepath << EOF
 listener 1883
 
-log_dest stdout
-
 # security
 password_file /mosquitto/config/passwd
 allow_anonymous false
+
+# persistence
+persistence true
+persistence_location /mosquitto/data/
+
+# logging
+log_dest stdout
+log_dest file /mosquitto/log/mosquitto.log
 
 EOF
