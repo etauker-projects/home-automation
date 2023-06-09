@@ -30,6 +30,26 @@ services:
     environment:
       - TZ=Europe/Dublin
 
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt
+    network_mode: host
+    depends_on: [ mosquitto ]
+    restart: unless-stopped
+    # group_add:
+    #   - dialout
+    # user: 1000:1000
+    volumes:
+      - ./data/zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro
+    ports:
+      # Frontend port
+      - 8080:8080
+    environment:
+      - TZ=Europe/Dublin
+    devices:
+      - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyACM0
+
 # TODO: implement
 #   glances:
 #     container_name: glances
