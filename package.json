@@ -14,5 +14,8 @@
   "bugs": {
     "url": "https://github.com/etauker-projects/home-automation/issues"
   },
-  "homepage": "https://github.com/etauker-projects/home-automation#readme"
+  "homepage": "https://github.com/etauker-projects/home-automation#readme",
+  "dependencies": {
+    "mqtt": "^4.3.7"
+  }
 }
