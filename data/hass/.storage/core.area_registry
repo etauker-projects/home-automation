@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "core.area_registry",
+  "data": {
+    "areas": [
+      {
+        "name": "Kitchen",
+        "id": "kitchen",
+        "picture": null
+      },
+      {
+        "name": "Dining Room",
+        "id": "dining_room",
+        "picture": null
+      },
+      {
+        "name": "Sitting Room",
+        "id": "sitting_room",
+        "picture": null
+      },
+      {
+        "name": "Hallway",
+        "id": "hallway",
+        "picture": null
+      },
+      {
+        "name": "Downstairs Bathroom",
+        "id": "downstairs_bathroom",
+        "picture": null
+      },
+      {
+        "name": "Utility Room",
+        "id": "utility_room",
+        "picture": null
+      },
+      {
+        "name": "Upstairs Bathroom",
+        "id": "upstairs_bathroom",
+        "picture": null
+      },
+      {
+        "name": "Master Bedroom",
+        "id": "master_bedroom",
+        "picture": null
+      },
+      {
+        "name": "Karolina's Bedroom",
+        "id": "large_bedroom",
+        "picture": null
+      },
+      {
+        "name": "Totti's Bedroom",
+        "id": "small_bedroom",
+        "picture": null
+      },
+      {
+        "name": "Master Bedroom - Ensuite",
+        "id": "master_bedroom_ensuite",
+        "picture": null
+      },
+      {
+        "name": "Master Bedroom - Wardrobe",
+        "id": "master_bedroom_wardrobe",
+        "picture": null
+      }
+    ]
+  }
+}

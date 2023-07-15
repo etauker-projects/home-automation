@@ -1,0 +1,66 @@
+- id: '1689283863346'
+  alias: Toggle Blinds
+  description: Close blinds if they're open, otherwise fully open them.
+  trigger:
+  - platform: device
+    domain: mqtt
+    device_id: 2e4d7d3bd473ef60f33ca92bc4662f53
+    type: click
+    subtype: single
+    discovery_id: 0x00158d00087427a6 click_single
+  condition: []
+  action:
+  - service: script.update_device_status
+    data: {}
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 1
+      milliseconds: 0
+  - if:
+    - condition: device
+      device_id: bee20f914aa1b980f607bf04854727ae
+      domain: cover
+      entity_id: cover.blinds_001
+      type: is_position
+      below: 100
+    then:
+    - device_id: bee20f914aa1b980f607bf04854727ae
+      domain: cover
+      entity_id: cover.blinds_001
+      type: set_position
+      position: 100
+    else:
+    - device_id: bee20f914aa1b980f607bf04854727ae
+      domain: cover
+      entity_id: cover.blinds_001
+      type: set_position
+      position: 0
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 30
+      milliseconds: 0
+    enabled: true
+  - service: script.update_device_status
+    data: {}
+  - service: logbook.log
+    data:
+      entity_id: cover.blinds_001
+      message: status update
+      name: '{{entity_id}}'
+  mode: single
+- id: '1689295153626'
+  alias: Morning Routine
+  description: ''
+  trigger:
+  - platform: time
+    at: 08:30:00
+  condition: []
+  action:
+  - service: automation.trigger
+    data:
+      skip_condition: false
+    target:
+      entity_id: automation.open_blinds
+  mode: single

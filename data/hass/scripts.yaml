@@ -1,0 +1,10 @@
+update_device_status:
+  alias: Update Device Status
+  sequence:
+  - service: mqtt.publish
+    data:
+      topic: zigbee2mqtt/blinds_001/get
+      payload: '{"state": ""}'
+  mode: parallel
+  icon: mdi:update
+  max: 10

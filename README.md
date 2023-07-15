@@ -40,3 +40,17 @@ mosquitto_pub -h localhost -t "test-topic" -u $MOSQUITTO_USERNAME -P $MOSQUITTO_
 ## References
 - https://hometechhacker.com/mqtt-home-assistant-using-docker-eclipse-mosquitto/
 - https://github.com/vvatelot/mosquitto-docker-compose
+
+
+TODO:
+- alter data drectory permissions
+    - add user that runs the container and admin user to the same user group
+
+
+echo $USER
+groups $USER
+sudo groupadd hass
+sudo usermod -a -G $USER hass
+groups $USER
+
+

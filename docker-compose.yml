@@ -21,6 +21,7 @@ services:
     network_mode: host
     depends_on: [ mosquitto ]
     restart: unless-stopped
+    # user: mosquitto:hass
     privileged: true
     volumes:
       - ./data/hass:/config
@@ -36,6 +37,7 @@ services:
     network_mode: host
     depends_on: [ mosquitto ]
     restart: unless-stopped
+    # user: mosquitto:hass
     # group_add:
     #   - dialout
     # user: 1000:1000

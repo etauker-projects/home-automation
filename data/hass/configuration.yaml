@@ -1,0 +1,52 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+# Text to speech
+tts:
+  - platform: google_translate
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+sensor: 
+  - platform: history_stats
+    name: Plug Energy (Test)
+    entity_id: sensor.plug_001_energy
+    state: "on"
+    type: time
+    start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+    end: "{{ now() }}"
+
+utility_meter:
+  plug_001_energy_hourly:
+    name: Plug Energy Meter Hourly (Test)
+    source: sensor.plug_001_energy
+    cycle: hourly
+    # unique_id: meter.plug_001_energy_hourly
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false
+
+  plug_001_energy_monthly:
+    name: Plug Energy Meter Monthly (Test)
+    source: sensor.plug_001_energy
+    cycle: monthly
+    # unique_id: meter.plug_001_energy_monthly
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false
+
+  plug_001_energy_daily:
+    name: Plug Energy Meter Daily (Test)
+    source: sensor.plug_001_energy
+    cycle: daily
+    # unique_id: meter.plug_001_energy_daily
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false

@@ -1,3 +1,20 @@
-data/*
-!data/readme.md
 .DS_Store
+
+!data/readme.md
+
+# 
+data/_*
+data/mosquitto
+data/zigbee2mqtt
+data/hass
+
+# # auth files
+# data/hass/.cloud
+# data/hass/deps
+# data/hass/tts
+# data/hass/.HA_VERSION
+# data/hass/*.db*
+# data/hass/*.log*
+# data/hass/.storage/auth
+# data/hass/.storage/auth_provider.homeassistant
+# data/hass/.storage/secrets.yaml
