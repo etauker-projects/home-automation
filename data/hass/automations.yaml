@@ -64,3 +64,55 @@
     target:
       entity_id: automation.open_blinds
   mode: single
+- id: '1689553261485'
+  alias: Toggle Bedroom LEDs
+  description: ''
+  trigger:
+  - platform: device
+    domain: mqtt
+    device_id: 2e4d7d3bd473ef60f33ca92bc4662f53
+    type: click
+    subtype: single
+    discovery_id: 0x00158d00087427a6 click_single
+    enabled: false
+  condition: []
+  action:
+  - if:
+    - condition: device
+      device_id: bee20f914aa1b980f607bf04854727ae
+      domain: cover
+      entity_id: cover.blinds_001
+      type: is_position
+      below: 100
+    then:
+    - device_id: bee20f914aa1b980f607bf04854727ae
+      domain: cover
+      entity_id: cover.blinds_001
+      type: set_position
+      position: 100
+    else:
+    - device_id: bee20f914aa1b980f607bf04854727ae
+      domain: cover
+      entity_id: cover.blinds_001
+      type: set_position
+      position: 0
+    enabled: false
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 30
+      milliseconds: 0
+    enabled: false
+  - service: remote.send_command
+    data:
+      device: light_remote_001
+      command: 'on'
+    target:
+      entity_id: remote.remote_001
+  - service: logbook.log
+    data:
+      entity_id: cover.blinds_001
+      message: status update
+      name: '{{entity_id}}'
+    enabled: false
+  mode: single

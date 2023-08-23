@@ -8,3 +8,26 @@ update_device_status:
   mode: parallel
   icon: mdi:update
   max: 10
+update_home_assistant_update_available:
+  alias: 'Update Home Assistant Update Available '
+  sequence:
+  - variables:
+      current:
+        '[object Object]':
+  - if:
+    - condition: template
+      value_template: '{{sensor.current_version}} === {{sensor.docker_hub}}'
+    then:
+    - service: input_text.set_value
+      data:
+        value: 'false'
+      target:
+        entity_id: input_text.home_assistant_update_available
+    else:
+    - service: input_text.set_value
+      data:
+        value: true
+      target:
+        entity_id: input_text.home_assistant_update_available
+  mode: parallel
+  icon: mdi:update
