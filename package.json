@@ -4,8 +4,10 @@
   "description": "Central hub for IoT and home automation.",
   "scripts": {
     "setup": "sudo --preserve-env bash ./scripts/setup.sh",
+    "update": "bash ./scripts/update.sh",
     "start": "docker compose up --detach",
-    "stop": "docker compose down"
+    "stop": "docker compose down",
+    "update-hass": "docker compose pull home-assistant && docker compose up home-assistant --remove-orphans -d && docker image prune"
   },
   "author": {
     "name": "Tautvydas Kersulis",

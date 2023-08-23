@@ -29,3 +29,13 @@
 
 # # To be run while hass container is running
 # docker exec home-assistant bash -c "hass --config /config --script auth change_password $username $password"
+
+
+# Install plugins
+docker exec home-assistant bash -c "mkdir -p /config/www && cd /config/www && git clone https://github.com/thomasloven/lovelace-card-mod && git clone https://github.com/thomasloven/lovelace-auto-entities.git && git clone https://github.com/bokub/rgb-light-card.git && git clone https://github.com/iantrich/config-template-card.git && git clone https://github.com/totaldebug/atomic-calendar-revive.git && git clone https://github.com/benct/lovelace-multiple-entity-row.git"
+
+# Other plugins potrentially useful in the future 
+# - https://github.com/kalkih/mini-media-player
+
+
+
