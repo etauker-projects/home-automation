@@ -15,6 +15,18 @@ services:
       - 1883:1883
       - 9001:9001
 
+  influxdb:
+    container_name: influxdb
+    image: influxdb:2.0
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data/influxdb/data:/var/lib/influxdb2
+      - ./data/influxdb/config:/etc/influxdb2
+      # - ./data/influxdb/scripts:/docker-entrypoint-initdb.d
+    # ports:
+    #   - 8086:8086
+
   home-assistant:
     container_name: home-assistant
     image: "ghcr.io/home-assistant/home-assistant:stable"
