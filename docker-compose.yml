@@ -2,18 +2,20 @@ version: '3'
 
 services:
   mosquitto:
-    container_name: eclipse-mosquitto
+    container_name: mqtt-broker
     image: eclipse-mosquitto:latest
-    network_mode: host
+    # network_mode: host
     restart: unless-stopped
     volumes:
       - ./data/mosquitto/config:/mosquitto/config
       - ./data/mosquitto/data:/mosquitto/data
       - ./data/mosquitto/log:/mosquitto/log
       - /etc/localtime:/etc/localtime:ro
-    ports:
-      - 1883:1883
-      - 9001:9001
+    expose:
+      - "1883"
+      - "9001"
+    networks:
+      - home-automation
 
   influxdb:
     container_name: influxdb
@@ -30,7 +32,7 @@ services:
   home-assistant:
     container_name: home-assistant
     image: "ghcr.io/home-assistant/home-assistant:stable"
-    network_mode: host
+    # network_mode: host
     depends_on: [ mosquitto ]
     restart: unless-stopped
     # user: mosquitto:hass
@@ -42,11 +44,22 @@ services:
       - 8123:8123
     environment:
       - TZ=Europe/Dublin
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.home-assistant.rule=Host(`dev.etauker.ie`) && (Path(`/auth/token`) || PathPrefix(`/home-assistant`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/home-assistant.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/lovelace.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/auth/authorize.*`) || Path(`/api/websocket`))"
+      - "traefik.http.routers.home-assistant.rule=Host(`hass.etauker.ie`)"
+      - "traefik.http.routers.home-assistant.entrypoints=web,ws"
+      - "traefik.http.middlewares.strip-home-assistant-prefix.stripprefix.prefixes=/home-assistant"
+      - "traefik.http.routers.home-assistant.middlewares=strip-home-assistant-prefix@docker"
+      - "traefik.http.services.home-assistant.loadbalancer.server.port=8123"
+    networks:
+      - home-automation
+      - reverse-proxy
 
   zigbee2mqtt:
     container_name: zigbee2mqtt
     image: koenkk/zigbee2mqtt
-    network_mode: host
+    # network_mode: host
     depends_on: [ mosquitto ]
     restart: unless-stopped
     # user: mosquitto:hass
@@ -63,6 +76,38 @@ services:
       - TZ=Europe/Dublin
     devices:
       - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyACM0
+    # labels:
+    #   - "traefik.http.routers.zigbee2mqtt.rule=Host(`zigbee2mqtt.docker.localhost`)"
+    #   - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080"
+
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.zigbee2mqtt.rule=Host(`dev.etauker.ie`) && PathPrefix(`/zigbee2mqtt`)"
+      - "traefik.http.routers.zigbee2mqtt.rule=Host(`zigbee2mqtt.etauker.ie`)"
+      - "traefik.http.routers.zigbee2mqtt.entrypoints=web"
+      # - "traefik.http.middlewares.strip-zigbee2mqtt-prefix.stripprefix.prefixes=/zigbee2mqtt"
+      # - "traefik.http.routers.zigbee2mqtt.middlewares=strip-zigbee2mqtt-prefix@docker"
+      - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080"
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.zigbee2mqtt.rule=Host(`dev.etauker.ie`)"
+    #   - "traefik.http.routers.zigbee2mqtt.entrypoints=web"
+    #   - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8123"
+    networks:
+      - home-automation
+      - reverse-proxy
+
+  whoami:
+    image: "traefik/whoami"
+    container_name: whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`dev.etauker.ie`) && PathPrefix(`/test`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.middlewares.strip-test-prefix.stripprefix.prefixes=/test"
+      - "traefik.http.routers.whoami.middlewares=strip-test-prefix@docker"
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"
+    networks:
+      - reverse-proxy
 
 # TODO: implement
 #   glances:
@@ -87,3 +132,13 @@ services:
 # secrets:
 #   glances_password:
 #     file: ./data/glances/passwd
+
+networks:
+  home-automation: 
+    name: home-automation
+
+  reverse-proxy:
+    # driver: bridge
+    name: traefik
+    external: true
+
