@@ -20,14 +20,16 @@ services:
   influxdb:
     container_name: influxdb
     image: influxdb:2.0
-    network_mode: host
+    # network_mode: host
     restart: unless-stopped
     volumes:
       - ./data/influxdb/data:/var/lib/influxdb2
       - ./data/influxdb/config:/etc/influxdb2
       # - ./data/influxdb/scripts:/docker-entrypoint-initdb.d
-    # ports:
-    #   - 8086:8086
+    ports:
+      - 8086:8086
+    networks:
+      - home-automation
 
   home-assistant:
     container_name: home-assistant
