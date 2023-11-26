@@ -5,6 +5,7 @@ update_device_status:
     data:
       topic: zigbee2mqtt/blinds_001/get
       payload: '{"state": ""}'
+      qos: '1'
   mode: parallel
   icon: mdi:update
   max: 10
@@ -31,3 +32,91 @@ update_home_assistant_update_available:
         entity_id: input_text.home_assistant_update_available
   mode: parallel
   icon: mdi:update
+set_sitting_room_floor_light_colour:
+  alias: Set sitting room floor light colour
+  sequence:
+  - service: mqtt.publish
+    data:
+      topic: zigbee2mqtt/light_001/set
+      qos: '1'
+      payload_template: "{% set side = states('sensor.cube_001_side') %}\n{% if int(side)
+        == 0 %}\n  { \"state\": \"OFF\" }\n{% elif int(side) == 1 %}\n  { \"state\":
+        \"ON\", \"color\": { \"x\": 0.254, \"y\": 0.197 }}\n{% elif int(side) == 2
+        %}\n  { \"state\": \"ON\", \"color\": { \"x\": 0.151, \"y\": 0.257 }}\n{%
+        elif int(side) == 3 %}\n  { \"state\": \"ON\", \"color\": { \"x\": 0.545,
+        \"y\": 0.373 }}\n{% elif int(side) == 4 %}\n  { \"state\": \"ON\", \"color\":
+        { \"x\": 0.695, \"y\": 0.298 }}\n{% elif int(side) == 5 %}\n  { \"state\":
+        \"ON\", \"color\": { \"x\": 0.17, \"y\": 0.659 }}\n{% else %}\n  { \"state\":
+        \"OFF\" }\n{% endif %}\n"
+  mode: queued
+  icon: mdi:alarm-light
+  max: 10
+set_sitting_room_floor_light_brightness:
+  alias: Set sitting room floor light brightness
+  sequence:
+  - service: mqtt.publish
+    data:
+      topic: zigbee2mqtt/light_001/set
+      qos: '1'
+      payload_template: '{ "color": { "r": 0 , "g": 0, "b": 255 } }
+
+        '
+    enabled: false
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 1
+      milliseconds: 500
+    enabled: false
+  - service: mqtt.publish
+    data:
+      topic: zigbee2mqtt/light_001/set
+      qos: '1'
+      payload_template: '{ "brightness": {{ states(''input_number.previous_cube_angle'')
+        }} }
+
+        '
+    enabled: true
+  - service: mqtt.publish
+    data:
+      topic: zigbee2mqtt/light_001/set
+      qos: '1'
+      payload_template: '{ "brightness": {{ states(''input_number.previous_cube_angle'')
+        }}, "color": { "x": {{ state_attr(''light.light_001'', ''xy_color'')[0] }},
+        "y": {{ state_attr(''light.light_001'', ''xy_color'')[1] }} }}
+
+        '
+    enabled: false
+  - service: script.1699117389889
+    data: {}
+    enabled: false
+  mode: queued
+  icon: mdi:alarm-light
+  max: 10
+turn_bedside_light_on:
+  alias: Turn bedside light on
+  sequence:
+  - type: turn_on
+    device_id: 474122319d1e56391ad01e5c81c7b2d8
+    entity_id: 33dc613da234bcb207daa2af15983438
+    domain: light
+    brightness_pct: 1
+    flash: short
+  - type: turn_on
+    device_id: 474122319d1e56391ad01e5c81c7b2d8
+    entity_id: 33dc613da234bcb207daa2af15983438
+    domain: light
+    brightness_pct: 50
+    flash: long
+  mode: single
+'1699117389889':
+  alias: Update Floor Lamp Status
+  sequence:
+  - service: mqtt.publish
+    data:
+      topic: zigbee2mqtt/lights_001/get
+      payload: '{"state": ""}'
+      qos: '2'
+  mode: parallel
+  icon: mdi:update
+  max: 10

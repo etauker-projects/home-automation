@@ -32,7 +32,8 @@
 
 
 # Install plugins
-docker exec home-assistant bash -c "mkdir -p /config/www && cd /config/www && git clone https://github.com/thomasloven/lovelace-card-mod && git clone https://github.com/thomasloven/lovelace-auto-entities.git && git clone https://github.com/bokub/rgb-light-card.git && git clone https://github.com/iantrich/config-template-card.git && git clone https://github.com/totaldebug/atomic-calendar-revive.git && git clone https://github.com/benct/lovelace-multiple-entity-row.git"
+docker exec home-assistant bash -c "mkdir -p /config/www && cd /config/www && git clone https://github.com/thomasloven/lovelace-card-mod && git clone https://github.com/thomasloven/lovelace-auto-entities.git && git clone https://github.com/bokub/rgb-light-card.git && git clone https://github.com/iantrich/config-template-card.git && git clone https://github.com/totaldebug/atomic-calendar-revive.git && git clone https://github.com/benct/lovelace-multiple-entity-row.git && mkdir lovelace-mushroom && cd lovelace-mushroom && wget https://github.com/piitaya/lovelace-mushroom/releases/latest/download/mushroom.js"
+docker exec home-assistant bash -c "mkdir -p /config/www/apexcharts-card && cd /config/www/apexcharts-card && wget https://github.com/RomRider/apexcharts-card/releases/latest/download/apexcharts-card.js"
 
 # Other plugins potrentially useful in the future 
 # - https://github.com/kalkih/mini-media-player

@@ -9,6 +9,33 @@ frontend:
     # /local (in hass) = /config/www (inside container) = ~/workspace/home-assistant/data/hass/www (outside container)
     - /local/lovelace-card-mod/card-mod.js
     - /local/lovelace-auto-entities/auto-entities.js
+    - /local/lovelace-mushroom/mushroom.js
+    - /local/apexcharts-card/apexcharts-card.js?v=2.0.4
+
+http:
+  use_x_forwarded_for: true
+  trusted_proxies: 
+    - 172.23.0.2
+
+lovelace:
+  mode: yaml
+  resources:
+    - url: /local/apexcharts-card/apexcharts-card.js?v=2.0.4
+      type: module
+    - url: /local/atomic-calendar-revive/dist/atomic-calendar-revive.js
+      type: module
+    - url: /local/config-template-card/src/config-template-card.ts
+      type: module
+    - url: /local/lovelace-auto-entities/auto-entities.js
+      type: module
+    - url: /local/lovelace-card-mod/card-mod.js
+      type: module
+    - url: /local/lovelace-multiple-entity-row/multiple-entity-row.js
+      type: module
+    - url: /local/lovelace-mushroom/mushroom.js
+      type: module
+    - url: /local/rgb-light-card/card.js
+      type: module
 
 # Text to speech
 tts:
@@ -20,37 +47,102 @@ scene: !include scenes.yaml
 
 sensor: 
   - platform: history_stats
-    name: Plug Energy (Test)
-    entity_id: sensor.plug_001_energy
+    name: Time on today
+    entity_id: switch.plug_001
+    unique_id: sensor.plug_001_time_on_today
     state: "on"
     type: time
-    start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+    start: "{{ now().replace(hour=0, minute=0, second=0, microsecond=0) }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: Time on this month
+    entity_id: switch.plug_001
+    unique_id: sensor.plug_001_time_on_this_month
+    state: "on"
+    type: time
+    start: "{{ now().replace(day=0, hour=0, minute=0, second=0, microsecond=0) }}"
     end: "{{ now() }}"
 
 utility_meter:
   plug_001_energy_hourly:
-    name: Plug Energy Meter Hourly (Test)
+    name: Plug Energy Usage Hourly
     source: sensor.plug_001_energy
     cycle: hourly
-    # unique_id: meter.plug_001_energy_hourly
-    offset: 0
-    delta_values: false
-    # periodically_resetting: false
-
-  plug_001_energy_monthly:
-    name: Plug Energy Meter Monthly (Test)
-    source: sensor.plug_001_energy
-    cycle: monthly
-    # unique_id: meter.plug_001_energy_monthly
+    unique_id: meter.plug_001_energy_hourly
     offset: 0
     delta_values: false
     # periodically_resetting: false
 
   plug_001_energy_daily:
-    name: Plug Energy Meter Daily (Test)
+    name: Plug Energy Usage Daily
     source: sensor.plug_001_energy
     cycle: daily
-    # unique_id: meter.plug_001_energy_daily
+    unique_id: meter.plug_001_energy_daily
     offset: 0
     delta_values: false
     # periodically_resetting: false
+
+  plug_001_energy_monthly:
+    name: Plug Energy Usage Monthly
+    source: sensor.plug_001_energy
+    cycle: monthly
+    unique_id: meter.plug_001_energy_monthly
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false
+
+  plug_001_cost_hourly:
+    name: Plug Running Cost Hourly
+    source: sensor.plug_001_cost
+    cycle: hourly
+    unique_id: meter.plug_001_cost_hourly
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false
+
+  plug_001_cost_daily:
+    name: Plug Running Cost Daily
+    source: sensor.plug_001_cost
+    cycle: daily
+    unique_id: meter.plug_001_cost_daily
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false
+
+  plug_001_cost_monthly:
+    name: Plug Running Cost Monthly
+    source: sensor.plug_001_cost
+    cycle: monthly
+    unique_id: meter.plug_001_cost_monthly
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false
+
+template:
+    sensor:
+    - name: Plug Cost (Test)
+      unique_id: 'plug_001_cost'
+      unit_of_measurement: "€"
+      state_class: total_increasing
+      state: >
+        {% set consumption = (states('sensor.plug_001_energy') | float) %}
+        {% set price = (states('input_number.electricity_price') | float) %}
+        {{ (consumption * price) | round(2, default=0) }}
+    name: Plug Energy Cost Monthly
+    source: sensor.plug_001_cost
+    cycle: monthly
+    unique_id: meter.plug_001_cost_monthly
+    offset: 0
+    delta_values: false
+    # periodically_resetting: false
+
+template:
+    sensor:
+    - name: Plug Cost (Test)
+      unique_id: 'plug_001_cost'
+      unit_of_measurement: "€"
+      state_class: total_increasing
+      state: >
+        {% set consumption = (states('sensor.plug_001_energy') | float) %}
+        {% set price = (states('input_number.electricity_price') | float) %}
+        {{ (consumption * price) | round(4, default=0) }}

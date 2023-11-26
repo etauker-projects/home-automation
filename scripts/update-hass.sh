@@ -66,6 +66,14 @@ PLUGIN=lovelace-multiple-entity-row
 echo "-- Updating '$PLUGIN' plugin"
 docker exec home-assistant bash -c "cd /config/www/$PLUGIN && git pull"
 
+PLUGIN=lovelace-mushroom
+echo "-- Updating '$PLUGIN' plugin"
+docker exec home-assistant bash -c "cd /config/www/$PLUGIN && rm mushroom.js && wget https://github.com/piitaya/lovelace-mushroom/releases/latest/download/mushroom.js"
+
+PLUGIN=apexcharts-card
+echo "-- Updating '$PLUGIN' plugin"
+docker exec home-assistant bash -c "cd /config/www/$PLUGIN && rm apexcharts-card.js && wget https://github.com/RomRider/apexcharts-card/releases/latest/download/apexcharts-card.js"
+
 echo "-- Restarting home-assistant container"
 docker restart home-assistant
 
