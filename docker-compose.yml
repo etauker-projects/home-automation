@@ -19,7 +19,7 @@ services:
 
   influxdb:
     container_name: influxdb
-    image: influxdb:2.0
+    image: influxdb:latest
     # network_mode: host
     restart: unless-stopped
     volumes:

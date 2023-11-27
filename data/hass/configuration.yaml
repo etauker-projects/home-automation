@@ -2,6 +2,29 @@
 # Loads default set of integrations. Do not remove.
 default_config:
 
+influxdb:
+  api_version: 2
+  ssl: false
+  # verify_ssl: false
+  host: influxdb
+  port: 8086
+  organization: 7d33f3b283be919f
+  bucket: home-automation
+  token: <token>
+  precision: ms
+  measurement_attr: domain__device_class
+  tags:
+    source: home-assistant
+  tags_attributes:
+    - friendly_name
+  include:
+    entity_globs:
+      - sensor.plug_*_energy
+      - sensor.plug_*_cost
+      - sensor.weather_*_temperature
+      - sensor.weather_*_humidity
+
+
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
@@ -60,7 +83,7 @@ sensor:
     unique_id: sensor.plug_001_time_on_this_month
     state: "on"
     type: time
-    start: "{{ now().replace(day=0, hour=0, minute=0, second=0, microsecond=0) }}"
+    start: "{{ now().replace(day=1, hour=0, minute=0, second=0, microsecond=0) }}"
     end: "{{ now() }}"
 
 utility_meter:
@@ -128,21 +151,3 @@ template:
         {% set consumption = (states('sensor.plug_001_energy') | float) %}
         {% set price = (states('input_number.electricity_price') | float) %}
         {{ (consumption * price) | round(2, default=0) }}
-    name: Plug Energy Cost Monthly
-    source: sensor.plug_001_cost
-    cycle: monthly
-    unique_id: meter.plug_001_cost_monthly
-    offset: 0
-    delta_values: false
-    # periodically_resetting: false
-
-template:
-    sensor:
-    - name: Plug Cost (Test)
-      unique_id: 'plug_001_cost'
-      unit_of_measurement: "€"
-      state_class: total_increasing
-      state: >
-        {% set consumption = (states('sensor.plug_001_energy') | float) %}
-        {% set price = (states('input_number.electricity_price') | float) %}
-        {{ (consumption * price) | round(4, default=0) }}
