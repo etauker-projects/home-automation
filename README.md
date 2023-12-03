@@ -38,6 +38,7 @@ mosquitto_pub -h localhost -t "test-topic" -u $MOSQUITTO_USERNAME -P $MOSQUITTO_
 
 
 ## References
+- https://www.awesome-ha.com/
 - https://hometechhacker.com/mqtt-home-assistant-using-docker-eclipse-mosquitto/
 - https://github.com/vvatelot/mosquitto-docker-compose
 
