@@ -57,3 +57,9 @@ docker exec influxdb influx setup \
     --password $password \
     --retention $retention \
     --force
+
+# influx v1 dbrp create \
+#   --db home-automation \
+#   --rp hass-retention-policy \
+#   --bucket-id <bucket> \
+#   --default

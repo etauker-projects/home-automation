@@ -55,3 +55,14 @@ sudo usermod -a -G $USER hass
 groups $USER
 
 
+TODO: 
+1. create home-assistant user
+```
+sudo useradd <user>
+sudo passwd <user>
+sudo groupadd <group>
+sudo usermod -a -G <group> <user>
+```
+2. change config folder ownership to home-assistant user
+sudo chown --recursive <user>:<group> <directory>
+3. run docker image with this user

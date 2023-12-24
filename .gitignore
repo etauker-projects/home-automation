@@ -3,11 +3,13 @@
 !data/readme.md
 
 # 
-data/_*
-data/mosquitto
-data/zigbee2mqtt
-data/hass
-data/influxdb
+data
+temp
+# data/_*
+# data/mosquitto
+# data/zigbee2mqtt
+# data/hass
+# data/influxdb
 
 # # auth files
 # data/hass/.cloud
