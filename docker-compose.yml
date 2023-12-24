@@ -16,6 +16,12 @@ services:
       - "9001"
     networks:
       - home-automation
+    #   - reverse-proxy
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.mosquitto.entrypoints=web"
+    #   - "traefik.http.services.mosquitto.loadbalancer.server.port=1883"
+    #   - "traefik.http.services.mosquitto.loadbalancer.server.port=9001"
 
   influxdb:
     container_name: influxdb
@@ -110,6 +116,34 @@ services:
       - "traefik.http.services.whoami.loadbalancer.server.port=80"
     networks:
       - reverse-proxy
+
+  grafana:
+    container_name: hass-grafana
+    image: "grafana/grafana-oss:latest"
+    # network_mode: host
+    restart: unless-stopped
+    # user: mosquitto:hass
+    user: 1003:1002
+    # group_add:
+    #   - dialout
+    volumes:
+      - ./data/grafana:/var/lib/grafana:rw
+    ports:
+      - 3000:3000
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.home-assistant.rule=Host(`dev.etauker.ie`) && (Path(`/auth/token`) || PathPrefix(`/home-assistant`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/home-assistant.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/lovelace.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/auth/authorize.*`) || Path(`/api/websocket`))"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.hass.etauker.ie`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      # - "traefik.http.middlewares.strip-grafana-prefix.stripprefix.prefixes=/grafana"
+      # - "traefik.http.routers.grafana.middlewares=strip-grafana-prefix@docker"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    networks:
+      - home-automation
+      - reverse-proxy
+
+  # --user "$(id -u)" \
+
 
 # TODO: implement
 #   glances:
