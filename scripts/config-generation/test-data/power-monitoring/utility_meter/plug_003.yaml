@@ -1,0 +1,43 @@
+plug_003_energy_hourly:
+  name: Upstairs Hallway Plug Energy Usage Hourly
+  source: sensor.plug_003_energy
+  cycle: hourly
+  unique_id: meter.plug_003_energy_hourly
+  offset: 0
+  delta_values: false
+plug_003_energy_daily:
+  name: Upstairs Hallway Plug Energy Usage Daily
+  source: sensor.plug_003_energy
+  cycle: daily
+  unique_id: meter.plug_003_energy_daily
+  offset: 0
+  delta_values: false
+plug_003_energy_monthly:
+  name: Upstairs Hallway Plug Energy Usage Monthly
+  source: sensor.plug_003_energy
+  cycle: monthly
+  unique_id: meter.plug_003_energy_monthly
+  offset: 0
+  delta_values: false
+
+plug_003_cost_hourly:
+  name: Upstairs Hallway Plug Running Cost Hourly
+  source: sensor.plug_003_cost
+  cycle: hourly
+  unique_id: meter.plug_003_cost_hourly
+  offset: 0
+  delta_values: false
+plug_003_cost_daily:
+  name: Upstairs Hallway Plug Running Cost Daily
+  source: sensor.plug_003_cost
+  cycle: daily
+  unique_id: meter.plug_003_cost_daily
+  offset: 0
+  delta_values: false
+plug_003_cost_monthly:
+  name: Upstairs Hallway Plug Running Cost Monthly
+  source: sensor.plug_003_cost
+  cycle: monthly
+  unique_id: meter.plug_003_cost_monthly
+  offset: 0
+  delta_values: false

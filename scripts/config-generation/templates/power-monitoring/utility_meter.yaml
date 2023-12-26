@@ -1,0 +1,43 @@
+${id}_energy_hourly:
+  name: ${name} Energy Usage Hourly
+  source: sensor.${id}_energy
+  cycle: hourly
+  unique_id: meter.${id}_energy_hourly
+  offset: 0
+  delta_values: false
+${id}_energy_daily:
+  name: ${name} Energy Usage Daily
+  source: sensor.${id}_energy
+  cycle: daily
+  unique_id: meter.${id}_energy_daily
+  offset: 0
+  delta_values: false
+${id}_energy_monthly:
+  name: ${name} Energy Usage Monthly
+  source: sensor.${id}_energy
+  cycle: monthly
+  unique_id: meter.${id}_energy_monthly
+  offset: 0
+  delta_values: false
+
+${id}_cost_hourly:
+  name: ${name} Running Cost Hourly
+  source: sensor.${id}_cost
+  cycle: hourly
+  unique_id: meter.${id}_cost_hourly
+  offset: 0
+  delta_values: false
+${id}_cost_daily:
+  name: ${name} Running Cost Daily
+  source: sensor.${id}_cost
+  cycle: daily
+  unique_id: meter.${id}_cost_daily
+  offset: 0
+  delta_values: false
+${id}_cost_monthly:
+  name: ${name} Running Cost Monthly
+  source: sensor.${id}_cost
+  cycle: monthly
+  unique_id: meter.${id}_cost_monthly
+  offset: 0
+  delta_values: false

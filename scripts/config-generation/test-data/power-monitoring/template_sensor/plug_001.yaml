@@ -1,0 +1,8 @@
+- name: Server Plug Running Cost
+  unique_id: 'plug_001_cost'
+  unit_of_measurement: "€"
+  state_class: total_increasing
+  state: >
+    {% set consumption = (states('sensor.plug_001_energy') | float) %}
+    {% set price = (states('input_number.electricity_price') | float) %}
+    {{ (consumption * price) | round(2, default=0) }}

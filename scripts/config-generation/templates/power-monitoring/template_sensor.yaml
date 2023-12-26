@@ -1,0 +1,8 @@
+- name: ${name} Running Cost
+  unique_id: '${id}_cost'
+  unit_of_measurement: "€"
+  state_class: total_increasing
+  state: >
+    {% set consumption = (states('sensor.${id}_energy') | float) %}
+    {% set price = (states('input_number.electricity_price') | float) %}
+    {{ (consumption * price) | round(2, default=0) }}

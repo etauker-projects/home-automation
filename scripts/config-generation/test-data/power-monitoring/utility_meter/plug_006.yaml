@@ -1,0 +1,43 @@
+plug_006_energy_hourly:
+  name: Coffee Machine Energy Usage Hourly
+  source: sensor.plug_006_energy
+  cycle: hourly
+  unique_id: meter.plug_006_energy_hourly
+  offset: 0
+  delta_values: false
+plug_006_energy_daily:
+  name: Coffee Machine Energy Usage Daily
+  source: sensor.plug_006_energy
+  cycle: daily
+  unique_id: meter.plug_006_energy_daily
+  offset: 0
+  delta_values: false
+plug_006_energy_monthly:
+  name: Coffee Machine Energy Usage Monthly
+  source: sensor.plug_006_energy
+  cycle: monthly
+  unique_id: meter.plug_006_energy_monthly
+  offset: 0
+  delta_values: false
+
+plug_006_cost_hourly:
+  name: Coffee Machine Running Cost Hourly
+  source: sensor.plug_006_cost
+  cycle: hourly
+  unique_id: meter.plug_006_cost_hourly
+  offset: 0
+  delta_values: false
+plug_006_cost_daily:
+  name: Coffee Machine Running Cost Daily
+  source: sensor.plug_006_cost
+  cycle: daily
+  unique_id: meter.plug_006_cost_daily
+  offset: 0
+  delta_values: false
+plug_006_cost_monthly:
+  name: Coffee Machine Running Cost Monthly
+  source: sensor.plug_006_cost
+  cycle: monthly
+  unique_id: meter.plug_006_cost_monthly
+  offset: 0
+  delta_values: false

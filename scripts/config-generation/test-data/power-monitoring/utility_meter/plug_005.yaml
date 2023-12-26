@@ -1,0 +1,43 @@
+plug_005_energy_hourly:
+  name: Downstairs Floor Lamp Energy Usage Hourly
+  source: sensor.plug_005_energy
+  cycle: hourly
+  unique_id: meter.plug_005_energy_hourly
+  offset: 0
+  delta_values: false
+plug_005_energy_daily:
+  name: Downstairs Floor Lamp Energy Usage Daily
+  source: sensor.plug_005_energy
+  cycle: daily
+  unique_id: meter.plug_005_energy_daily
+  offset: 0
+  delta_values: false
+plug_005_energy_monthly:
+  name: Downstairs Floor Lamp Energy Usage Monthly
+  source: sensor.plug_005_energy
+  cycle: monthly
+  unique_id: meter.plug_005_energy_monthly
+  offset: 0
+  delta_values: false
+
+plug_005_cost_hourly:
+  name: Downstairs Floor Lamp Running Cost Hourly
+  source: sensor.plug_005_cost
+  cycle: hourly
+  unique_id: meter.plug_005_cost_hourly
+  offset: 0
+  delta_values: false
+plug_005_cost_daily:
+  name: Downstairs Floor Lamp Running Cost Daily
+  source: sensor.plug_005_cost
+  cycle: daily
+  unique_id: meter.plug_005_cost_daily
+  offset: 0
+  delta_values: false
+plug_005_cost_monthly:
+  name: Downstairs Floor Lamp Running Cost Monthly
+  source: sensor.plug_005_cost
+  cycle: monthly
+  unique_id: meter.plug_005_cost_monthly
+  offset: 0
+  delta_values: false

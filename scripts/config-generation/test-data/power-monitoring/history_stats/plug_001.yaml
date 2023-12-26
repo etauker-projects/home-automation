@@ -1,0 +1,16 @@
+- platform: history_stats
+  name: plug_001_time_on_today
+  entity_id: switch.plug_001
+  unique_id: sensor.plug_001_time_on_today
+  state: "on"
+  type: time
+  start: "{{ now().replace(hour=0, minute=0, second=0, microsecond=0) }}"
+  end: "{{ now() }}"
+- platform: history_stats
+  name: plug_001_time_on_this_month
+  entity_id: switch.plug_001
+  unique_id: sensor.plug_001_time_on_this_month
+  state: "on"
+  type: time
+  start: "{{ now().replace(day=1, hour=0, minute=0, second=0, microsecond=0) }}"
+  end: "{{ now() }}"
