@@ -1,8 +1,10 @@
 .DS_Store
+**/node_modules
+**/*/package-lock.json
 
 !data/readme.md
 
-# 
+#
 data
 temp
 # data/_*
@@ -10,6 +12,9 @@ temp
 # data/zigbee2mqtt
 # data/hass
 # data/influxdb
+
+scripts/health-data/data
+scripts/health-data/output
 
 # # auth files
 # data/hass/.cloud
