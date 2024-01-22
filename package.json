@@ -9,7 +9,8 @@
     "stop": "docker compose down",
     "update-hass": "docker compose pull home-assistant && docker compose up home-assistant --remove-orphans -d && docker image prune",
     "docker-ps": "docker ps --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Networks}}\t{{.Image}}'",
-    "restart-wifi": "sudo bash ./scripts/wifi-reconnect.sh"
+    "restart-wifi": "sudo bash ./scripts/wifi-reconnect.sh",
+    "reconnect-hass": "sudo bash ./scripts/hass-reconnect.sh"
   },
   "author": {
     "name": "Tautvydas Kersulis",
