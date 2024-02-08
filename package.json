@@ -2,7 +2,17 @@
   "name": "@etauker/home-automation",
   "version": "1.0.0",
   "description": "Central hub for IoT and home automation.",
+  "type": "module",
   "scripts": {
+    "lint": "npx eslint --config ./config/.eslintrc ./src/**/*.ts",
+    "prebuild": "npx rimraf ./dist",
+    "build": "tsc --project ./config/tsconfig.json",
+    "test": "cross-env LOGGER_LOG_LEVEL=warn TSX_TSCONFIG_PATH='./config/tsconfig.json' mocha --config ./config/.mocharc.json './src/**/*.spec.ts'",
+    "start:app": "tsx --tsconfig ./config/tsconfig.json --inspect=7000 --es-module-specifier-resolution=node ./src/app.ts",
+    "push": "npm install && npm run lint && cross-env MODE=production npm run build && npm run test && git push --follow-tags",
+    "start:prod": "node --es-module-specifier-resolution=node ./dist/app.js",
+    "build:image": "docker compose -f ./docker-compose.yml -p home-automation-api build",
+    "start:image": "docker compose -f ./docker-compose.yml -p home-automation-api up",
     "setup": "sudo --preserve-env bash ./scripts/setup.sh",
     "update": "bash ./scripts/update.sh",
     "start": "docker compose up --detach",
@@ -19,5 +29,18 @@
   "bugs": {
     "url": "https://github.com/etauker-projects/home-automation/issues"
   },
-  "homepage": "https://github.com/etauker-projects/home-automation#readme"
+  "homepage": "https://github.com/etauker-projects/home-automation#readme",
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "chai": "^5.0.3",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.56.0",
+    "mocha": "^10.3.0",
+    "rimraf": "^5.0.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
 }

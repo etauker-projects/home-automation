@@ -1,6 +1,21 @@
 version: '3'
 
 services:
+
+  api:
+    build:
+      context: .
+      dockerfile: ./config/main.dockerfile
+      labels:
+      - app=home-automation-api
+      # args:
+      #   NPM_TOKEN: ${NPM_TOKEN}
+    container_name: home-automation-api
+    # env_file:
+    #   - .env
+    # ports:
+    #   - 2000:9999
+
   mosquitto:
     container_name: mqtt-broker
     image: eclipse-mosquitto:latest
@@ -184,7 +199,7 @@ services:
 #     file: ./data/glances/passwd
 
 networks:
-  home-automation: 
+  home-automation:
     name: home-automation
 
   reverse-proxy:
