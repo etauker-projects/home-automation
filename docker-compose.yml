@@ -2,19 +2,19 @@ version: '3'
 
 services:
 
-  api:
-    build:
-      context: .
-      dockerfile: ./config/main.dockerfile
-      labels:
-      - app=home-automation-api
-      # args:
-      #   NPM_TOKEN: ${NPM_TOKEN}
-    container_name: home-automation-api
-    # env_file:
-    #   - .env
-    # ports:
-    #   - 2000:9999
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: ./config/main.dockerfile
+  #     labels:
+  #     - app=home-automation-api
+  #     # args:
+  #     #   NPM_TOKEN: ${NPM_TOKEN}
+  #   container_name: home-automation-api
+  #   # env_file:
+  #   #   - .env
+  #   # ports:
+  #   #   - 2000:9999
 
   mosquitto:
     container_name: mqtt-broker
@@ -175,28 +175,37 @@ services:
 
 
 # TODO: implement
-#   glances:
-#     container_name: glances
-#     image: nicolargo/glances:latest-full
-#     restart: always
-#     pid: host
-#     volumes:
-#       # - ./data/glances/passwd:/root/.config/glances/glances.pwd
-#       # - ./data/glances/glances.conf:/glances/conf/glances.conf
-#       - /var/run/docker.sock:/var/run/docker.sock:ro
+  glances:
+    container_name: glances
+    image: nicolargo/glances:latest
+    restart: unless-stopped
+    pid: host
+    volumes:
+      # - ./data/glances/passwd:/root/.config/glances/glances.pwd
+      # - ./data/glances/glances.conf:/glances/conf/glances.conf
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
-#     ports:
-#       - 61208:61208
-#       - 61209:61209
-#     environment:
-#       - "GLANCES_OPT=-w --password"
-#     secrets:
-#       - source: glances_password
-#         target: /root/.config/glances/glances.pwd
+    ports:
+      - 61208:61208
+      - 61209:61209
+    environment:
+      - "GLANCES_OPT=-w --password"
+    secrets:
+      - source: glances_password
+        target: /root/.config/glances/glances.pwd
+    networks:
+      - home-automation
+      - reverse-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glances.rule=Host(`glances.etauker.ie`)"
+      - "traefik.http.routers.glances.entrypoints=web"
+      - "traefik.http.services.glances.loadbalancer.server.port=61208"
+      - "traefik.http.services.glances.loadbalancer.server.port=61209"
 
-# secrets:
-#   glances_password:
-#     file: ./data/glances/passwd
+secrets:
+  glances_password:
+    file: ./data/glances/glances.pwd
 
 networks:
   home-automation:
