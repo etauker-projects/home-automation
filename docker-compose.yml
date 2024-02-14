@@ -173,16 +173,17 @@ services:
 
   # --user "$(id -u)" \
 
-
-# TODO: implement
   glances:
     container_name: glances
     image: nicolargo/glances:latest
     restart: unless-stopped
     pid: host
+    # user: root:root
+    # privileged: true
     volumes:
       # - ./data/glances/passwd:/root/.config/glances/glances.pwd
       # - ./data/glances/glances.conf:/glances/conf/glances.conf
+      - ./data/glances/glances.conf:/etc/glances/glances.conf
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
     ports:
