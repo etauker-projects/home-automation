@@ -36,6 +36,11 @@ mosquitto_sub -h localhost -t "test-topic" -u $MOSQUITTO_USERNAME -P $MOSQUITTO_
 mosquitto_pub -h localhost -t "test-topic" -u $MOSQUITTO_USERNAME -P $MOSQUITTO_PASSWORD -m "Hello World"
 ```
 
+Or start the app and then using using the CLI from JS dependency execute:
+```bash
+npx mqtt sub -t 'etauker/home-automation/response' -h 'localhost' -v -u $MOSQUITTO_USERNAME  -P $MOSQUITTO_PASSWORD
+npx mqtt pub -t 'etauker/home-automation/request' -h 'localhost' -v -u $MOSQUITTO_USERNAME  -P $MOSQUITTO_PASSWORD -m 'hello from CLI'
+```
 
 ## References
 - https://www.awesome-ha.com/
