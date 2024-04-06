@@ -97,10 +97,16 @@ directories.forEach(async dir => {
 //             const response = { success: true };
 //             console.log('Responding with a json object:', response);
 //             connector.publish(`${topic}/response`, JSON.stringify(response));
+//         } else {
+//             const response = { success: true, reason: 'Testing disabled' };
+//             console.log('Responding with a json object:', response);
+//             connector.publish(`${topic}/response`, JSON.stringify(response));
 //         }
 
 //     } catch (error) {
 //         console.error('Received non-json value:', payload);
-//         connector.publish(`${topic}/response`, 'Did not get that, please send json');
+//         const response = { success: true, reason: 'Non-json value received' };
+//         console.log('Responding with a json object:', response);
+//         connector.publish(`${topic}/response`, JSON.stringify(response));
 //     }
 // });

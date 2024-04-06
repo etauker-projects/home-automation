@@ -17,5 +17,7 @@ RUN npm run build
 FROM base AS release
 RUN npm ci --omit=dev
 COPY --from=build /workspace/dist ./dist
+RUN mkdir "/.npm"
+RUN chown -R 65534:65534 "/.npm"
 USER nobody
 CMD npm run start:prod
