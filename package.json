@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "check-disk-space": "^3.4.0",
-    "get-folder-size": "^4.0.0"
+    "get-folder-size": "^4.0.0",
+    "mqtt": "^5.5.0"
   }
 }

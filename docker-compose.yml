@@ -39,6 +39,21 @@ services:
     #   - "traefik.http.services.mosquitto.loadbalancer.server.port=1883"
     #   - "traefik.http.services.mosquitto.loadbalancer.server.port=9001"
 
+  mosquitto-host-mode:
+    container_name: mqtt-broker-host-mode
+    image: eclipse-mosquitto:latest
+    profiles: [ ad-hoc ]
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+      - ./data/mosquitto/log:/mosquitto/log
+      - /etc/localtime:/etc/localtime:ro
+    expose:
+      - "1883"
+      - "9001"
+
   influxdb:
     container_name: influxdb
     image: influxdb:latest
