@@ -19,6 +19,7 @@ services:
   mosquitto:
     container_name: mqtt-broker
     image: eclipse-mosquitto:latest
+    profiles: [ production ]
     # network_mode: host
     restart: unless-stopped
     volumes:
@@ -41,6 +42,7 @@ services:
   influxdb:
     container_name: influxdb
     image: influxdb:latest
+    profiles: [ production ]
     # network_mode: host
     restart: unless-stopped
     volumes:
@@ -55,6 +57,7 @@ services:
   home-assistant:
     container_name: home-assistant
     image: "ghcr.io/home-assistant/home-assistant:stable"
+    profiles: [ production ]
     depends_on: [ mosquitto ]
     restart: unless-stopped
     # user: mosquitto:hass
@@ -81,9 +84,10 @@ services:
   home-assistant-host-mode:
     # run home-assistant in host mode
     # this is sometimes needed to magically re-connect devkit devices
-    container_name: home-assistant
+    container_name: home-assistant-host-mode
     image: "ghcr.io/home-assistant/home-assistant:stable"
     network_mode: host
+    profiles: [ ad-hoc ]
     # depends_on: [ mosquitto ]
     restart: unless-stopped
     privileged: true
@@ -96,6 +100,7 @@ services:
   zigbee2mqtt:
     container_name: zigbee2mqtt
     image: koenkk/zigbee2mqtt
+    profiles: [ production ]
     # network_mode: host
     depends_on: [ mosquitto ]
     restart: unless-stopped
@@ -136,6 +141,7 @@ services:
   whoami:
     image: "traefik/whoami"
     container_name: whoami
+    profiles: [ ad-hoc ]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.whoami.rule=Host(`dev.etauker.ie`) && PathPrefix(`/test`)"
@@ -149,6 +155,7 @@ services:
   grafana:
     container_name: hass-grafana
     image: "grafana/grafana-oss:latest"
+    profiles: [ production ]
     # network_mode: host
     restart: unless-stopped
     # user: mosquitto:hass
@@ -176,6 +183,7 @@ services:
   glances:
     container_name: glances
     image: nicolargo/glances:latest
+    profiles: [ production ]
     restart: unless-stopped
     pid: host
     # user: root:root

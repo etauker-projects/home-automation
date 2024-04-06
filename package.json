@@ -15,12 +15,12 @@
     "start:image": "docker compose -f ./docker-compose.yml -p home-automation-api up",
     "setup": "sudo --preserve-env bash ./scripts/setup.sh",
     "update": "bash ./scripts/update.sh",
-    "start": "docker compose up --detach",
+    "start": "docker compose --profile production up --detach",
     "stop": "docker compose down",
     "update-hass": "docker compose pull home-assistant && docker compose up home-assistant --remove-orphans -d && docker image prune",
     "docker-ps": "docker ps --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Networks}}\t{{.Image}}'",
     "restart-wifi": "sudo bash ./scripts/wifi-reconnect.sh",
-    "reconnect-hass": "sudo bash ./scripts/hass-reconnect.sh"
+    "reconnect-hass": "bash ./scripts/hass-reconnect.sh"
   },
   "author": {
     "name": "Tautvydas Kersulis",
