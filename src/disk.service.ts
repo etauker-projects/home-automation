@@ -1,4 +1,5 @@
-import checkDiskSpace, { DiskSpace } from 'check-disk-space';
+import { DiskSpace } from 'check-disk-space';
+import checkDiskSpace from 'check-disk-space';
 
 export class DiskService {
 
