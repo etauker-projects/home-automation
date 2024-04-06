@@ -12,7 +12,7 @@ export class MqttConnector {
             client.on('connect', () => {
                resolve(client);
             });
-            client.on('error', (error) => {
+            client.on('error', (error: any) => {
                 this.connected = Promise.reject(error);
             });
         })
@@ -25,7 +25,7 @@ export class MqttConnector {
                     messageHandler(message.toString());
                 });
 
-                client.subscribe(topic, (error) => error ? reject(error) : resolve(this));
+                client.subscribe(topic, (error: any) => error ? reject(error) : resolve(this));
             });
         });
     }

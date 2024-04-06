@@ -2,19 +2,38 @@ version: '3'
 
 services:
 
-  # api:
-  #   build:
-  #     context: .
-  #     dockerfile: ./config/main.dockerfile
-  #     labels:
-  #     - app=home-automation-api
-  #     # args:
-  #     #   NPM_TOKEN: ${NPM_TOKEN}
-  #   container_name: home-automation-api
-  #   # env_file:
-  #   #   - .env
-  #   # ports:
-  #   #   - 2000:9999
+  home-automation-api:
+    build:
+      context: .
+      dockerfile: ./config/main.dockerfile
+      labels:
+      - app=home-automation-api
+      # args:
+      #   NPM_TOKEN: ${NPM_TOKEN}
+    profiles: [ production ]
+    depends_on: [ mosquitto ]
+    restart: unless-stopped
+    container_name: home-automation-api
+    env_file:
+      - config/.env
+    networks:
+      - home-automation
+
+  home-automation-api-host-mode:
+    build:
+      context: .
+      dockerfile: ./config/main.dockerfile
+      labels:
+      - app=home-automation-api
+      # args:
+      #   NPM_TOKEN: ${NPM_TOKEN}
+    network_mode: host
+    profiles: [ ad-hoc ]
+    depends_on: [ mosquitto-host-mode ]
+    restart: unless-stopped
+    container_name: home-automation-api
+    env_file:
+      - config/.env
 
   mosquitto:
     container_name: mqtt-broker
