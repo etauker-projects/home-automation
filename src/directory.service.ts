@@ -1,4 +1,6 @@
-// import getFolderSize from 'get-folder-size';
+import getFolderSize from 'get-folder-size';
+import { GetFolderSizeLib } from './get-folder-size';
+const lib = getFolderSize as any as GetFolderSizeLib;
 
 export class DirectoryService {
     // appoach 1
@@ -9,4 +11,8 @@ export class DirectoryService {
 
     // appoach 2
     // command = 'sudo du -sh ${directory} | sort -h'
+
+    public async getSizeBytes(directory: string): Promise<number> {
+        return await lib.strict(directory, { bigint: false });
+    }
 }
