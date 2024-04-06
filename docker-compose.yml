@@ -31,7 +31,7 @@ services:
     profiles: [ ad-hoc ]
     depends_on: [ mosquitto-host-mode ]
     restart: unless-stopped
-    container_name: home-automation-api
+    container_name: home-automation-api-host-mode
     env_file:
       - config/.env
 
