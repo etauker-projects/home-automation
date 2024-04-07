@@ -18,6 +18,8 @@ services:
       - config/.env
     networks:
       - home-automation
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
   home-automation-api-host-mode:
     build:
