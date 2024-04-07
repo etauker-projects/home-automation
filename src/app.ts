@@ -54,6 +54,8 @@ directories.forEach(async dir => {
 
 //--------------------------------------------------------------------
 // import { MqttConnector } from './mqtt/mqtt-connector';
+// import { DockerConnector } from './docker/docker-connector.js';
+
 // import { DiskService } from './disk.service';
 
 
@@ -110,3 +112,5 @@ directories.forEach(async dir => {
 //         connector.publish(`${topic}/response`, JSON.stringify(response));
 //     }
 // });
+// const docker = new DockerConnector();
+// docker.showDockerContainers();
