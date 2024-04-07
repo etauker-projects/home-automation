@@ -15,9 +15,11 @@ RUN npm run build
 
 # ---- Release ----
 FROM base AS release
+RUN apk add docker
 RUN npm ci --omit=dev
 COPY --from=build /workspace/dist ./dist
 RUN mkdir "/.npm"
 RUN chown -R 65534:65534 "/.npm"
-USER nobody
+# RUN addgroup nobody docker
+# USER nobody
 CMD npm run start:prod

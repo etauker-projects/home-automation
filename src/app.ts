@@ -1,4 +1,5 @@
-import { MqttConnector } from './mqtt/mqtt-connector.js';
+import { DockerConnector } from './docker/docker-connector.js';
+
 // import { DiskService } from './disk.service';
 
 
@@ -48,10 +49,5 @@ connector.subscribe(`${topic}/request`, (payload) => {
             connector.publish(`${topic}/response`, JSON.stringify(response));
         }
 
-    } catch (error) {
-        console.error('Received non-json value:', payload);
-        const response = { success: true, reason: 'Non-json value received' };
-        console.log('Responding with a json object:', response);
-        connector.publish(`${topic}/response`, JSON.stringify(response));
-    }
-});
+const docker = new DockerConnector();
+docker.showDockerContainers();
