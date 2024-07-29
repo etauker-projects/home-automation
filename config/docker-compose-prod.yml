@@ -1,0 +1,59 @@
+version: '3'
+
+services:
+
+  home-assistant:
+    extends:
+      file: ./docker-compose-base.yml
+      service: home-assistant
+    # container_name: home-assistant
+    # image: "ghcr.io/home-assistant/home-assistant:stable"
+    # # profiles: [ production ]
+    # # depends_on: [ mosquitto ]
+    # restart: unless-stopped
+    # # user: mosquitto:hass
+    # privileged: true
+    # volumes:
+    #   - ../data/hass:/config
+    #   - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
+    # environment:
+    #   - TZ=Europe/Dublin
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.home-assistant.rule=Host(`dev.etauker.ie`) && (Path(`/auth/token`) || PathPrefix(`/home-assistant`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/home-assistant.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/lovelace.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/auth/authorize.*`) || Path(`/api/websocket`))"
+      - "traefik.http.routers.home-assistant.rule=Host(`hass.etauker.ie`)"
+      - "traefik.http.routers.home-assistant.entrypoints=web,ws"
+      - "traefik.http.middlewares.strip-home-assistant-prefix.stripprefix.prefixes=/home-assistant"
+      - "traefik.http.routers.home-assistant.middlewares=strip-home-assistant-prefix@docker"
+      - "traefik.http.services.home-assistant.loadbalancer.server.port=8123"
+    # networks:
+    #   - home-automation
+    #   - reverse-proxy
+
+  # home-assistant-host-mode:
+  #   # run home-assistant in host mode
+  #   # this is sometimes needed to magically re-connect devkit devices
+  #   container_name: home-assistant-host-mode
+  #   image: "ghcr.io/home-assistant/home-assistant:stable"
+  #   network_mode: host
+  #   profiles: [ ad-hoc ]
+  #   # depends_on: [ mosquitto ]
+  #   restart: unless-stopped
+  #   privileged: true
+  #   volumes:
+  #     - ./data/hass:/config
+  #     - /etc/localtime:/etc/localtime:ro
+  #   environment:
+  #     - TZ=Europe/Dublin
+
+networks:
+  home-automation:
+    name: home-automation
+    external: true
+
+  reverse-proxy:
+    name: traefik
+    external: true
+
