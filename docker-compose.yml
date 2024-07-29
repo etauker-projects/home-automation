@@ -131,6 +131,42 @@ services:
     environment:
       - TZ=Europe/Dublin
 
+  wyoming-piper:
+    container_name: wyoming-piper
+    image: rhasspy/wyoming-piper
+    ports:
+      - "10200:10200"
+    volumes:
+      - "./data/piper:/data"
+    command: [ "--voice", "en-gb-southern_english_female-low" ]
+    restart: unless-stopped
+    networks:
+      - home-automation
+
+  wyoming-whisper:
+    container_name: wyoming-whisper
+    image: rhasspy/wyoming-whisper
+    ports:
+      - "10300:10300"
+    volumes:
+      - ./data/whisper:/data
+    command: [ "--model", "small-int8", "--language", "en" ]
+    restart: unless-stopped
+    networks:
+      - home-automation
+
+  wyoming-openwakeword:
+    container_name: wyoming-openwakeword
+    image: rhasspy/wyoming-openwakeword
+    ports:
+      - "10400:10400"
+    volumes:
+      - "./data/openwakeword:/custom"
+    command: [ "--preload-model", "dobby", "--custom-model-dir", "/custom" ]
+    restart: unless-stopped
+    networks:
+      - home-automation
+
   zigbee2mqtt:
     container_name: zigbee2mqtt
     image: koenkk/zigbee2mqtt
