@@ -10,7 +10,7 @@ services:
       - app=home-automation-api
       # args:
       #   NPM_TOKEN: ${NPM_TOKEN}
-    profiles: [ production ]
+    profiles: [ ad-hoc ]
     depends_on: [ mosquitto ]
     restart: unless-stopped
     container_name: home-automation-api
@@ -91,6 +91,9 @@ services:
       - home-automation
 
   home-assistant:
+    # extends:
+    #   file: ./config/docker-compose-base.yml
+    #   service: home-assistant
     container_name: home-assistant
     image: "ghcr.io/home-assistant/home-assistant:stable"
     profiles: [ production ]
@@ -202,6 +205,9 @@ services:
       - ./data/grafana:/var/lib/grafana:rw
     ports:
       - 3000:3000
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECRITY_COOKIE_SAMESITE=none
     labels:
       - "traefik.enable=true"
       # - "traefik.http.routers.home-assistant.rule=Host(`dev.etauker.ie`) && (Path(`/auth/token`) || PathPrefix(`/home-assistant`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/home-assistant.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/lovelace.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/auth/authorize.*`) || Path(`/api/websocket`))"

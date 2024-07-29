@@ -112,5 +112,6 @@ directories.forEach(async dir => {
 //         connector.publish(`${topic}/response`, JSON.stringify(response));
 //     }
 // });
+
 // const docker = new DockerConnector();
-// docker.showDockerContainers();
+// docker.updateHomeAssistant();
