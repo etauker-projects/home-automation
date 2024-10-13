@@ -17,6 +17,8 @@
     "update": "bash ./scripts/update.sh",
     "start": "docker compose --profile production up --detach",
     "stop": "docker compose --profile production down",
+    "start:test": "docker compose --profile testing up --detach",
+    "stop:test": "docker compose --profile testing down",
     "update-hass": "docker compose pull home-assistant && docker stop home-assistant && docker rm home-assistant && docker compose up home-assistant --remove-orphans -d && docker image prune -f",
     "docker-ps": "docker ps --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Networks}}\t{{.Image}}'",
     "restart-wifi": "sudo bash ./scripts/wifi-reconnect.sh",
