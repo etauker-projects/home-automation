@@ -71,3 +71,7 @@ sudo usermod -a -G <group> <user>
 2. change config folder ownership to home-assistant user
 sudo chown --recursive <user>:<group> <directory>
 3. run docker image with this user
+
+
+# Mounting network drive
+- https://obie.hashnode.dev/ubuntu-server-permanently-mounting-samba-shares

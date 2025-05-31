@@ -13,14 +13,14 @@ read_password () {
             echo "Passwords do not match, try again..."
             read_password
         fi
-    else 
+    else
         password=$MOSQUITTO_PASSWORD
     fi
 }
 
 if [ -z "$MOSQUITTO_USERNAME" ]; then
     read -p "Mosquitto username: " username
-else 
+else
     username=$MOSQUITTO_USERNAME
 fi
 
