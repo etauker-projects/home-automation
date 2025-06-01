@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "create-ca": ". ./config/.env && bash ./scripts/create-ca.sh",
-    "create-cert": ". ./config/.env && bash ./scripts/create-cert.sh"
+    "create-cert": ". ./config/.env && bash ./scripts/create-cert.sh",
+    "read-cert": ". ./config/.env && bash ./scripts/read-cert.sh",
+    "verify-cert": ". ./config/.env && bash ./scripts/verify-cert.sh"
   },
   "author": {
     "name": "Tautvydas Kersulis",
