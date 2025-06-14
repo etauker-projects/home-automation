@@ -59,3 +59,16 @@ log_dest stdout
 log_dest file /mosquitto/log/mosquitto.log
 
 EOF
+
+
+# CREATE
+mosquitto_passwd -b passwordfile username password
+
+# READ
+awk 'BEGIN { FS=":"; OFS=","; } {print $1}' passwd
+
+# UPDATE
+mosquitto_passwd -b passwordfile username password
+
+# DELETE
+mosquitto_passwd -D passwordfile username

@@ -1,0 +1,179 @@
+version: '3'
+
+services:
+#   mosquitto:
+#     container_name: mqtt-broker
+#     image: eclipse-mosquitto:latest
+#     # network_mode: host
+#     restart: unless-stopped
+#     volumes:
+#       - ./data/mosquitto/config:/mosquitto/config
+#       - ./data/mosquitto/data:/mosquitto/data
+#       - ./data/mosquitto/log:/mosquitto/log
+#       - /etc/localtime:/etc/localtime:ro
+#     expose:
+#       - "1883"
+#       - "9001"
+#     networks:
+#       - home-automation
+#     #   - reverse-proxy
+#     # labels:
+#     #   - "traefik.enable=true"
+#     #   - "traefik.http.routers.mosquitto.entrypoints=web"
+#     #   - "traefik.http.services.mosquitto.loadbalancer.server.port=1883"
+#     #   - "traefik.http.services.mosquitto.loadbalancer.server.port=9001"
+
+#   influxdb:
+#     container_name: influxdb
+#     image: influxdb:latest
+#     # network_mode: host
+#     restart: unless-stopped
+#     volumes:
+#       - ./data/influxdb/data:/var/lib/influxdb2
+#       - ./data/influxdb/config:/etc/influxdb2
+#       # - ./data/influxdb/scripts:/docker-entrypoint-initdb.d
+#     ports:
+#       - 8086:8086
+#     networks:
+#       - home-automation
+
+  home-assistant-test:
+    container_name: home-assistant-test
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    network_mode: host
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - ./data/hass:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    environment:
+      - TZ=Europe/Dublin
+    # ports:
+    #   - 8123:8123
+    # labels:
+    #   - "traefik.enable=true"
+      # - "traefik.http.routers.home-assistant.rule=Host(`dev.etauker.ie`) && (Path(`/auth/token`) || PathPrefix(`/home-assistant`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/home-assistant.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/lovelace.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/auth/authorize.*`) || Path(`/api/websocket`))"
+      # - "traefik.http.routers.home-assistant.rule=Host(`hass.etauker.ie`)"
+      # - "traefik.http.routers.home-assistant.entrypoints=web,ws"
+      # - "traefik.http.middlewares.strip-home-assistant-prefix.stripprefix.prefixes=/home-assistant"
+      # - "traefik.http.routers.home-assistant.middlewares=strip-home-assistant-prefix@docker"
+      # - "traefik.http.services.home-assistant.loadbalancer.server.port=8123"
+    # networks:
+    #   - home-automation
+    #   - reverse-proxy
+
+#   zigbee2mqtt:
+#     container_name: zigbee2mqtt
+#     image: koenkk/zigbee2mqtt
+#     # network_mode: host
+#     depends_on: [ mosquitto ]
+#     restart: unless-stopped
+#     # user: mosquitto:hass
+#     # group_add:
+#     #   - dialout
+#     # user: 1000:1000
+#     volumes:
+#       - ./data/zigbee2mqtt:/app/data
+#       - /run/udev:/run/udev:ro
+#     ports:
+#       # Frontend port
+#       - 8080:8080
+#     environment:
+#       - TZ=Europe/Dublin
+#     devices:
+#       - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyACM0
+#     # labels:
+#     #   - "traefik.http.routers.zigbee2mqtt.rule=Host(`zigbee2mqtt.docker.localhost`)"
+#     #   - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080"
+
+#     labels:
+#       - "traefik.enable=true"
+#       # - "traefik.http.routers.zigbee2mqtt.rule=Host(`dev.etauker.ie`) && PathPrefix(`/zigbee2mqtt`)"
+#       - "traefik.http.routers.zigbee2mqtt.rule=Host(`zigbee2mqtt.etauker.ie`)"
+#       - "traefik.http.routers.zigbee2mqtt.entrypoints=web"
+#       # - "traefik.http.middlewares.strip-zigbee2mqtt-prefix.stripprefix.prefixes=/zigbee2mqtt"
+#       # - "traefik.http.routers.zigbee2mqtt.middlewares=strip-zigbee2mqtt-prefix@docker"
+#       - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080"
+#     #   - "traefik.enable=true"
+#     #   - "traefik.http.routers.zigbee2mqtt.rule=Host(`dev.etauker.ie`)"
+#     #   - "traefik.http.routers.zigbee2mqtt.entrypoints=web"
+#     #   - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8123"
+#     networks:
+#       - home-automation
+#       - reverse-proxy
+
+#   whoami:
+#     image: "traefik/whoami"
+#     container_name: whoami
+#     labels:
+#       - "traefik.enable=true"
+#       - "traefik.http.routers.whoami.rule=Host(`dev.etauker.ie`) && PathPrefix(`/test`)"
+#       - "traefik.http.routers.whoami.entrypoints=web"
+#       - "traefik.http.middlewares.strip-test-prefix.stripprefix.prefixes=/test"
+#       - "traefik.http.routers.whoami.middlewares=strip-test-prefix@docker"
+#       - "traefik.http.services.whoami.loadbalancer.server.port=80"
+#     networks:
+#       - reverse-proxy
+
+#   grafana:
+#     container_name: hass-grafana
+#     image: "grafana/grafana-oss:latest"
+#     # network_mode: host
+#     restart: unless-stopped
+#     # user: mosquitto:hass
+#     user: 1003:1002
+#     # group_add:
+#     #   - dialout
+#     volumes:
+#       - ./data/grafana:/var/lib/grafana:rw
+#     ports:
+#       - 3000:3000
+#     labels:
+#       - "traefik.enable=true"
+#       # - "traefik.http.routers.home-assistant.rule=Host(`dev.etauker.ie`) && (Path(`/auth/token`) || PathPrefix(`/home-assistant`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/home-assistant.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/lovelace.*`) || HeadersRegexp(`Referer`, `https?://dev.etauker.ie/auth/authorize.*`) || Path(`/api/websocket`))"
+#       - "traefik.http.routers.grafana.rule=Host(`grafana.hass.etauker.ie`)"
+#       - "traefik.http.routers.grafana.entrypoints=web"
+#       # - "traefik.http.middlewares.strip-grafana-prefix.stripprefix.prefixes=/grafana"
+#       # - "traefik.http.routers.grafana.middlewares=strip-grafana-prefix@docker"
+#       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+#     networks:
+#       - home-automation
+#       - reverse-proxy
+
+#   # --user "$(id -u)" \
+
+
+# # TODO: implement
+# #   glances:
+# #     container_name: glances
+# #     image: nicolargo/glances:latest-full
+# #     restart: always
+# #     pid: host
+# #     volumes:
+# #       # - ./data/glances/passwd:/root/.config/glances/glances.pwd
+# #       # - ./data/glances/glances.conf:/glances/conf/glances.conf
+# #       - /var/run/docker.sock:/var/run/docker.sock:ro
+
+# #     ports:
+# #       - 61208:61208
+# #       - 61209:61209
+# #     environment:
+# #       - "GLANCES_OPT=-w --password"
+# #     secrets:
+# #       - source: glances_password
+# #         target: /root/.config/glances/glances.pwd
+
+# # secrets:
+# #   glances_password:
+# #     file: ./data/glances/passwd
+
+# networks:
+#   home-automation:
+#     name: home-automation
+
+#   reverse-proxy:
+#     # driver: bridge
+#     name: traefik
+#     external: true
+
