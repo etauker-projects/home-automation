@@ -1,4 +1,4 @@
-import { MqttConnector } from './mqtt/mqtt-connector.js';
+// import { MqttConnector } from './mqtt/mqtt-connector.js';
 // import { DiskService } from './disk.service';
 
 
@@ -16,42 +16,58 @@ import { MqttConnector } from './mqtt/mqtt-connector.js';
 // console.log(`Used space: ${((await disk.getUsedSpaceBytes(directory) / 1_000_000_000).toFixed(2))}GB`);
 // console.log(`Used space: ${((await disk.getUsedSpacePercentage(directory)).toFixed(2))}%`);
 
-const host = process.env.MQTT_HOST;
-if (!host) {
-    throw new Error('Value not provided for MQTT_HOST');
-}
+// const host = process.env.MQTT_HOST;
+// if (!host) {
+//     throw new Error('Value not provided for MQTT_HOST');
+// }
 
-const username = process.env.MQTT_USER;
-if (!username) {
-    throw new Error('Value not provided for MQTT_USER');
-}
+// const username = process.env.MQTT_USER;
+// if (!username) {
 
-const password = process.env.MQTT_PASSWORD;
-if (!password) {
-    throw new Error('Value not provided for MQTT_PASSWORD');
-}
+//     throw new Error('Value not provided for MQTT_USER');
+// }
 
-const connector = new MqttConnector(host, username, password);
-const topic = 'etauker/home-automation';
-connector.subscribe(`${topic}/request`, (payload) => {
-    try {
-        const json = JSON.parse(payload);
-        console.log('Received json value:', json);
+// const password = process.env.MQTT_PASSWORD;
+// if (!password) {
+//     throw new Error('Value not provided for MQTT_PASSWORD');
+// }
 
-        if (json.test === true) {
-            const response = { success: true };
-            console.log('Responding with a json object:', response);
-            connector.publish(`${topic}/response`, JSON.stringify(response));
-        } else {
-            const response = { success: true, reason: 'Testing disabled' };
-            console.log('Responding with a json object:', response);
-            connector.publish(`${topic}/response`, JSON.stringify(response));
-        }
+// const connector = new MqttConnector(host, username, password);
+// const topic = 'etauker/home-automation';
+// connector.subscribe(`${topic}/request`, (payload) => {
+//     try {
+//         const json = JSON.parse(payload);
+//         console.log('Received json value:', json);
 
-    } catch (error) {
-        console.error('Received non-json value:', payload);
-        const response = { success: true, reason: 'Non-json value received' };
-        console.log('Responding with a json object:', response);
-        connector.publish(`${topic}/response`, JSON.stringify(response));
-    }
+//         if (json.test === true) {
+//             const response = { success: true };
+//             console.log('Responding with a json object:', response);
+//             connector.publish(`${topic}/response`, JSON.stringify(response));
+//         } else {
+//             const response = { success: true, reason: 'Testing disabled' };
+//             console.log('Responding with a json object:', response);
+//             connector.publish(`${topic}/response`, JSON.stringify(response));
+//         }
+
+//     } catch (error) {
+//         console.error('Received non-json value:', payload);
+//         const response = { success: true, reason: 'Non-json value received' };
+//         console.log('Responding with a json object:', response);
+//         connector.publish(`${topic}/response`, JSON.stringify(response));
+//     }
+// });
+
+import { TemplatingService } from './templating/templating.service';
+
+const templatingService = new TemplatingService();
+
+templatingService.loadModule('power_monitoring').then((result) => {
+    // console.log('Loaded template set:', result);
+    const replaced = templatingService.prepareTemplate(result.templates[0].content, {
+        MODULE: 'power_monitoring',
+        ID: 'office_desk_plug',
+        NAME: 'Office Desk Plug',
+    });
+    console.log('Replaced:', replaced);
 });
+
