@@ -1,9 +1,9 @@
 DOMAIN=$1
 
 # TODO: add IP of the server
-# IP=$2
-# EXTFILE="subjectAltName=DNS:$DOMAIN,DNS:*.$DOMAIN,IP:127.0.0.1,IP:$IP"
-EXTFILE="subjectAltName=DNS:$DOMAIN,DNS:*.$DOMAIN,IP:127.0.0.1"
+IP=$2
+EXTFILE="subjectAltName=DNS:$DOMAIN,DNS:*.$DOMAIN,IP:127.0.0.1,IP:$IP"
+# EXTFILE="subjectAltName=DNS:$DOMAIN,DNS:*.$DOMAIN,IP:127.0.0.1"
 
 mkdir -p $CERT_DIR
 cd $CERT_DIR
@@ -36,6 +36,6 @@ openssl x509 \
   -CAcreateserial
 
 echo "Outputting certificate chain for $DOMAIN"
-cat  ca.crt "$DOMAIN.crt" > "$DOMAIN.chain.crt"
+cat  ca.crt "$DOMAIN.crt" > "$DOMAIN.fullchain.crt"
 
 cd - > /dev/null 2>&1
