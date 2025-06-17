@@ -57,17 +57,50 @@
 //     }
 // });
 
-import { TemplatingService } from './templating/templating.service';
+import { TemplateService } from './template/template.service';
 
-const templatingService = new TemplatingService();
+// const templatingService = new TemplatingService();
 
-templatingService.loadModule('power_monitoring').then((result) => {
-    // console.log('Loaded template set:', result);
-    const replaced = templatingService.prepareTemplate(result.templates[0].content, {
-        MODULE: 'power_monitoring',
-        ID: 'office_desk_plug',
-        NAME: 'Office Desk Plug',
-    });
-    console.log('Replaced:', replaced);
+// templatingService.loadModule('power_monitoring').then((result) => {
+//     // console.log('Loaded template set:', result);
+//     const replaced = templatingService.prepareTemplate(result.templates[0].content, {
+//         MODULE: 'power_monitoring',
+//         ID: 'office_desk_plug',
+//         NAME: 'Office Desk Plug',
+//     });
+//     console.log('Replaced:', replaced);
+// });
+
+
+// export interface ModuleConfiguration {
+//     id: string;
+//     name: string;
+//     description: string;
+// }
+
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const appConfiguration = {
+    inputDirectory: resolve(__dirname, '../templateSource'),
+    outputDirectory: resolve(__dirname, '../templateDestination'),
+};
+
+const moduleConfiguration = {
+    id: 'power_monitoring',
+    name: 'Power Monitoring',
+    description: 'Module for monitoring power consumption of devices',
+};
+
+
+export type AppConfiguration = typeof appConfiguration;
+export type ModuleConfiguration = typeof moduleConfiguration;
+
+
+const template = new TemplateService(appConfiguration);
+
+template.loadModule(moduleConfiguration.id).then((result) => {
+    console.log('Loaded template set:', result);
 });
-

@@ -4,14 +4,14 @@
     {
       "label": "Start Backend",
       "type": "shell",
-      "command": "cd backend && npm install && npm run build && node dist/index.js",
+      "command": "cd app/backend && npm install && npm run build && node dist/index.js",
       "problemMatcher": [],
       "group": "build"
     },
     {
       "label": "Start Frontend",
       "type": "shell",
-      "command": "cd frontend && npm install && npx ng serve",
+      "command": "cd app/frontend && npm install && npx ng serve",
       "problemMatcher": [],
       "group": "build"
     }
