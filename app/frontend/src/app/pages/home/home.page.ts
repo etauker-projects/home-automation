@@ -7,6 +7,14 @@ interface Template {
   path: string;
 }
 
+interface EntityMapping {
+  id: string;
+  module: string;
+  sourceEntityId: string;
+  templateDestinationPath: string;
+  templateSourcePath: string;
+}
+
 @Component({
   selector: 'app-home-page',
   standalone: true,
@@ -15,14 +23,23 @@ interface Template {
   styleUrl: './home.page.css'
 })
 export class HomePage {
-  public columns: TableColumn<any>[];
-  public rows: TableRow<Template>[];
+  public templateColumns: TableColumn<Template>[];
+  public templateRows: TableRow<Template>[];
+
+  public entityMappingColumns: TableColumn<EntityMapping>[];
+  public entityMappingRows: TableRow<EntityMapping>[];
 
   constructor() {
 
-    // const templatePath = '/Users/etauker/workspace/etauker/home-automation/app/backend/templateSource';
+    // const templateInputPath = '/Users/etauker/workspace/etauker/home-automation/app/backend/templateSource';
+    // const templateOutputPath = '/Users/etauker/workspace/etauker/home-automation/app/backend/templateDestination';
 
-    this.rows = [
+    this.templateColumns = [
+      // { key: 'id', label: 'ID' },
+      { key: 'path', label: 'Path' },
+    ];
+
+    this.templateRows = [
       // {
       //   id: '128ebda0-996d-4add-b777-99778956e1d8',
       //   path: '/Users/etauker/workspace/etauker/home-automation/app/backend/templateSource/power_monitoring/history_stats',
@@ -41,9 +58,36 @@ export class HomePage {
       },
     ];
 
-    this.columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'path', label: 'Path' },
+    // Second table data
+    this.entityMappingColumns = [
+      // { key: 'id', label: 'ID' },
+      // { key: 'module', label: 'Module' },
+      { key: 'templateSourcePath', label: 'Input Path' },
+      { key: 'templateDestinationPath', label: 'Output Path' },
+      { key: 'sourceEntityId', label: 'Entity ID' },
+    ];
+    this.entityMappingRows = [
+      {
+        id: 'ba8ea0b1-205a-432c-8dcc-2b6fa70036f4',
+        sourceEntityId: 'sensor.office_desk_plug',
+        module: 'power_monitoring',
+        // templateSourcePath: templateInputPath + '/power_monitoring/template_sensor/plug.yaml',
+        // templateDestinationPath: templateOutputPath + '/power_monitoring/template_sensor/office_desk_plug.yaml',
+        templateSourcePath: '/power_monitoring/template_sensor/plug.yaml',
+        templateDestinationPath: '/power_monitoring/template_sensor/office_desk_plug.yaml',
+        // destinationEntityId: 'sensor.office_desk_plug_power',
+      },
+      {
+        id: '4453c6c8-6f65-4b4d-8d8e-46d2a81047a0',
+        sourceEntityId: 'sensor.office_desk_plug',
+        module: 'power_monitoring',
+        // templateSourcePath: templateInputPath + '/power_monitoring/utility_monitor/plug.yaml',
+        // templateDestinationPath: templateOutputPath + '/power_monitoring/utility_monitor/office_desk_plug.yaml',
+        templateSourcePath: '/power_monitoring/utility_monitor/plug.yaml',
+        templateDestinationPath: '/power_monitoring/utility_monitor/office_desk_plug.yaml',
+        // destinationEntityId: 'sensor.office_desk_plug_running_cost_hourly',
+      },
     ];
   }
 }
+
