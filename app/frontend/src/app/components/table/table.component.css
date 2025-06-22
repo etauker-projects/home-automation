@@ -27,6 +27,8 @@ th {
 
 td {
     border-bottom: 1px solid #e5e7eb;
+    color: #6d7179;
+    font-weight: 400;
 }
 
 tr:last-child td {
