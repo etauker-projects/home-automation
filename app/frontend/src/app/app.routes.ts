@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-// import { HomePage } from './pages/home/home.page';
 
 export const routes: Routes = [
     {
@@ -7,7 +6,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/home/home.page').then(m => m.HomePage)
     },
     {
-        path: 'entities/:entityId',
+        path: 'modules/:moduleId',
+        loadComponent: () => import('./pages/module/module.page').then(m => m.ModulePage)
+    },
+    {
+        path: 'modules/:moduleId/entities/:entityId',
         loadComponent: () => import('./pages/entity-mapping/entity-mapping.page').then(m => m.EntityMappingPage)
     },
 ];
