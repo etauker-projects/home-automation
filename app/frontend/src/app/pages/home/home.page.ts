@@ -24,7 +24,7 @@ export class HomePage {
 
   constructor(private router: Router) {
     this.columns = [
-      { key: 'id', label: 'ID' },
+      // { key: 'id', label: 'ID' },
       { key: 'key', label: 'Key' },
       { key: 'name', label: 'Name' },
       { key: 'description', label: 'Description' },
@@ -40,7 +40,7 @@ export class HomePage {
     this.actions = [
       {
         key: 'navigate',
-        label: 'Navigate',
+        label: 'Details',
         handle: (row: TableRow<Module>) => {
           this.router.navigate(['/modules', row.id]);
         },

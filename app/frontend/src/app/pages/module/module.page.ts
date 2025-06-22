@@ -71,7 +71,7 @@ export class ModulePage {
     // Second table data
     this.entityMappingColumns = [
       { key: 'sourceEntityId', label: 'Entity ID' },
-      { key: 'templateSourcePath', label: 'Input Path' },
+      { key: 'templateSourcePath', label: 'Template Path' },
       { key: 'templateDestinationPath', label: 'Output Path' },
     ];
     this.entityMappingRows = [
@@ -98,7 +98,7 @@ export class ModulePage {
     this.entityMappingActions = [
         {
             key: 'navigate',
-            label: 'Navigate',
+            label: 'Details',
             // icon: 'navigate',
             handle: (row: TableRow<EntityMapping>) => {
                 this.router.navigate(['/modules', this.moduleId, 'entities', row.id]);
