@@ -62,9 +62,9 @@ export class HomePage {
     this.entityMappingColumns = [
       // { key: 'id', label: 'ID' },
       // { key: 'module', label: 'Module' },
+      { key: 'sourceEntityId', label: 'Entity ID' },
       { key: 'templateSourcePath', label: 'Input Path' },
       { key: 'templateDestinationPath', label: 'Output Path' },
-      { key: 'sourceEntityId', label: 'Entity ID' },
     ];
     this.entityMappingRows = [
       {
