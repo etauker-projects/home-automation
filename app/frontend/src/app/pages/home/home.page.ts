@@ -75,7 +75,6 @@ export class HomePage {
         // templateDestinationPath: templateOutputPath + '/power_monitoring/template_sensor/office_desk_plug.yaml',
         templateSourcePath: '/power_monitoring/template_sensor/plug.yaml',
         templateDestinationPath: '/power_monitoring/template_sensor/office_desk_plug.yaml',
-        // destinationEntityId: 'sensor.office_desk_plug_power',
       },
       {
         id: '4453c6c8-6f65-4b4d-8d8e-46d2a81047a0',
@@ -85,7 +84,6 @@ export class HomePage {
         // templateDestinationPath: templateOutputPath + '/power_monitoring/utility_monitor/office_desk_plug.yaml',
         templateSourcePath: '/power_monitoring/utility_monitor/plug.yaml',
         templateDestinationPath: '/power_monitoring/utility_monitor/office_desk_plug.yaml',
-        // destinationEntityId: 'sensor.office_desk_plug_running_cost_hourly',
       },
     ];
   }
