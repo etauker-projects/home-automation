@@ -7,7 +7,7 @@
         </thead>
         <tbody>
             <tr *ngFor="let row of rows">
-                <td *ngFor="let column of columns"class="fd-table__cell">
+                <td *ngFor="let column of columns" class="fd-table__cell">
                     <span *ngIf="column.key !== 'actions'">{{ row[column.key] }}</span>
                     <span *ngIf="column.key === 'actions'">
                         <span

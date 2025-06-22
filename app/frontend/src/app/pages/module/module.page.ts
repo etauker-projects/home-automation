@@ -120,6 +120,6 @@ export class ModulePage {
         //         console.log('Delete handle for row:', row);
         //     },
         // },
-    ]
+    ];
   }
 }

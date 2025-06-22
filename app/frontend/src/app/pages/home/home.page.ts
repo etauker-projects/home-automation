@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { TableComponent } from '../../components/table/table.component';
-import type { TableColumn, TableRow } from '../../components/table/table.interfaces';
+import type { TableAction, TableColumn, TableRow } from '../../components/table/table.interfaces';
 
 interface Module {
   id: string;
@@ -19,8 +20,9 @@ interface Module {
 export class HomePage {
   public columns: TableColumn<Module>[];
   public rows: TableRow<Module>[];
+  public actions: TableAction<Module>[];
 
-  constructor() {
+  constructor(private router: Router) {
     this.columns = [
       { key: 'id', label: 'ID' },
       { key: 'key', label: 'Key' },
@@ -33,6 +35,15 @@ export class HomePage {
         key: 'power_monitoring',
         name: 'Power Monitoring',
         description: 'Module for monitoring power consumption of devices',
+      },
+    ];
+    this.actions = [
+      {
+        key: 'navigate',
+        label: 'Navigate',
+        handle: (row: TableRow<Module>) => {
+          this.router.navigate(['/modules', row.id]);
+        },
       },
     ];
   }
