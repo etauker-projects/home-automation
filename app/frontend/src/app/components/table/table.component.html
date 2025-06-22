@@ -1,5 +1,5 @@
 <div>
-    <table>
+    <table class="table-auto border-collapse">
         <thead>
             <tr>
                 <th *ngFor="let column of columns" scope="col">{{ column.label }}</th>
@@ -7,7 +7,7 @@
         </thead>
         <tbody>
             <tr *ngFor="let row of rows">
-                <td  *ngFor="let column of columns"class="fd-table__cell">{{ row[column.key] }}</td>
+                <td *ngFor="let column of columns"class="fd-table__cell">{{ row[column.key] }}</td>
             </tr>
         </tbody>
     </table>
