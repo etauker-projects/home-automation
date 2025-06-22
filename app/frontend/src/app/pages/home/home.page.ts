@@ -34,12 +34,6 @@ export class HomePage {
         name: 'Power Monitoring',
         description: 'Module for monitoring power consumption of devices',
       },
-      {
-        id: '0305df92-d242-49d8-adfb-be0c224d8f19',
-        key: 'climate_control',
-        name: 'Climate Control',
-        description: 'Module for managing heating and cooling systems',
-      },
     ];
   }
 }

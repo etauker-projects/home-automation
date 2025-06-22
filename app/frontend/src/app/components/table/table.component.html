@@ -7,7 +7,16 @@
         </thead>
         <tbody>
             <tr *ngFor="let row of rows">
-                <td *ngFor="let column of columns"class="fd-table__cell">{{ row[column.key] }}</td>
+                <td *ngFor="let column of columns"class="fd-table__cell">
+                    <span *ngIf="column.key !== 'actions'">{{ row[column.key] }}</span>
+                    <span *ngIf="column.key === 'actions'">
+                        <span
+                            *ngFor="let action of actions"
+                            (click)="onActionClick(action, row)"
+                            class="action"
+                        >{{ action.label }}</span>
+                    </span>
+                </td>
             </tr>
         </tbody>
     </table>

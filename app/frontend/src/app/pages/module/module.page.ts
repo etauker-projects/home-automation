@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { TableComponent } from '../../components/table/table.component';
-import type { TableColumn, TableRow } from '../../components/table/table.interfaces';
+import type { TableAction, TableColumn, TableRow } from '../../components/table/table.interfaces';
 
 interface Template {
   id: string;
@@ -30,6 +30,7 @@ export class ModulePage {
 
   public entityMappingColumns: TableColumn<EntityMapping>[];
   public entityMappingRows: TableRow<EntityMapping>[];
+  public entityMappingActions: TableAction<EntityMapping>[] = [];
 
   constructor() {
 
@@ -86,5 +87,32 @@ export class ModulePage {
         templateDestinationPath: '/power_monitoring/utility_monitor/office_desk_plug.yaml',
       },
     ];
+
+    this.entityMappingActions = [
+        {
+            key: 'navigate',
+            label: 'Navigate',
+            // icon: 'navigate',
+            handle: (row: TableRow<EntityMapping>) => {
+                console.log('Navigate handle for row:', row);
+            },
+        },
+        // {
+        //     key: 'edit',
+        //     label: 'Edit',
+        //     // icon: 'edit',
+        //     handle: (row: TableRow<EntityMapping>) => {
+        //         console.log('Edit handle for row:', row);
+        //     },
+        // },
+        // {
+        //     key: 'delete',
+        //     label: 'Delete',
+        //     // icon: 'delete',
+        //     handle: (row: TableRow<EntityMapping>) => {
+        //         console.log('Delete handle for row:', row);
+        //     },
+        // },
+    ]
   }
 }
