@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { TableComponent } from '../../components/table/table.component';
+import { ActivatedRoute, Router } from '@angular/router';
 import type { TableAction, TableColumn, TableRow } from '../../components/table/table.interfaces';
 
 interface Template {
@@ -32,7 +33,13 @@ export class ModulePage {
   public entityMappingRows: TableRow<EntityMapping>[];
   public entityMappingActions: TableAction<EntityMapping>[] = [];
 
-  constructor() {
+  private moduleId?: string;
+
+  constructor(private route: ActivatedRoute, private router: Router) {
+
+    this.route.paramMap.subscribe(params => {
+        this.moduleId = params.get('moduleId') ?? undefined;
+    });
 
     // const templateInputPath = '/Users/etauker/workspace/etauker/home-automation/app/backend/templateSource';
     // const templateOutputPath = '/Users/etauker/workspace/etauker/home-automation/app/backend/templateDestination';
@@ -94,7 +101,7 @@ export class ModulePage {
             label: 'Navigate',
             // icon: 'navigate',
             handle: (row: TableRow<EntityMapping>) => {
-                console.log('Navigate handle for row:', row);
+                this.router.navigate(['/modules', this.moduleId, 'entities', row.id]);
             },
         },
         // {
