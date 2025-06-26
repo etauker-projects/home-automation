@@ -2,42 +2,28 @@
 
 <!-- Configuration -->
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="entity-mapping-form">
-  <div>
-    <label for="module">Module:</label>
-    <input id="module" formControlName="module" required readonly/>
-  </div>
-  <div>
-    <label for="sourceEntityId">Source Entity ID:</label>
-    <input id="sourceEntityId" formControlName="sourceEntityId" required readonly/>
-  </div>
-  <div>
-    <label for="templateSourcePath">Template Source Path:</label>
-    <input id="templateSourcePath" formControlName="templateSourcePath" required readonly size="60"/>
-  </div>
-  <div>
-    <label for="templateDestinationPath">Template Destination Path:</label>
-    <input id="templateDestinationPath" formControlName="templateDestinationPath" required readonly size="60"/>
-  </div>
-  <button type="submit" [disabled]="form.invalid">Add Mapping</button>
+    <div>
+        <label for="module">Module:</label>
+        <input id="module" formControlName="module" required readonly />
+    </div>
+    <div>
+        <label for="sourceEntityId">Source Entity ID:</label>
+        <input id="sourceEntityId" formControlName="sourceEntityId" required readonly />
+    </div>
+    <div>
+        <label for="templateSourcePath">Template Source Path:</label>
+        <input id="templateSourcePath" formControlName="templateSourcePath" required readonly size="60" />
+    </div>
+    <div>
+        <label for="templateDestinationPath">Template Destination Path:</label>
+        <input id="templateDestinationPath" formControlName="templateDestinationPath" required readonly size="60" />
+    </div>
+    <button type="submit" [disabled]="form.invalid">Add Mapping</button>
 </form>
 
-<!-- Comparison Section -->
 <section class="text-comparison-section">
-  <h3>Compare Texts</h3>
-  <div class="comparison-inputs">
-    <div>
-      <label for="textA">Text A</label>
-      <textarea id="textA" [(ngModel)]="textA" rows="8" cols="40" placeholder="Paste or type first text..."></textarea>
-    </div>
-    <div>
-      <label for="textB">Text B</label>
-      <textarea id="textB" [(ngModel)]="textB" rows="8" cols="40" placeholder="Paste or type second text..."></textarea>
-    </div>
-  </div>
-  <div class="comparison-result">
-    <h4>Difference</h4>
-    <pre>{{ compareTexts(textA, textB) }}</pre>
-  </div>
+    <h3>Compare Texts</h3>
+    <app-diff-editor [original]="template" [modified]="output"></app-diff-editor>
 </section>
 
 <!-- Variables -->

@@ -1,19 +1,30 @@
 import { Component } from '@angular/core';
 import { TableComponent } from '../../components/table/table.component';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { EditorComponent } from '../../components/editor/editor.component';
+import { NGX_MONACO_EDITOR_CONFIG } from 'ngx-monaco-editor-v2';
+import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.component';
 
 @Component({
     selector: 'app-entity-mapping-page',
     standalone: true,
-    imports: [TableComponent, FormsModule, ReactiveFormsModule],
+    imports: [TableComponent, ReactiveFormsModule, FormsModule, EditorComponent, DiffEditorComponent],
     templateUrl: './entity-mapping.page.html',
-    styleUrl: './entity-mapping.page.css'
+    styleUrl: './entity-mapping.page.css',
+    providers: [
+        {
+            provide: NGX_MONACO_EDITOR_CONFIG,
+            useValue: {
+                baseUrl: '', // <-- updated to match actual loader.js location
+                defaultOptions: { theme: 'vs-dark', automaticLayout: true }
+            }
+        }
+    ],
 })
 export class EntityMappingPage {
     form: FormGroup;
-    textA = `
+    template = `
 \${ inputs.id }_energy_usage_hourly:
     name: \${ inputs.name } Energy Usage Hourly
     source: sensor.\${ inputs.id }_energy
@@ -35,9 +46,9 @@ export class EntityMappingPage {
     unique_id: meter.\${ inputs.id }_energy_usage_monthly
     offset: 0
     delta_values: false
-    `;
+    `.trim();
 
-    textB = `
+    output = `
 office_desk_plug_energy_usage_hourly:
     name: Office Desk Plug Energy Usage Hourly
     source: sensor.office_desk_plug_energy
@@ -59,7 +70,7 @@ office_desk_plug_energy_usage_monthly:
     unique_id: meter.office_desk_plug_energy_usage_monthly
     offset: 0
     delta_values: false
-    `;
+    `.trim();
 
     constructor(
         private route: ActivatedRoute,
@@ -80,22 +91,6 @@ office_desk_plug_energy_usage_monthly:
             // const entityId = params.get('entityId') ?? undefined;
             // this.form.controls['sourceEntityId'].setValue(entityId);
         });
-    }
-
-    compareTexts(a: string, b: string): string {
-        if (!a && !b) return '';
-        if (a === b) return 'No differences.';
-        // Simple line-by-line diff
-        const aLines = (a || '').split('\n');
-        const bLines = (b || '').split('\n');
-        const maxLen = Math.max(aLines.length, bLines.length);
-        let result = '';
-        for (let i = 0; i < maxLen; i++) {
-            if (aLines[i] !== bLines[i]) {
-                result += `Line ${i + 1}:\nA: ${aLines[i] || ''}\nB: ${bLines[i] || ''}\n\n`;
-            }
-        }
-        return result || 'No differences.';
     }
 
     onSubmit() {

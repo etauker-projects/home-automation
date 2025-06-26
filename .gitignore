@@ -28,3 +28,6 @@ scripts/health-data/output
 # data/hass/.storage/auth
 # data/hass/.storage/auth_provider.homeassistant
 # data/hass/.storage/secrets.yaml
+
+
+app/frontend/src/assets/monaco
