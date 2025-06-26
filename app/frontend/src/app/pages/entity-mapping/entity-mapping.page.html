@@ -21,6 +21,25 @@
   <button type="submit" [disabled]="form.invalid">Add Mapping</button>
 </form>
 
+<!-- Comparison Section -->
+<section class="text-comparison-section">
+  <h3>Compare Texts</h3>
+  <div class="comparison-inputs">
+    <div>
+      <label for="textA">Text A</label>
+      <textarea id="textA" [(ngModel)]="textA" rows="8" cols="40" placeholder="Paste or type first text..."></textarea>
+    </div>
+    <div>
+      <label for="textB">Text B</label>
+      <textarea id="textB" [(ngModel)]="textB" rows="8" cols="40" placeholder="Paste or type second text..."></textarea>
+    </div>
+  </div>
+  <div class="comparison-result">
+    <h4>Difference</h4>
+    <pre>{{ compareTexts(textA, textB) }}</pre>
+  </div>
+</section>
+
 <!-- Variables -->
 
 <!-- Preview of template file next to substituted result -->
