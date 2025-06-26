@@ -1,0 +1,73 @@
+.entity-mapping-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 600px;
+  margin: 2rem 0;
+  padding: 2rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.entity-mapping-form label {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.entity-mapping-form input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  background: #fff;
+  color: #1e293b;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+  transition: border-color 0.2s;
+}
+
+.entity-mapping-form input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px #6366f133;
+}
+
+.entity-mapping-form button[type="submit"] {
+  align-self: flex-start;
+  background: #6366f1;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 1rem;
+}
+
+.entity-mapping-form button[type="submit"]:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.entity-mapping-form button[type="submit"]:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.entity-mapping-form div {
+  display: flex;
+  flex-direction: column;
+}
+
+.entity-mapping-form input[readonly] {
+  background: #f3f4f6;
+  color: #64748b;
+  border-style: dashed;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 1;
+}

@@ -11,6 +11,7 @@ interface Template {
 interface EntityMapping {
   id: string;
   module: string;
+  enabled: boolean;
   sourceEntityId: string;
   templateDestinationPath: string;
   templateSourcePath: string;
@@ -73,6 +74,7 @@ export class ModulePage {
       { key: 'sourceEntityId', label: 'Entity ID' },
       { key: 'templateSourcePath', label: 'Template Path' },
       { key: 'templateDestinationPath', label: 'Output Path' },
+      { key: 'enabled', label: 'Enabled' },
     ];
     this.entityMappingRows = [
       {
@@ -83,6 +85,7 @@ export class ModulePage {
         // templateDestinationPath: templateOutputPath + '/power_monitoring/template_sensor/office_desk_plug.yaml',
         templateSourcePath: '/power_monitoring/template_sensor/plug.yaml',
         templateDestinationPath: '/power_monitoring/template_sensor/office_desk_plug.yaml',
+        enabled: true,
       },
       {
         id: '4453c6c8-6f65-4b4d-8d8e-46d2a81047a0',
@@ -92,6 +95,7 @@ export class ModulePage {
         // templateDestinationPath: templateOutputPath + '/power_monitoring/utility_monitor/office_desk_plug.yaml',
         templateSourcePath: '/power_monitoring/utility_monitor/plug.yaml',
         templateDestinationPath: '/power_monitoring/utility_monitor/office_desk_plug.yaml',
+        enabled: false,
       },
     ];
 
