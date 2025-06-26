@@ -21,9 +21,9 @@
     <button type="submit" [disabled]="form.invalid">Add Mapping</button>
 </form>
 
-<section class="text-comparison-section">
-    <h3>Compare Texts</h3>
-    <app-diff-editor [original]="template" [modified]="output"></app-diff-editor>
+<section *ngFor="let entity of entities" class="text-comparison-section">
+    <h3>{{ entity.title }}</h3>
+    <app-diff-editor [original]="entity.template" [modified]="entity.output"></app-diff-editor>
 </section>
 
 <!-- Variables -->

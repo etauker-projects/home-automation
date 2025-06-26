@@ -1,4 +1,6 @@
+import { parse , stringify } from 'yaml';
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { TableComponent } from '../../components/table/table.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -9,7 +11,7 @@ import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.co
 @Component({
     selector: 'app-entity-mapping-page',
     standalone: true,
-    imports: [TableComponent, ReactiveFormsModule, FormsModule, EditorComponent, DiffEditorComponent],
+    imports: [CommonModule, TableComponent, ReactiveFormsModule, FormsModule, EditorComponent, DiffEditorComponent],
     templateUrl: './entity-mapping.page.html',
     styleUrl: './entity-mapping.page.css',
     providers: [
@@ -24,6 +26,13 @@ import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.co
 })
 export class EntityMappingPage {
     form: FormGroup;
+    entities: {
+        title: string,
+        template: string,
+        output: string,
+        variables: { [key: string]: string };
+    }[];
+
     template = `
 \${ inputs.id }_energy_usage_hourly:
     name: \${ inputs.name } Energy Usage Hourly
@@ -91,6 +100,49 @@ office_desk_plug_energy_usage_monthly:
             // const entityId = params.get('entityId') ?? undefined;
             // this.form.controls['sourceEntityId'].setValue(entityId);
         });
+
+        const entities = parse(this.template);
+        console.log('Parsed template entities:', entities);
+
+        // TODO: handle case where entities is an array
+        this.entities = Object.keys(entities).map(key => {
+
+            const variables = this.extractVariables(entities[key]);
+            const title = this.extractTitle(entities[key], key, variables);
+
+            const json: { [key: string]: any } = {};
+            json[key] = entities[key];
+            const node = parse(JSON.stringify(json));
+            const template = stringify(node, { indent: 4 });
+
+            return {
+                title: title,
+                template: template,
+                output: this.substitueVariables(template, variables),
+                variables: variables,
+            };
+        });
+    }
+    extractTitle(json: { [key: string]: string }, key: string, variables: { [key: string]: string }): string {
+        let name = json['name'] ?? key;
+        Object.keys(variables).forEach(variable => name = name.replaceAll(variable, ''));
+        name = name.startsWith('_') ? name.substring(1) : name;
+        name = name.endsWith('_') ? name.substring(0, name.length-1) : name;
+        return name.trim();
+    }
+
+    // TODO
+    extractVariables(template: string): { [key: string]: string } {
+        return {
+            '${ inputs.id }': 'office_desk_plug',
+            '${ inputs.name }': 'Office Desk Plug',
+        };
+    }
+
+    substitueVariables(template: string, variables: { [key: string]: string }): string {
+        let result = template;
+        Object.keys(variables).forEach(key => result = result.replaceAll(key, variables[key]));
+        return result;
     }
 
     onSubmit() {
