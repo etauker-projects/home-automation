@@ -25,34 +25,36 @@ import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.co
     ],
 })
 export class EntityMappingPage {
+    private readonly regexString = '\\${\\s*input\\.KEY\\s*}';
+
     form: FormGroup;
     entities: {
         title: string,
         template: string,
         output: string,
-        variables: { [key: string]: string };
+        variables: Set<string>;
     }[];
 
     template = `
-\${ inputs.id }_energy_usage_hourly:
-    name: \${ inputs.name } Energy Usage Hourly
-    source: sensor.\${ inputs.id }_energy
+\${ input.id }_energy_usage_hourly:
+    name: \${ input.name } Energy Usage Hourly
+    source: sensor.\${ input.id }_energy
     cycle: hourly
-    unique_id: meter.\${ inputs.id }_energy_usage_hourly
+    unique_id: meter.\${ input.id }_energy_usage_hourly
     offset: 0
     delta_values: false
-\${ inputs.id }_energy_usage_daily:
-    name: \${ inputs.name } Energy Usage Daily
-    source: sensor.\${ inputs.id }_energy
+\${ input.id }_energy_usage_daily:
+    name: \${ input.name } Energy Usage Daily
+    source: sensor.\${ input.id }_energy
     cycle: daily
-    unique_id: meter.\${ inputs.id }_energy_usage_daily
+    unique_id: meter.\${ input.id }_energy_usage_daily
     offset: 0
     delta_values: false
-\${ inputs.id }_energy_usage_monthly:
-    name: \${ inputs.name } Energy Usage Monthly
-    source: sensor.\${ inputs.id }_energy
+\${ input.id }_energy_usage_monthly:
+    name: \${ input.name } Energy Usage Monthly
+    source: sensor.\${ input.id }_energy
     cycle: monthly
-    unique_id: meter.\${ inputs.id }_energy_usage_monthly
+    unique_id: meter.\${ input.id }_energy_usage_monthly
     offset: 0
     delta_values: false
     `.trim();
@@ -107,41 +109,68 @@ office_desk_plug_energy_usage_monthly:
         // TODO: handle case where entities is an array
         this.entities = Object.keys(entities).map(key => {
 
-            const variables = this.extractVariables(entities[key]);
-            const title = this.extractTitle(entities[key], key, variables);
-
             const json: { [key: string]: any } = {};
             json[key] = entities[key];
             const node = parse(JSON.stringify(json));
             const template = stringify(node, { indent: 4 });
 
+            const variables = this.extractVariables(template);
+            const title = this.extractTitle(entities[key], key, variables);
+
+            // TODO: get from user input
+            const variablesMap: { [key: string]: string } = {
+                id: 'office_desk_plug',
+                name: 'Office Desk Plug',
+            };
+
             return {
                 title: title,
                 template: template,
-                output: this.substitueVariables(template, variables),
+                output: this.substitueVariables(template, variablesMap),
                 variables: variables,
             };
         });
     }
-    extractTitle(json: { [key: string]: string }, key: string, variables: { [key: string]: string }): string {
+    extractTitle(json: { [key: string]: string }, key: string, variables: Set<string>): string {
         let name = json['name'] ?? key;
-        Object.keys(variables).forEach(variable => name = name.replaceAll(variable, ''));
+        variables.forEach(variable => name = name.replaceAll(variable, ''));
         name = name.startsWith('_') ? name.substring(1) : name;
         name = name.endsWith('_') ? name.substring(0, name.length-1) : name;
         return name.trim();
     }
 
     // TODO
-    extractVariables(template: string): { [key: string]: string } {
-        return {
-            '${ inputs.id }': 'office_desk_plug',
-            '${ inputs.name }': 'Office Desk Plug',
-        };
+    extractVariables(template: string): Set<string> {
+
+
+
+        // const templateFileContent = templatePromises.map(async templateName => {
+        //     const path = resolve(moduleDirectory, templateName);
+        //     const content = await readFile(path, 'utf-8');
+        const variables = new Set<string>();
+        const regex = new RegExp(this.regexString.replace('KEY', '(?<input>[a-zA-Z0-9]+)'), 'g');
+        const matches = template.matchAll(regex);
+        console.log('Matches found:', matches, template, regex);
+
+        for (const match of matches) {
+            if (match.groups?.['input']) {
+                // variables[key] = (match.groups?.['input']);
+                // console.log('Found variable:', match.groups?.['input']);
+                variables.add(match.groups?.['input']);
+
+            }
+        }
+
+        return variables;
+
     }
 
     substitueVariables(template: string, variables: { [key: string]: string }): string {
         let result = template;
-        Object.keys(variables).forEach(key => result = result.replaceAll(key, variables[key]));
+        Object.keys(variables).forEach(key => {
+            const regex = new RegExp(this.regexString.replace('KEY', key), 'g');
+            result = result.replaceAll(regex, variables[key])
+        });
         return result;
     }
 
