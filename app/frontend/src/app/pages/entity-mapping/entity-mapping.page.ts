@@ -8,6 +8,13 @@ import { EditorComponent } from '../../components/editor/editor.component';
 import { NGX_MONACO_EDITOR_CONFIG } from 'ngx-monaco-editor-v2';
 import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.component';
 
+export interface Control {
+    id: string;
+    label: string;
+    readonly: boolean;
+    control: FormControl;
+}
+
 @Component({
     selector: 'app-entity-mapping-page',
     standalone: true,
@@ -29,12 +36,7 @@ export class EntityMappingPage {
 
     form: FormGroup;
 
-    controls: {
-        id: string;
-        label: string;
-        readonly: boolean;
-        control: FormControl;
-    }[];
+    controls: Control[];
 
     previews: {
         title: string,
@@ -100,31 +102,47 @@ export class EntityMappingPage {
             //     readonly: true,
             //     control: this.formBuilder.control('/power_monitoring/template_sensor/office_desk_plug.yaml', Validators.required),
             // },
+
+            // standard variables for all templates
+            {
+                id: 'name',
+                label: 'Name',
+                readonly: false,
+                control: this.formBuilder.control('', Validators.required),
+            },
+            {
+                id: 'id',
+                label: 'Id',
+                readonly: false,
+                control: this.formBuilder.control('', Validators.required),
+            },
         ];
+
 
         this.form = this.formBuilder.group([]);
         variables.forEach(variable => this.appendToForm(variable));
 
-        // this.route.paramMap.subscribe(params => {
-            // const moduleId = params.get('moduleId') ?? '';
-            // this.form.controls['module'].setValue(moduleId);
-
-            // const entityId = params.get('entityId') ?? undefined;
-            // this.form.controls['sourceEntityId'].setValue(entityId);
-        // });
+        // convenience: pre-fill ID based on the entered name
+        this.form.get('name')?.valueChanges.subscribe((value: string) => {
+            if (value) {
+                this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
+            }
+        });
     }
 
-    private appendToForm(variable: string): void {
-        if (!this.controls.some(control => control.id === variable)) {
-            this.controls.push({
-                id: variable,
-                label: this.toHumanReadable(variable),
-                readonly: false,
-                control: this.formBuilder.control('', Validators.required),
-            });
+    private appendToForm(variable: string | Control): void {
+        const control = typeof variable === 'string' ? {
+            id: variable,
+            label: this.toHumanReadable(variable),
+            readonly: false,
+            control: this.formBuilder.control('', Validators.required),
+        } : variable;
+
+        if (!this.controls.some(c => c.id === control.id)) {
+            this.controls.push(control);
         }
-        if (!this.form.contains(variable)) {
-            this.form.addControl(variable, this.formBuilder.control('', Validators.required));
+        if (!this.form.contains(control.id)) {
+            this.form.addControl(control.id, control.control);
         }
     }
 
@@ -171,7 +189,7 @@ export class EntityMappingPage {
                 const template = stringify(node, { indent: 4 });
                 const title = this.extractTitle(entities[key], key);
 
-                const variables = this.getVariableValues(this.controls);
+                const variables = this.getFormValues();
 
                 return {
                     title: title,
@@ -181,9 +199,9 @@ export class EntityMappingPage {
             });
         }
     }
-    private getVariableValues(controls: { id: string; label: string; readonly: boolean; control: FormControl; }[]): { [key: string]: string } {
-        return controls.reduce((acc, control) => {
-            acc[control.id] = control.control.value;
+    private getFormValues(): { [key: string]: string } {
+        return Object.keys(this.form.controls).reduce((acc, key) => {
+            acc[key] = this.form.controls[key].value;
             return acc;
         }, {} as { [key: string]: string });
     }
