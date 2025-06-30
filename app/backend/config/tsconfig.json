@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "moduleResolution": "node",
+        "module": "es2022",
+        "target": "es2017",
+        "lib": [
+            "ES2021.String"
+        ],
+        "declaration": true,
+        "declarationMap": true,
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "outDir": "../dist"
+    },
+    "include": [
+        "./../src/**/*"
+    ],
+    "exclude": [
+        "*.spec.ts"
+    ],
+    "types": [
+        "node",
+        "mocha"
+    ]
+}

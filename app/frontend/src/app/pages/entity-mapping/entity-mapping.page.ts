@@ -7,6 +7,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule, t
 import { EditorComponent } from '../../components/editor/editor.component';
 import { NGX_MONACO_EDITOR_CONFIG } from 'ngx-monaco-editor-v2';
 import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.component';
+import { RestService } from '../../services/rest/rest.service';
 
 export interface Control {
     id: string;
@@ -36,7 +37,7 @@ export class EntityMappingPage {
 
     form: FormGroup;
 
-    controls: Control[];
+    controls: Control[] = [];
 
     previews: {
         title: string,
@@ -44,89 +45,69 @@ export class EntityMappingPage {
         output: string,
     }[] = [];
 
-    // TODO: fetch from the backend
-    template = `
-\${ input.id }_energy_usage_hourly:
-    name: \${ input.name } Energy Usage Hourly
-    source: sensor.\${ input.id }_energy
-    cycle: hourly
-    unique_id: meter.\${ input.id }_energy_usage_hourly
-    offset: 0
-    delta_values: false
-\${ input.id }_energy_usage_daily:
-    name: \${ input.name } Energy Usage Daily
-    source: sensor.\${ input.id }_energy
-    cycle: daily
-    unique_id: meter.\${ input.id }_energy_usage_daily
-    offset: 0
-    delta_values: false
-\${ input.id }_energy_usage_monthly:
-    name: \${ input.name } Energy Usage Monthly
-    source: sensor.\${ input.id }_energy
-    cycle: monthly
-    unique_id: meter.\${ input.id }_energy_usage_monthly
-    offset: 0
-    delta_values: false
-    `.trim();
+    template = '';
 
     constructor(
         // private route: ActivatedRoute,
         private formBuilder: FormBuilder,
+        private rest: RestService,
     ) {
 
-        const variables = this.extractVariables(this.template);
-
-        // TODO: split module and entity info into separate forms
-        this.controls = [
-            // {
-            //     id: 'module',
-            //     label: 'Module',
-            //     readonly: true,
-            //     control: this.formBuilder.control('power_monitoring', Validators.required),
-            // },
-            // {
-            //     id: 'sourceEntityId',
-            //     label: 'Source Entity ID',
-            //     readonly: true,
-            //     control: this.formBuilder.control('sensor.office_desk_plug', Validators.required),
-            // },
-            // {
-            //     id: 'templateSourcePath',
-            //     label: 'Template Source Path',
-            //     readonly: true,
-            //     control: this.formBuilder.control('/power_monitoring/template_sensor/plug.yaml', Validators.required),
-            // },
-            // {
-            //     id: 'templateDestinationPath',
-            //     label: 'Template Destination Path',
-            //     readonly: true,
-            //     control: this.formBuilder.control('/power_monitoring/template_sensor/office_desk_plug.yaml', Validators.required),
-            // },
-
-            // standard variables for all templates
-            {
-                id: 'name',
-                label: 'Name',
-                readonly: false,
-                control: this.formBuilder.control('', Validators.required),
-            },
-            {
-                id: 'id',
-                label: 'Id',
-                readonly: false,
-                control: this.formBuilder.control('', Validators.required),
-            },
-        ];
-
-
         this.form = this.formBuilder.group([]);
-        variables.forEach(variable => this.appendToForm(variable));
+        rest.getTemplate('power_monitoring', 'template_sensor/plug.yaml').then((data) => {
+            this.template = data.content;
+            const variables = this.extractVariables(this.template);
 
-        // convenience: pre-fill ID based on the entered name
-        this.form.get('name')?.valueChanges.subscribe((value: string) => {
-            if (value) {
-                this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
-            }
+            // TODO: split module and entity info into separate forms
+            this.controls = [
+                // {
+                //     id: 'module',
+                //     label: 'Module',
+                //     readonly: true,
+                //     control: this.formBuilder.control('power_monitoring', Validators.required),
+                // },
+                // {
+                //     id: 'sourceEntityId',
+                //     label: 'Source Entity ID',
+                //     readonly: true,
+                //     control: this.formBuilder.control('sensor.office_desk_plug', Validators.required),
+                // },
+                // {
+                //     id: 'templateSourcePath',
+                //     label: 'Template Source Path',
+                //     readonly: true,
+                //     control: this.formBuilder.control('/power_monitoring/template_sensor/plug.yaml', Validators.required),
+                // },
+                // {
+                //     id: 'templateDestinationPath',
+                //     label: 'Template Destination Path',
+                //     readonly: true,
+                //     control: this.formBuilder.control('/power_monitoring/template_sensor/office_desk_plug.yaml', Validators.required),
+                // },
+
+                // standard variables for all templates
+                {
+                    id: 'name',
+                    label: 'Name',
+                    readonly: false,
+                    control: this.formBuilder.control('', Validators.required),
+                },
+                {
+                    id: 'id',
+                    label: 'Id',
+                    readonly: false,
+                    control: this.formBuilder.control('', Validators.required),
+                },
+            ];
+
+            variables.forEach(variable => this.appendToForm(variable));
+
+            // convenience: pre-fill ID based on the entered name
+            this.form.get('name')?.valueChanges.subscribe((value: string) => {
+                if (value) {
+                    this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
+                }
+            });
         });
     }
 

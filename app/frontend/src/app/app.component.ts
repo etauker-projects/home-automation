@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+// import { HttpClient } from '@angular/common/http';
 import { RouterOutlet } from '@angular/router';
+import { RestService } from './services/rest/rest.service';
 
 @Component({
   selector: 'app-root',
@@ -13,15 +14,18 @@ export class AppComponent implements OnInit {
   title = 'frontend';
   backendMessage = '';
 
-  constructor(private http: HttpClient) {}
+  constructor(private rest: RestService) {}
 
   ngOnInit() {
-    this.http.get<{ message: string }>('http://localhost:3000/').subscribe(
-      (data) => this.backendMessage = data.message,
-      (err) => {
-        console.log(err);
-        this.backendMessage = 'Error connecting to backend!';
-      }
-    );
+
+    this.rest.getStatus().then((data) => this.backendMessage = data.status);
+
+    // this.http.get<{ status: string, mode: string, time: string }>('http://localhost:9999/home-automation/v1/status').subscribe(
+    //   (data) => this.backendMessage = data.status,
+    //   (err) => {
+    //     console.log(err);
+    //     this.backendMessage = 'Error connecting to backend!';
+    //   }
+    // );
   }
 }
