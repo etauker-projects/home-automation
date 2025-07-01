@@ -8,14 +8,14 @@ import { firstValueFrom } from 'rxjs';
 })
 export class RestService {
 
-  private host: string = 'http://localhost:9999/home-automation/v1';
+  private host: string = 'http://localhost:9999/home-automation/v1/templating';
 
   constructor(
     private http: HttpClient,
   ) { }
 
   public async getStatus(): Promise<{ status: string, mode: string, time: string }> {
-    const endpoint = `${this.host}/status`;
+    const endpoint = `http://localhost:9999/home-automation/v1/status`;
     const response = this.http.get<{ status: string, mode: string, time: string }>(endpoint);
     return firstValueFrom(response)
   }
@@ -39,7 +39,7 @@ export class RestService {
   }
 
   public async getTemplate(moduleId: string, templateId: string): Promise<any> {
-    // const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}`;
+    // const endpoint = `${this.host}/modules/${moduleId}/templates/${encodeURIComponent(templateId)}`;
     // const response = this.http.get<any>(endpoint);
     // return firstValueFrom(response);
     return Promise.resolve({

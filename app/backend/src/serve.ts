@@ -31,7 +31,7 @@ try {
 
     const server = new Server({ port, apiRoot })
         .register('/v1/status', StatusController.getInstance(connector))
-        .register('/v1/modules', ModuleController.getInstance(connector, appConfiguration))
+        .register('/v1/templating/modules', ModuleController.getInstance(connector, appConfiguration))
         .start();
 
 } catch (error) {
