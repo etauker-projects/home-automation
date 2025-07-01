@@ -9,8 +9,6 @@ import type { PersistenceConnector } from '../persistence/persistence.connector'
 export class StatusController extends ApiController implements IController {
 
     private static instance: StatusController;
-    private router: express.Router;
-    private stopped: boolean;
 
 
     // ===========================================
@@ -18,9 +16,6 @@ export class StatusController extends ApiController implements IController {
     // ===========================================
     constructor(connector: PersistenceConnector) {
         super(connector);
-        // eslint-disable-next-line new-cap
-        this.router = express.Router();
-        this.stopped = false;
     }
 
     // ===========================================
@@ -38,14 +33,9 @@ export class StatusController extends ApiController implements IController {
     //               PUBLIC FUNCTIONS
     // ===========================================
     public getRouter(prefix: string): express.Router {
-        return this.registerEndpoints(this.router, prefix, [
+        return this.registerEndpoints(prefix, [
             { method: 'get', endpoint: '', handler: this.getStatus },
         ]);
-    }
-
-    public stop(): Promise<boolean> {
-        this.stopped = true;
-        return Promise.resolve(this.stopped);
     }
 
     public async getStatus(
@@ -54,7 +44,7 @@ export class StatusController extends ApiController implements IController {
         res: express.Response,
     ): Promise<IResponse<any>> {
         return { status: 200, body: {
-            status: this.stopped ? 'stopped' : 'running',
+            status: this.isStopped() ? 'stopped' : 'running',
             mode: Extractor.extractString('MODE', 'unknown').toLowerCase(),
             time: new Date().toISOString(),
         }};

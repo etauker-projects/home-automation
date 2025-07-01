@@ -8,16 +8,11 @@ import { ModuleService } from './module.service';
 export class ModuleController extends ApiController implements IController {
 
     private static instance: ModuleController;
-    private router: express.Router;
-    private stopped: boolean;
     private service: ModuleService;
 
     constructor(connector: PersistenceConnector, config: AppConfiguration) {
         super(connector);
         this.service = new ModuleService(config);
-        // eslint-disable-next-line new-cap
-        this.router = express.Router();
-        this.stopped = false;
     }
 
     public static getInstance(connector: PersistenceConnector, config: AppConfiguration): ModuleController {
@@ -28,17 +23,12 @@ export class ModuleController extends ApiController implements IController {
     }
 
     public getRouter(prefix: string): express.Router {
-        return this.registerEndpoints(this.router, prefix, [
+        return this.registerEndpoints(prefix, [
             { method: 'get', endpoint: '', handler: this.getModules },
             // { method: 'get', endpoint: '/:moduleId/template-files', handler: this.getTemplates },
             // { method: 'get', endpoint: '/:moduleId/template-files/:templateId', handler: this.getTemplate },
             // { method: 'get', endpoint: '/:moduleId/entity-files', handler: this.getEntities },
         ]);
-    }
-
-    public stop(): Promise<boolean> {
-        this.stopped = true;
-        return Promise.resolve(this.stopped);
     }
 
     private async getModules(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {

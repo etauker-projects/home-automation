@@ -10,14 +10,27 @@ export class ApiController {
 
     private logger: LogService;
     private auth: AuthService;
+    private router: express.Router;
+    private stopped: boolean;
 
     constructor(connector: PersistenceConnector) {
         this.logger = LogFactory.makeService();
         this.auth = AuthFactory.makeService();
+        // eslint-disable-next-line new-cap
+        this.router = express.Router();
+        this.stopped = false;
+    }
+
+    public stop(): Promise<boolean> {
+        this.stopped = true;
+        return Promise.resolve(this.stopped);
+    }
+
+    public isStopped(): boolean {
+        return this.stopped;
     }
 
     protected registerEndpoints(
-        router: express.Router,
         prefix: string,
         registrations: IEndpoint[]
     ): express.Router {
@@ -38,10 +51,10 @@ export class ApiController {
                 }
             };
 
-            (router as any)[method](endpoint, handler);
+            (this.router as any)[method](endpoint, handler);
             this.logger.info(`-- ${ method.toUpperCase() } ${ prefix }${ endpoint }`);
         });
-        return router;
+        return this.router;
     }
 
     protected parseError(error: any): IResponse<{ message: string }> {
