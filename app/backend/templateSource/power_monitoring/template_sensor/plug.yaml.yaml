@@ -1,0 +1,39 @@
+- name: ${ input.name } Running Cost
+  unique_id: sensor.${ input.id }_running_cost
+  unit_of_measurement: "cents"
+  state_class: total_increasing
+  icon: mdi:currency-eur
+  state: >
+    {% set consumption = float(states('sensor.${ input.id }_energy'), 0.0) %}
+    {% set price = float(states('input_number.electricity_rate'), 0.0) %}
+    {{ (consumption * price * 100) | round(2, default=0) }}
+
+- name: ${ input.name } Running Cost Hourly
+  unique_id: sensor.${ input.id }_running_cost_hourly
+  unit_of_measurement: "cents"
+  state_class: total_increasing
+  icon: mdi:currency-eur
+  state: >
+    {% set consumption = float(states('sensor.${ input.id }_energy_usage_hourly'), 0.0) %}
+    {% set price = float(states('input_number.electricity_rate'), 0.0) %}
+    {{ (consumption * price * 100) | round(2, default=0) }}
+
+- name: ${ input.name } Running Cost Daily
+  unique_id: sensor.${ input.id }_running_cost_daily
+  unit_of_measurement: "cents"
+  state_class: total_increasing
+  icon: mdi:currency-eur
+  state: >
+    {% set consumption = float(states('sensor.${ input.id }_energy_usage_daily'), 0.0) %}
+    {% set price = float(states('input_number.electricity_rate'), 0.0) %}
+    {{ (consumption * price * 100) | round(2, default=0) }}
+
+- name: ${ input.name } Running Cost Monthly
+  unique_id: sensor.${ input.id }_running_cost_monthly
+  unit_of_measurement: "cents"
+  state_class: total_increasing
+  icon: mdi:currency-eur
+  state: >
+    {% set consumption = float(states('sensor.${ input.id }_energy_usage_monthly'), 0.0) %}
+    {% set price = float(states('input_number.electricity_rate'), 0.0) %}
+    {{ (consumption * price ls -la00) | round(2, default=0) }}

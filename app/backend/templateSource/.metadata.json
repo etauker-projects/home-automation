@@ -1,0 +1,9 @@
+{
+    "modules": [
+        {
+            "id": "power_monitoring",
+            "name": "Power Monitoring",
+            "description": "Module for monitoring power usage and statistics."
+        }
+    ]
+}

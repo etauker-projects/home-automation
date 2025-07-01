@@ -1,0 +1,21 @@
+${ input.id }_energy_usage_hourly:
+    name: ${ input.name } Energy Usage Hourly
+    source: sensor.${ input.id }_energy
+    cycle: hourly
+    unique_id: meter.${ input.id }_energy_usage_hourly
+    offset: 0
+    delta_values: false
+${ input.id }_energy_usage_daily:
+    name: ${ input.name } Energy Usage Daily
+    source: sensor.${ input.id }_energy
+    cycle: daily
+    unique_id: meter.${ input.id }_energy_usage_daily
+    offset: 0
+    delta_values: false
+${ input.id }_energy_usage_monthly:
+    name: ${ input.name } Energy Usage Monthly
+    source: sensor.${ input.id }_energy
+    cycle: monthly
+    unique_id: meter.${ input.id }_energy_usage_monthly
+    offset: 0
+    delta_values: false

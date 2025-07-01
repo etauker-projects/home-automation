@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 // import { LogFactory } from './microservice/logs/log.module';
 import { Server } from './microservice/server/server';
 import { StatusController } from './microservice/status/status.controller';
+import { ModuleController } from './templating/module/module.controller';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 // import { PersistenceFactory } from './microservice/persistence/persistence.factory';
 // import { IngredientGroupController } from './ingredient-group/ingredient-group.controller';
 
@@ -18,9 +21,17 @@ try {
     // const connector = PersistenceFactory.makeConnector(config);
     const connector = {} as any;
 
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+
+    const appConfiguration = {
+        inputDirectory: resolve(__dirname, '../templateSource'),
+        outputDirectory: resolve(__dirname, '../templateDestination'),
+    };
+
     const server = new Server({ port, apiRoot })
         .register('/v1/status', StatusController.getInstance(connector))
-        // .register('/v1/ingredient-group', IngredientGroupController.getInstance(connector))
+        .register('/v1/modules', ModuleController.getInstance(connector, appConfiguration))
         .start();
 
 } catch (error) {
