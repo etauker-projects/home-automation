@@ -14,6 +14,18 @@
                     "id": "c8166f12-e08d-4d1b-b4b1-e65b48297ec4",
                     "type": "utility_meter"
                 }
+            ],
+            "entities": [
+                {
+                    "id": "generic_plug",
+                    "templateId": "63aa7c32-c129-4271-8478-55ee4d6a3542",
+                    "type": "template_sensor",
+                    "managed": true,
+                    "variables": {
+                        "id": "generic_plug",
+                        "name": "Generic Plug"
+                    }
+                }
             ]
         }
     ]

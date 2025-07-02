@@ -19,6 +19,8 @@ export interface EntityMetadata {
     id: string;
     templateId: string;
     type: string;
+    managed: boolean;
+    variables: { [key: string]: string };
 }
 
 export interface EntityFile extends EntityMetadata {

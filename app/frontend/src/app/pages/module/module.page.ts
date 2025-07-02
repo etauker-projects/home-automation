@@ -49,6 +49,7 @@ export class ModulePage {
       { key: 'id', label: 'Entity' },
       { key: 'templateId', label: 'Template' },
       { key: 'type', label: 'Type' },
+      { key: 'managed', label: 'Managed' },
     ];
 
     this.entityMappingActions = [

@@ -4,6 +4,7 @@ export interface Module {
     name: string;
     description: string;
     templates?: TemplateMetadata[];
+    entities?: EntityMetadata[];
 }
 
 export interface TemplateMetadata {
@@ -19,6 +20,8 @@ export interface EntityMetadata {
     id: string;
     templateId: string;
     type: string;
+    managed: boolean;
+    variables: { [key: string]: string };
 }
 
 export interface EntityFile extends EntityMetadata {

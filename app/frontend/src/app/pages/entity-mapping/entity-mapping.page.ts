@@ -49,6 +49,7 @@ export class EntityMappingPage {
         title: string,
         template: string,
         output: string,
+        variables: { [key: string]: string },
     }[] = [];
 
     template = '';
@@ -194,6 +195,7 @@ export class EntityMappingPage {
                         title: title,
                         template: template,
                         output: this.substitueVariables(template, variables),
+                        variables,
                     };
 
                 });
@@ -212,6 +214,7 @@ export class EntityMappingPage {
                         title: title,
                         template: template,
                         output: this.substitueVariables(template, variables),
+                        variables,
                     };
 
                 });
@@ -233,6 +236,8 @@ export class EntityMappingPage {
             id: this.entityId!,
             templateId: this.templateId!,
             type: this.templateType!,
+            managed: true,
+            variables: this.previews.reduce((vars, preview) => ({ ...vars, ...preview.variables }), {}),
             content: str,
         }
 

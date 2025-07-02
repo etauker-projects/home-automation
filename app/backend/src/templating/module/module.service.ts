@@ -27,6 +27,19 @@ export class ModuleService {
         return modules.find(module => module.id === moduleId);
     }
 
+    public async saveModule(module: Module): Promise<Module> {
+        const modules = await this.getModules();
+        const index = modules.findIndex(m => m.id === module.id);
+        if (index > -1) {
+            modules.splice(index, 1, module);
+            const payload = JSON.stringify({ modules });
+            const sourceRoot = resolve(this.sourceDirectory);
+            const metadataPath = resolve(sourceRoot, '.metadata.json');
+            await writeFile(metadataPath, payload, { encoding: 'utf-8', flag: 'wx' });
+        }
+        return this.getModule(module.id);
+    }
+
     public async getTemplateFiles(moduleId: string): Promise<TemplateMetadata[]> {
         const module = await this.getModule(moduleId);
         return module.templates ?? [];
@@ -51,7 +64,11 @@ export class ModuleService {
                 const id = parts.pop().replace('.yaml', '');
                 const type = parts.pop();
                 const resolvedTemplateId = module.templates.find(t => t.type === type).id;
-                return { id, templateId: resolvedTemplateId, type };
+
+                const meta = module.entities.find(meta => meta.templateId === templateId && meta.id === id);
+                const managed = !!meta;
+                const variables = managed ? meta.variables : {};
+                return { id, templateId: resolvedTemplateId, type, managed, variables };
             })
             .filter(meta => meta.templateId === templateId)
         ;
@@ -59,8 +76,7 @@ export class ModuleService {
 
     public async getTemplateFile(moduleId: string, templateId: string): Promise<TemplateFile> {
         const module = await this.getModule(moduleId);
-        const templateFiles = module.templates ?? [];
-        const meta = templateFiles.find(meta => meta.id === templateId);
+        const meta = (module.templates ?? []).find(meta => meta.id === templateId);
         const path = this.formatPath(module.key, meta.type, 'template');
         const fullpath = resolve(this.sourceDirectory, path.substring(1));
 
@@ -68,36 +84,25 @@ export class ModuleService {
             encoding: 'utf-8',
         });
 
-        return {
-            id: templateId,
-            type: meta.type,
-            content: contents,
-        }
+        return { ...meta, content: contents };
     }
 
     public async getEntityFile(moduleId: string, templateId: string, entityId: string): Promise<EntityFile> {
-        const entityFiles = await this.getEntityFiles(moduleId, templateId);
-        const meta = entityFiles.find(meta => meta.id === entityId);
-        const path = this.formatPath(moduleId, meta.type, entityId);
+        const module = await this.getModule(moduleId);
+        const meta = (module.entities ?? []).find(meta => meta.id === entityId);
+        const path = this.formatPath(moduleId, meta.type, meta.id);
         const fullpath = resolve(this.destinationDirectory, path.substring(1));
 
         const contents = await readFile(fullpath, {
             encoding: 'utf-8',
         });
 
-        return {
-            id: entityId,
-            templateId: templateId,
-            type: meta.type,
-            content: contents,
-        }
+        return { ...meta, content: contents };
     }
 
     public async saveEntityFile(moduleId: string, templateId: string, file: EntityFile): Promise<EntityFile> {
         const module = await this.getModule(moduleId);
-        const templateFiles = module.templates ?? [];
-        const meta = templateFiles.find(meta => meta.id === templateId);
-        const path = this.formatPath(module.key, meta.type, file.id);
+        const path = this.formatPath(module.key, file.type, file.id);
         const fullpath = resolve(this.destinationDirectory, path.substring(1));
 
         try {
@@ -106,6 +111,18 @@ export class ModuleService {
         } catch (err: any) {
             if (err.code === 'ENOENT') {
                 await writeFile(fullpath, file.content, { encoding: 'utf-8', flag: 'wx' });
+                delete file.content;
+
+                if (!module.entities) {
+                    module.entities = [];
+                }
+                const index = module.entities.findIndex(meta => meta.templateId === templateId && meta.id === file.id);
+                if (index > -1) {
+                    module.entities?.splice(index, 1, file);
+                } else {
+                    module.entities.push(file);
+                }
+                await this.saveModule(module);
                 return file;
             }
             throw err;
