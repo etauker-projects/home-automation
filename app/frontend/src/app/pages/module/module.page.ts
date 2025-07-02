@@ -3,7 +3,7 @@ import { TableComponent } from '../../components/table/table.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { TableAction, TableColumn, TableRow } from '../../components/table/table.interfaces';
 import { RestService } from '../../services/rest/rest.service';
-import type { EntityMetadata, TemplateMetadata } from './module.interfaces';
+import type { EntityMetadata } from './module.interfaces';
 
 @Component({
   selector: 'app-module-page',
@@ -15,8 +15,8 @@ import type { EntityMetadata, TemplateMetadata } from './module.interfaces';
 })
 export class ModulePage {
 
-  public templateColumns: TableColumn<TemplateMetadata>[];
-  public templateRows: TableRow<TemplateMetadata>[] = [];
+//   public templateColumns: TableColumn<TemplateMetadata>[];
+//   public templateRows: TableRow<TemplateMetadata>[] = [];
 
   public entityMappingColumns: TableColumn<EntityMetadata>[];
   public entityMappingRows: TableRow<EntityMetadata>[] = [];
@@ -30,18 +30,19 @@ export class ModulePage {
         this.moduleId = params.get('moduleId') ?? undefined;
 
         if (this.moduleId) {
-            this.templateRows = await this.rest.getTemplateFiles(this.moduleId);
+            // this.templateRows = await this.rest.getTemplateFiles(this.moduleId);
 
-            const promises = this.templateRows.map(template => this.rest.getEntityFiles(this.moduleId!, template.id));
+            const templates = await this.rest.getTemplateFiles(this.moduleId);
+            const promises = templates.map(template => this.rest.getEntityFiles(this.moduleId!, template.id));
             this.entityMappingRows = (await Promise.all(promises)).flat();
         }
     });
 
-    this.templateColumns = [
-      // { key: 'id', label: 'ID' },
-      { key: 'id', label: 'ID' },
-      { key: 'type', label: 'type' },
-    ];
+    // this.templateColumns = [
+    //   // { key: 'id', label: 'ID' },
+    //   { key: 'id', label: 'ID' },
+    //   { key: 'type', label: 'type' },
+    // ];
 
     // Second table data
     this.entityMappingColumns = [
