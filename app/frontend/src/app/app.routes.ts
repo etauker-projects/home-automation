@@ -10,7 +10,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/module/module.page').then(m => m.ModulePage)
     },
     {
-        path: 'modules/:moduleId/entities/:entityId',
+        path: 'modules/:moduleId/entities/:templatePath',
         loadComponent: () => import('./pages/entity-mapping/entity-mapping.page').then(m => m.EntityMappingPage)
     },
 ];

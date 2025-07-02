@@ -38,8 +38,8 @@ export class RestService {
     return firstValueFrom(response)
   }
 
-  public async getTemplate(moduleId: string, templateId: string): Promise<any> {
-    const endpoint = `${this.host}/modules/${moduleId}/template-files/${encodeURIComponent(templateId)}`;
+  public async getTemplateFile(moduleId: string, templatePath: string): Promise<any> {
+    const endpoint = `${this.host}/modules/${moduleId}/template-files/${encodeURIComponent(templatePath)}`;
     const response = this.http.get<any>(endpoint);
     return firstValueFrom(response);
   }

@@ -3,7 +3,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableComponent } from '../../components/table/table.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule, type FormControl } from '@angular/forms';
-// import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { EditorComponent } from '../../components/editor/editor.component';
 import { NGX_MONACO_EDITOR_CONFIG } from 'ngx-monaco-editor-v2';
 import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.component';
@@ -35,6 +35,9 @@ export interface Control {
 export class EntityMappingPage {
     private readonly regexString = '\\${\\s*input\\.KEY\\s*}';
 
+    private moduleId?: string;
+    private templatePath?: string;
+
     form: FormGroup;
 
     controls: Control[] = [];
@@ -48,66 +51,76 @@ export class EntityMappingPage {
     template = '';
 
     constructor(
-        // private route: ActivatedRoute,
+        private route: ActivatedRoute,
         private formBuilder: FormBuilder,
         private rest: RestService,
     ) {
 
         this.form = this.formBuilder.group([]);
-        rest.getTemplate('power_monitoring', 'template_sensor/plug.yaml').then((data) => {
-            this.template = data.content;
-            const variables = this.extractVariables(this.template);
+        this.route.paramMap.subscribe(async params => {
+            this.moduleId = params.get('moduleId') ?? undefined;
+            this.templatePath = params.get('templatePath') ? decodeURIComponent(params.get('templatePath')!) : undefined;
 
-            // TODO: split module and entity info into separate forms
-            this.controls = [
-                // {
-                //     id: 'module',
-                //     label: 'Module',
-                //     readonly: true,
-                //     control: this.formBuilder.control('power_monitoring', Validators.required),
-                // },
-                // {
-                //     id: 'sourceEntityId',
-                //     label: 'Source Entity ID',
-                //     readonly: true,
-                //     control: this.formBuilder.control('sensor.office_desk_plug', Validators.required),
-                // },
-                // {
-                //     id: 'templateSourcePath',
-                //     label: 'Template Source Path',
-                //     readonly: true,
-                //     control: this.formBuilder.control('/power_monitoring/template_sensor/plug.yaml', Validators.required),
-                // },
-                // {
-                //     id: 'templateDestinationPath',
-                //     label: 'Template Destination Path',
-                //     readonly: true,
-                //     control: this.formBuilder.control('/power_monitoring/template_sensor/office_desk_plug.yaml', Validators.required),
-                // },
+            if (this.moduleId && this.templatePath) {
 
-                // standard variables for all templates
-                {
-                    id: 'name',
-                    label: 'Name',
-                    readonly: false,
-                    control: this.formBuilder.control('', Validators.required),
-                },
-                {
-                    id: 'id',
-                    label: 'Id',
-                    readonly: false,
-                    control: this.formBuilder.control('', Validators.required),
-                },
-            ];
+                rest.getTemplateFile(this.moduleId, this.templatePath).then((data) => {
+                    this.template = data.content;
+                    const variables = this.extractVariables(this.template);
 
-            variables.forEach(variable => this.appendToForm(variable));
+                    // TODO: split module and entity info into separate forms
+                    this.controls = [
+                        // {
+                        //     id: 'module',
+                        //     label: 'Module',
+                        //     readonly: true,
+                        //     control: this.formBuilder.control('power_monitoring', Validators.required),
+                        // },
+                        // {
+                        //     id: 'sourceEntityId',
+                        //     label: 'Source Entity ID',
+                        //     readonly: true,
+                        //     control: this.formBuilder.control('sensor.office_desk_plug', Validators.required),
+                        // },
+                        // {
+                        //     id: 'templateSourcePath',
+                        //     label: 'Template Source Path',
+                        //     readonly: true,
+                        //     control: this.formBuilder.control('/power_monitoring/template_sensor/plug.yaml', Validators.required),
+                        // },
+                        // {
+                        //     id: 'templateDestinationPath',
+                        //     label: 'Template Destination Path',
+                        //     readonly: true,
+                        //     control: this.formBuilder.control('/power_monitoring/template_sensor/office_desk_plug.yaml', Validators.required),
+                        // },
 
-            // convenience: pre-fill ID based on the entered name
-            this.form.get('name')?.valueChanges.subscribe((value: string) => {
-                if (value) {
-                    this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
-                }
-            });
+                        // standard variables for all templates
+                        {
+                            id: 'name',
+                            label: 'Name',
+                            readonly: false,
+                            control: this.formBuilder.control('', Validators.required),
+                        },
+                        {
+                            id: 'id',
+                            label: 'Id',
+                            readonly: false,
+                            control: this.formBuilder.control('', Validators.required),
+                        },
+                    ];
+
+                    variables.forEach(variable => this.appendToForm(variable));
+
+                    // convenience: pre-fill ID based on the entered name
+                    this.form.get('name')?.valueChanges.subscribe((value: string) => {
+                        if (value) {
+                            this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
+                        }
+                    });
+
+                });
+            }
+
         });
     }
 
@@ -161,23 +174,43 @@ export class EntityMappingPage {
         if (this.form.valid) {
             const entities = parse(this.template);
 
-            // TODO: handle case where entities is an array
-            this.previews = Object.keys(entities).map(key => {
+            if (!entities) {
+                console.warn('No entities found in the template file');
+                this.previews = [];
+            } else if (Array.isArray(entities)) {
+                this.previews = entities.map((entity, index) => {
 
-                const json: { [key: string]: any } = {};
-                json[key] = entities[key];
-                const node = parse(JSON.stringify(json));
-                const template = stringify(node, { indent: 4 });
-                const title = this.extractTitle(entities[key], key);
+                    const node = parse(JSON.stringify(entity));
+                    const template = stringify(node, { indent: 4 });
+                    const title = this.extractTitle(entity, `${index}`);
+                    const variables = this.getFormValues();
 
-                const variables = this.getFormValues();
+                    return {
+                        title: title,
+                        template: template,
+                        output: this.substitueVariables(template, variables),
+                    };
 
-                return {
-                    title: title,
-                    template: template,
-                    output: this.substitueVariables(template, variables),
-                };
-            });
+                });
+            } else if (typeof entities === 'object') {
+                this.previews = Object.keys(entities).map(key => {
+
+                    const json: { [key: string]: any } = {};
+                    json[key] = entities[key];
+                    const node = parse(JSON.stringify(json));
+                    const template = stringify(node, { indent: 4 });
+                    const title = this.extractTitle(entities[key], key);
+
+                    const variables = this.getFormValues();
+
+                    return {
+                        title: title,
+                        template: template,
+                        output: this.substitueVariables(template, variables),
+                    };
+
+                });
+            }
         }
     }
     private getFormValues(): { [key: string]: string } {

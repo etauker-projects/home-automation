@@ -66,7 +66,7 @@ export class ModulePage {
             label: 'Details',
             // icon: 'navigate',
             handle: (row: TableRow<EntityMapping>) => {
-                this.router.navigate(['/modules', this.moduleId, 'entities', row.id]);
+                this.router.navigate(['/modules', this.moduleId, 'entities', encodeURIComponent(row.templatePath)]);
             },
         },
         // {

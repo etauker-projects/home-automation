@@ -84,9 +84,9 @@ export class ModuleService {
 
     public async getTemplateFile(moduleId: string, templatePath: string): Promise<{ path: string; content: string }> {
         const destinationRoot = resolve(this.sourceDirectory);
-        const modulePath = resolve(destinationRoot, moduleId, templatePath);
+        const templateFilePath = resolve(destinationRoot, templatePath.substring(1));
 
-        const contents = await readFile(modulePath, {
+        const contents = await readFile(templateFilePath, {
             encoding: 'utf-8',
         });
 
