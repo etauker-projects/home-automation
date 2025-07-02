@@ -4,9 +4,33 @@ import type { AppConfiguration } from '../../app';
 
 export interface Module {
     id: string;
+    key: string;
     name: string;
     description: string;
 }
+
+export interface TemplateMetadata {
+    id: string;
+    moduleId: string;
+    path: string;
+    type: string;
+}
+
+export interface TemplateFile extends TemplateMetadata {
+    content: string;
+}
+
+export interface EntityMetadata {
+    id: string;
+    templateId: string;
+    path: string;
+    type: string;
+}
+
+export interface EntityFile extends EntityMetadata{
+    content: string;
+}
+
 
 export class ModuleService {
 
@@ -97,7 +121,7 @@ export class ModuleService {
     }
 
     public async saveEntityFile(moduleId: string, templatePath: string, content: string): Promise<{ path: string; content: string }> {
-        const destinationRoot = resolve(this.sourceDirectory);
+        const destinationRoot = resolve(this.destinationDirectory);
         const templateFilePath = resolve(destinationRoot, templatePath.substring(1));
 
         try {

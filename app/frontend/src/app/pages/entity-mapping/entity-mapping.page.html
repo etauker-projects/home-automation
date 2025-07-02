@@ -12,3 +12,5 @@
     <h2>{{ preview.title }}</h2>
     <app-diff-editor [original]="preview.template" [modified]="preview.output"></app-diff-editor>
 </section>
+
+<button *ngIf="(previews?.length || 0) > 0" (click)="onSave()" class="entity-mapping-form">Save</button>

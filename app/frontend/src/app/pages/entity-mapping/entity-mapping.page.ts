@@ -213,6 +213,22 @@ export class EntityMappingPage {
             }
         }
     }
+
+    onSave() {
+
+        if (this.previews.length === 0) {
+            console.warn('No previews to save');
+            return;
+        }
+
+        const str = stringify(this.previews.map(preview => parse(preview.output)), { indent: 4 });
+
+        console.log('Saving string:', str);
+        this.rest.postEntityFile(this.moduleId!, this.templatePath!, str).then(() => {
+            console.log('Entity file saved successfully');
+        });
+    }
+
     private getFormValues(): { [key: string]: string } {
         return Object.keys(this.form.controls).reduce((acc, key) => {
             acc[key] = this.form.controls[key].value;

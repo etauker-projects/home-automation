@@ -20,6 +20,7 @@ export class Server {
         this.controllers = [];
         this.app = express();
         this.app.use(cors()); // Enable CORS for all routes
+        this.app.use(express.json());
         this.apiRoot = config.apiRoot ?? '/api';
         this.port = config.port ?? 9999;
     }
