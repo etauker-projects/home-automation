@@ -43,4 +43,10 @@ export class RestService {
     const response = this.http.get<any>(endpoint);
     return firstValueFrom(response);
   }
+
+  public async postEntityFile(moduleId: string, templatePath: string, content: string): Promise<string> {
+    const endpoint = `${this.host}/modules/${moduleId}/template-files/${encodeURIComponent(templatePath)}/entity-files`;
+    const response = this.http.post<{ content: string }>(endpoint, { content });
+    return firstValueFrom(response).then(res => res.content);
+  }
 }

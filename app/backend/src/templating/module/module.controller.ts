@@ -28,6 +28,7 @@ export class ModuleController extends ApiController implements IController {
             { method: 'get', endpoint: '/:moduleId/template-files', handler: this.getTemplateFiles },
             { method: 'get', endpoint: '/:moduleId/template-files/:templatePath', handler: this.getTemplateFile },
             { method: 'get', endpoint: '/:moduleId/entity-files', handler: this.getEntityFiles },
+            { method: 'post', endpoint: '/:moduleId/template-files/:templatePath/entity-files', handler: this.postEntityFile },
         ]);
     }
 
@@ -52,6 +53,14 @@ export class ModuleController extends ApiController implements IController {
         const { moduleId } = req.params;
         const templatePath = decodeURIComponent(req.params.templatePath);
         const template = await this.service.getTemplateFile(moduleId, templatePath);
+        return { status: 200, body: template };
+    }
+
+    private async postEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
+        const { moduleId } = req.params;
+        const templatePath = decodeURIComponent(req.params.templatePath);
+        const content = req.body.content;
+        const template = await this.service.saveEntityFile(moduleId, templatePath, content);
         return { status: 200, body: template };
     }
 }

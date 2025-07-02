@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { readFile, readdir } from 'fs/promises';
+import { readFile, readdir, writeFile } from 'fs/promises';
 import type { AppConfiguration } from '../../app';
 
 export interface Module {
@@ -93,6 +93,26 @@ export class ModuleService {
         return {
             path: templatePath,
             content: contents,
+        }
+    }
+
+    public async saveEntityFile(moduleId: string, templatePath: string, content: string): Promise<{ path: string; content: string }> {
+        const destinationRoot = resolve(this.sourceDirectory);
+        const templateFilePath = resolve(destinationRoot, templatePath.substring(1));
+
+        try {
+            await readFile(templateFilePath, { encoding: 'utf-8' });
+            throw new Error(`File already exists: ${templateFilePath}`);
+        } catch (err: any) {
+            if (err.code === 'ENOENT') {
+
+                await writeFile(templateFilePath, content, { encoding: 'utf-8', flag: 'wx' });
+                return {
+                    path: templatePath,
+                    content: content,
+                };
+            }
+            throw err;
         }
     }
 }
