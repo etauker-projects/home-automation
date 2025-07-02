@@ -56,8 +56,8 @@ export class ModulePage {
     // Second table data
     this.entityMappingColumns = [
       { key: 'id', label: 'Entity' },
-      { key: 'path', label: 'Path' },
       { key: 'templatePath', label: 'Template' },
+      { key: 'path', label: 'Path' },
     ];
 
     this.entityMappingActions = [

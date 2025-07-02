@@ -26,6 +26,7 @@ export class ModuleController extends ApiController implements IController {
         return this.registerEndpoints(prefix, [
             { method: 'get', endpoint: '', handler: this.getModules },
             { method: 'get', endpoint: '/:moduleId/template-files', handler: this.getTemplateFiles },
+            { method: 'get', endpoint: '/:moduleId/template-files/:templatePath', handler: this.getTemplateFile },
             { method: 'get', endpoint: '/:moduleId/entity-files', handler: this.getEntityFiles },
         ]);
     }
@@ -47,33 +48,10 @@ export class ModuleController extends ApiController implements IController {
         return { status: 200, body: modules };
     }
 
-    // private async getTemplate(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
-    //     // TODO: Replace with real data source
-    //     const { moduleId } = req.params;
-    //     const templateId: string = decodeURIComponent(req.params.templateId);
-    //     return { status: 200, body: {
-    //   content: `
-// \${ input.id }_energy_usage_hourly:
-//     name: \${ input.name } Energy Usage Hourly
-//     source: sensor.\${ input.id }_energy
-//     cycle: hourly
-//     unique_id: meter.\${ input.id }_energy_usage_hourly
-//     offset: 0
-//     delta_values: false
-// \${ input.id }_energy_usage_daily:
-//     name: \${ input.name } Energy Usage Daily
-//     source: sensor.\${ input.id }_energy
-//     cycle: daily
-//     unique_id: meter.\${ input.id }_energy_usage_daily
-//     offset: 0
-//     delta_values: false
-// \${ input.id }_energy_usage_monthly:
-//     name: \${ input.name } Energy Usage Monthly
-//     source: sensor.\${ input.id }_energy
-//     cycle: monthly
-//     unique_id: meter.\${ input.id }_energy_usage_monthly
-//     offset: 0
-//     delta_values: false`.trim()
-    //   }};
-    // }
+    private async getTemplateFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
+        const { moduleId } = req.params;
+        const templatePath = decodeURIComponent(req.params.templatePath);
+        const template = await this.service.getTemplateFile(moduleId, templatePath);
+        return { status: 200, body: template };
+    }
 }

@@ -81,4 +81,18 @@ export class ModuleService {
                 return { id, path, templatePath };
             });
     }
+
+    public async getTemplateFile(moduleId: string, templatePath: string): Promise<{ path: string; content: string }> {
+        const destinationRoot = resolve(this.sourceDirectory);
+        const modulePath = resolve(destinationRoot, moduleId, templatePath);
+
+        const contents = await readFile(modulePath, {
+            encoding: 'utf-8',
+        });
+
+        return {
+            path: templatePath,
+            content: contents,
+        }
+    }
 }
