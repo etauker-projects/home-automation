@@ -48,6 +48,7 @@ export class ModuleService {
     public async getEntityFiles(moduleId: string, templateId: string): Promise<EntityMetadata[]> {
         const destinationRoot = resolve(this.destinationDirectory);
         const module = await this.getModule(moduleId);
+        const template = (module.templates ?? []).find(t => t.id === templateId);
         const modulePath = resolve(destinationRoot, module.key);
 
         const items = await readdir(modulePath, {
@@ -59,18 +60,16 @@ export class ModuleService {
         return items
             .filter(item => item.isFile())
             .map(item => resolve(item.parentPath, item.name).replace(destinationRoot, ''))
+            .filter(path => path.includes(template?.type))
             .map(path => {
                 const parts = path.split('/');
                 const id = parts.pop().replace('.yaml', '');
                 const type = parts.pop();
-                const resolvedTemplateId = module.templates.find(t => t.type === type).id;
-
                 const meta = module.entities.find(meta => meta.templateId === templateId && meta.id === id);
                 const managed = !!meta;
                 const variables = managed ? meta.variables : {};
-                return { id, templateId: resolvedTemplateId, type, managed, variables };
+                return { id, templateId: meta?.templateId, type, managed, variables };
             })
-            .filter(meta => meta.templateId === templateId)
         ;
     }
 
