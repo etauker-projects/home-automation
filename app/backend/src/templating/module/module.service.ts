@@ -11,9 +11,11 @@ export interface Module {
 export class ModuleService {
 
     private sourceDirectory: string;
+    private destinationDirectory: string;
 
     constructor(appconfig: AppConfiguration) {
         this.sourceDirectory = appconfig.inputDirectory;
+        this.destinationDirectory = appconfig.outputDirectory;
     }
 
     public async getModules(): Promise<Module[]> {
@@ -57,5 +59,26 @@ export class ModuleService {
         return items
             .filter(item => item.isFile())
             .map(item => resolve(item.parentPath, item.name).replace(sourceRoot, ''))
+    }
+
+    public async getEntityFiles(moduleId: string): Promise<{ id: string; path: string; templatePath: string }[]> {
+        const destinationRoot = resolve(this.destinationDirectory);
+        const modulePath = resolve(destinationRoot, moduleId);
+
+        const items = await readdir(modulePath, {
+            withFileTypes: true,
+            recursive: true,
+            encoding: 'utf-8',
+        });
+
+        return items
+            .filter(item => item.isFile())
+            .map(item => resolve(item.parentPath, item.name).replace(destinationRoot, ''))
+            .map(path => {
+                const parts = path.split('/');
+                const id = parts[parts.length - 1].replace('.yaml', '');
+                const templatePath = path.replace(id, 'plug');
+                return { id, path, templatePath };
+            });
     }
 }

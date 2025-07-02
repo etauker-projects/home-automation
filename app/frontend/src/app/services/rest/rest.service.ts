@@ -26,15 +26,15 @@ export class RestService {
     return firstValueFrom(response)
   }
 
-  public async getTemplateFiles(moduleId: string): Promise<any> {
+  public async getTemplateFiles(moduleId: string): Promise<string[]> {
     const endpoint = `${this.host}/modules/${moduleId}/template-files`;
-    const response = this.http.get<any>(endpoint);
+    const response = this.http.get<string[]>(endpoint);
     return firstValueFrom(response)
   }
 
-  public async getEntities(moduleId: string): Promise<any> {
-    const endpoint = `${this.host}/modules/${moduleId}/entities`;
-    const response = this.http.get<any>(endpoint);
+  public async getEntityFiles(moduleId: string): Promise<{ id: string; path: string; templatePath: string }[]> {
+    const endpoint = `${this.host}/modules/${moduleId}/entity-files`;
+    const response = this.http.get<{ id: string; path: string; templatePath: string }[]>(endpoint);
     return firstValueFrom(response)
   }
 

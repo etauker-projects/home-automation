@@ -10,11 +10,8 @@ interface Template {
 
 interface EntityMapping {
   id: string;
-  module: string;
-  enabled: boolean;
-  sourceEntityId: string;
-  templateDestinationPath: string;
-  templateSourcePath: string;
+  path: string;
+  templatePath: string;
 }
 
 
@@ -32,7 +29,7 @@ export class ModulePage {
   public templateRows: TableRow<Template>[] = [];
 
   public entityMappingColumns: TableColumn<EntityMapping>[];
-  public entityMappingRows: TableRow<EntityMapping>[];
+  public entityMappingRows: TableRow<EntityMapping>[] = [];
   public entityMappingActions: TableAction<EntityMapping>[] = [];
 
   private moduleId?: string;
@@ -45,6 +42,9 @@ export class ModulePage {
         if (this.moduleId) {
             const paths = await this.rest.getTemplateFiles(this.moduleId);
             this.templateRows = paths.map((path: string) => ({ path }));
+
+            const mappings = await this.rest.getEntityFiles(this.moduleId);
+            this.entityMappingRows = mappings;
         }
     });
 
@@ -55,32 +55,9 @@ export class ModulePage {
 
     // Second table data
     this.entityMappingColumns = [
-      { key: 'sourceEntityId', label: 'Entity ID' },
-      { key: 'templateSourcePath', label: 'Template Path' },
-      { key: 'templateDestinationPath', label: 'Output Path' },
-      { key: 'enabled', label: 'Enabled' },
-    ];
-    this.entityMappingRows = [
-      {
-        id: 'ba8ea0b1-205a-432c-8dcc-2b6fa70036f4',
-        sourceEntityId: 'sensor.office_desk_plug',
-        module: 'power_monitoring',
-        // templateSourcePath: templateInputPath + '/power_monitoring/template_sensor/plug.yaml',
-        // templateDestinationPath: templateOutputPath + '/power_monitoring/template_sensor/office_desk_plug.yaml',
-        templateSourcePath: '/power_monitoring/template_sensor/plug.yaml',
-        templateDestinationPath: '/power_monitoring/template_sensor/office_desk_plug.yaml',
-        enabled: true,
-      },
-      {
-        id: '4453c6c8-6f65-4b4d-8d8e-46d2a81047a0',
-        sourceEntityId: 'sensor.office_desk_plug',
-        module: 'power_monitoring',
-        // templateSourcePath: templateInputPath + '/power_monitoring/utility_monitor/plug.yaml',
-        // templateDestinationPath: templateOutputPath + '/power_monitoring/utility_monitor/office_desk_plug.yaml',
-        templateSourcePath: '/power_monitoring/utility_monitor/plug.yaml',
-        templateDestinationPath: '/power_monitoring/utility_monitor/office_desk_plug.yaml',
-        enabled: false,
-      },
+      { key: 'id', label: 'Entity' },
+      { key: 'path', label: 'Path' },
+      { key: 'templatePath', label: 'Template' },
     ];
 
     this.entityMappingActions = [

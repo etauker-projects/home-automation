@@ -1,0 +1,21 @@
+generic_plug_energy_usage_hourly:
+    name: Generic Plug Energy Usage Hourly
+    source: sensor.generic_plug_energy
+    cycle: hourly
+    unique_id: meter.generic_plug_energy_usage_hourly
+    offset: 0
+    delta_values: false
+generic_plug_energy_usage_daily:
+    name: Generic Plug Energy Usage Daily
+    source: sensor.generic_plug_energy
+    cycle: daily
+    unique_id: meter.generic_plug_energy_usage_daily
+    offset: 0
+    delta_values: false
+generic_plug_energy_usage_monthly:
+    name: Generic Plug Energy Usage Monthly
+    source: sensor.generic_plug_energy
+    cycle: monthly
+    unique_id: meter.generic_plug_energy_usage_monthly
+    offset: 0
+    delta_values: false
