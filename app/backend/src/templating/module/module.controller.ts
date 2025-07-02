@@ -4,6 +4,7 @@ import type { PersistenceConnector } from '../../microservice/persistence/persis
 import { IController } from '../../microservice/server/controller.interface';
 import * as express from 'express';
 import { ModuleService } from './module.service';
+import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
 
 export class ModuleController extends ApiController implements IController {
 
@@ -25,42 +26,42 @@ export class ModuleController extends ApiController implements IController {
     public getRouter(prefix: string): express.Router {
         return this.registerEndpoints(prefix, [
             { method: 'get', endpoint: '', handler: this.getModules },
-            { method: 'get', endpoint: '/:moduleId/template-files', handler: this.getTemplateFiles },
-            { method: 'get', endpoint: '/:moduleId/template-files/:templatePath', handler: this.getTemplateFile },
-            { method: 'get', endpoint: '/:moduleId/entity-files', handler: this.getEntityFiles },
-            { method: 'post', endpoint: '/:moduleId/template-files/:templatePath/entity-files', handler: this.postEntityFile },
+            { method: 'get', endpoint: '/:moduleId/templates', handler: this.getTemplateFiles },
+            { method: 'get', endpoint: '/:moduleId/templates/:templateId', handler: this.getTemplateFile },
+            { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
+            { method: 'post', endpoint: '/:moduleId/template/:templateId/entities', handler: this.postEntityFile },
         ]);
     }
 
-    private async getModules(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
+    private async getModules(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<Module[]>> {
         const modules = await this.service.getModules();
         return { status: 200, body: modules };
     }
 
-    private async getTemplateFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
+    private async getTemplateFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<TemplateMetadata[]>> {
         const { moduleId } = req.params;
         const modules = await this.service.getTemplateFiles(moduleId);
         return { status: 200, body: modules };
     }
 
-    private async getEntityFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
-        const { moduleId } = req.params;
-        const modules = await this.service.getEntityFiles(moduleId);
+    private async getTemplateFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<TemplateFile>> {
+        const { moduleId, templateId } = req.params;
+        const template = await this.service.getTemplateFile(moduleId, templateId);
+        return { status: 200, body: template };
+    }
+
+    private async getEntityFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityMetadata[]>> {
+        const { moduleId, templateId } = req.params;
+        const modules = await this.service.getEntityFiles(moduleId, templateId);
         return { status: 200, body: modules };
     }
 
-    private async getTemplateFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
-        const { moduleId } = req.params;
-        const templatePath = decodeURIComponent(req.params.templatePath);
-        const template = await this.service.getTemplateFile(moduleId, templatePath);
-        return { status: 200, body: template };
-    }
-
+    // TODO: fix type
     private async postEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
         const { moduleId } = req.params;
-        const templatePath = decodeURIComponent(req.params.templatePath);
+        const templateId = decodeURIComponent(req.params.templateId);
         const content = req.body.content;
-        const template = await this.service.saveEntityFile(moduleId, templatePath, content);
-        return { status: 200, body: template };
+        const entity = await this.service.saveEntityFile(moduleId, templateId, content);
+        return { status: 200, body: entity };
     }
 }

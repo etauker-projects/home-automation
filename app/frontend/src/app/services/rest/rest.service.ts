@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from '../../pages/module/module.interfaces';
 
 
 @Injectable({
@@ -20,33 +21,33 @@ export class RestService {
     return firstValueFrom(response)
   }
 
-  public async getModules(): Promise<any> {
+  public async getModules(): Promise<Module[]> {
     const endpoint = `${this.host}/modules`;
-    const response = this.http.get<any>(endpoint);
+    const response = this.http.get<Module[]>(endpoint);
     return firstValueFrom(response)
   }
 
-  public async getTemplateFiles(moduleId: string): Promise<string[]> {
-    const endpoint = `${this.host}/modules/${moduleId}/template-files`;
-    const response = this.http.get<string[]>(endpoint);
+  public async getTemplateFiles(moduleId: string): Promise<TemplateMetadata[]> {
+    const endpoint = `${this.host}/modules/${moduleId}/templates`;
+    const response = this.http.get<TemplateMetadata[]>(endpoint);
     return firstValueFrom(response)
   }
 
-  public async getEntityFiles(moduleId: string): Promise<{ id: string; path: string; templatePath: string }[]> {
-    const endpoint = `${this.host}/modules/${moduleId}/entity-files`;
-    const response = this.http.get<{ id: string; path: string; templatePath: string }[]>(endpoint);
-    return firstValueFrom(response)
-  }
-
-  public async getTemplateFile(moduleId: string, templatePath: string): Promise<any> {
-    const endpoint = `${this.host}/modules/${moduleId}/template-files/${encodeURIComponent(templatePath)}`;
-    const response = this.http.get<any>(endpoint);
+  public async getTemplateFile(moduleId: string, templateId: string): Promise<TemplateFile> {
+    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}`;
+    const response = this.http.get<TemplateFile>(endpoint);
     return firstValueFrom(response);
   }
 
-  public async postEntityFile(moduleId: string, templatePath: string, content: string): Promise<string> {
-    const endpoint = `${this.host}/modules/${moduleId}/template-files/${encodeURIComponent(templatePath)}/entity-files`;
-    const response = this.http.post<{ content: string }>(endpoint, { content });
-    return firstValueFrom(response).then(res => res.content);
+  public async getEntityFiles(moduleId: string, templateId: string): Promise<EntityMetadata[]> {
+    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities`;
+    const response = this.http.get<EntityMetadata[]>(endpoint);
+    return firstValueFrom(response)
+  }
+
+  public async postEntityFile(moduleId: string, templateId: string, content: EntityFile): Promise<EntityFile> {
+    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities`;
+    const response = this.http.post<EntityFile>(endpoint, { content });
+    return firstValueFrom(response);
   }
 }

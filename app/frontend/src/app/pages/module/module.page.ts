@@ -3,17 +3,7 @@ import { TableComponent } from '../../components/table/table.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { TableAction, TableColumn, TableRow } from '../../components/table/table.interfaces';
 import { RestService } from '../../services/rest/rest.service';
-
-interface Template {
-  path: string;
-}
-
-interface EntityMapping {
-  id: string;
-  path: string;
-  templatePath: string;
-}
-
+import type { EntityMetadata, TemplateMetadata } from './module.interfaces';
 
 @Component({
   selector: 'app-module-page',
@@ -25,12 +15,12 @@ interface EntityMapping {
 })
 export class ModulePage {
 
-  public templateColumns: TableColumn<Template>[];
-  public templateRows: TableRow<Template>[] = [];
+  public templateColumns: TableColumn<TemplateMetadata>[];
+  public templateRows: TableRow<TemplateMetadata>[] = [];
 
-  public entityMappingColumns: TableColumn<EntityMapping>[];
-  public entityMappingRows: TableRow<EntityMapping>[] = [];
-  public entityMappingActions: TableAction<EntityMapping>[] = [];
+  public entityMappingColumns: TableColumn<EntityMetadata>[];
+  public entityMappingRows: TableRow<EntityMetadata>[] = [];
+  public entityMappingActions: TableAction<EntityMetadata>[] = [];
 
   private moduleId?: string;
 
@@ -40,24 +30,24 @@ export class ModulePage {
         this.moduleId = params.get('moduleId') ?? undefined;
 
         if (this.moduleId) {
-            const paths = await this.rest.getTemplateFiles(this.moduleId);
-            this.templateRows = paths.map((path: string) => ({ path }));
+            this.templateRows = await this.rest.getTemplateFiles(this.moduleId);
 
-            const mappings = await this.rest.getEntityFiles(this.moduleId);
-            this.entityMappingRows = mappings;
+            const promises = this.templateRows.map(template => this.rest.getEntityFiles(this.moduleId!, template.id));
+            this.entityMappingRows = (await Promise.all(promises)).flat();
         }
     });
 
     this.templateColumns = [
       // { key: 'id', label: 'ID' },
-      { key: 'path', label: 'Path' },
+      { key: 'id', label: 'ID' },
+      { key: 'type', label: 'type' },
     ];
 
     // Second table data
     this.entityMappingColumns = [
       { key: 'id', label: 'Entity' },
-      { key: 'templatePath', label: 'Template' },
-      { key: 'path', label: 'Path' },
+      { key: 'templateId', label: 'Template' },
+      { key: 'type', label: 'Type' },
     ];
 
     this.entityMappingActions = [
@@ -65,8 +55,8 @@ export class ModulePage {
             key: 'navigate',
             label: 'Details',
             // icon: 'navigate',
-            handle: (row: TableRow<EntityMapping>) => {
-                this.router.navigate(['/modules', this.moduleId, 'entities', encodeURIComponent(row.templatePath)]);
+            handle: (row: TableRow<EntityMetadata>) => {
+                this.router.navigate(['/modules', this.moduleId, 'templates', row.templateId, 'entities', row.id]);
             },
         },
         // {

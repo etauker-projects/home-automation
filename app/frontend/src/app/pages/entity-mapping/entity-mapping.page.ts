@@ -36,7 +36,8 @@ export class EntityMappingPage {
     private readonly regexString = '\\${\\s*input\\.KEY\\s*}';
 
     private moduleId?: string;
-    private templatePath?: string;
+    private templateId?: string;
+    private entityId?: string;
 
     form: FormGroup;
 
@@ -59,11 +60,12 @@ export class EntityMappingPage {
         this.form = this.formBuilder.group([]);
         this.route.paramMap.subscribe(async params => {
             this.moduleId = params.get('moduleId') ?? undefined;
-            this.templatePath = params.get('templatePath') ? decodeURIComponent(params.get('templatePath')!) : undefined;
+            this.templateId = params.get('templateId') ?? undefined;
+            this.entityId = params.get('entityId') ?? undefined;
 
-            if (this.moduleId && this.templatePath) {
+            if (this.moduleId && this.templateId && this.entityId) {
 
-                rest.getTemplateFile(this.moduleId, this.templatePath).then((data) => {
+                rest.getTemplateFile(this.moduleId, this.templateId).then((data) => {
                     this.template = data.content;
                     const variables = this.extractVariables(this.template);
 
@@ -224,9 +226,9 @@ export class EntityMappingPage {
         const str = stringify(this.previews.map(preview => parse(preview.output)), { indent: 4 });
 
         console.log('Saving string:', str);
-        this.rest.postEntityFile(this.moduleId!, this.templatePath!, str).then(() => {
-            console.log('Entity file saved successfully');
-        });
+        // this.rest.postEntityFile(this.moduleId!, this.templatePath!, str).then(() => {
+        //     console.log('Entity file saved successfully');
+        // });
     }
 
     private getFormValues(): { [key: string]: string } {

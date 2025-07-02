@@ -27,7 +27,7 @@ export class HomePage {
   constructor(private router: Router, private rest: RestService) {
     this.columns = [
       // { key: 'id', label: 'ID' },
-      { key: 'id', label: 'ID' },
+      { key: 'key', label: 'Key' },
       { key: 'name', label: 'Name' },
       { key: 'description', label: 'Description' },
     ];

@@ -1,35 +1,7 @@
 import { resolve } from 'path';
 import { readFile, readdir, writeFile } from 'fs/promises';
 import type { AppConfiguration } from '../../app';
-
-export interface Module {
-    id: string;
-    key: string;
-    name: string;
-    description: string;
-}
-
-export interface TemplateMetadata {
-    id: string;
-    moduleId: string;
-    path: string;
-    type: string;
-}
-
-export interface TemplateFile extends TemplateMetadata {
-    content: string;
-}
-
-export interface EntityMetadata {
-    id: string;
-    templateId: string;
-    path: string;
-    type: string;
-}
-
-export interface EntityFile extends EntityMetadata{
-    content: string;
-}
+import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
 
 
 export class ModuleService {
@@ -46,48 +18,24 @@ export class ModuleService {
         const sourceRoot = resolve(this.sourceDirectory);
         const metadataPath = resolve(sourceRoot, '.metadata.json');
         const content = await readFile(metadataPath, 'utf-8');
-        const metadata = JSON.parse(content);
-
-        const items = await readdir(sourceRoot, {
-            withFileTypes: true,
-            recursive: false,
-            encoding: 'utf-8',
-        });
-
-        for (const item of items) {
-            if (!item.isFile()) {
-                if (!metadata.modules.map(m => m.id).includes(item.name)) {
-                    metadata.modules.push({
-                        id: item.name,
-                        name: "",
-                        description: "",
-                    });
-                }
-            }
-        }
-
-        return metadata.modules;
+        const metadata = JSON.parse(content).modules as Module[];
+        return metadata;
     }
 
-    public async getTemplateFiles(moduleId: string): Promise<string[]> {
-        const sourceRoot = resolve(this.sourceDirectory);
-        const modulePath = resolve(sourceRoot, moduleId);
-
-        const items = await readdir(modulePath, {
-            withFileTypes: true,
-            recursive: true,
-            encoding: 'utf-8',
-
-        });
-
-        return items
-            .filter(item => item.isFile())
-            .map(item => resolve(item.parentPath, item.name).replace(sourceRoot, ''))
+    public async getModule(moduleId: string): Promise<Module | undefined> {
+        const modules = await this.getModules();
+        return modules.find(module => module.id === moduleId);
     }
 
-    public async getEntityFiles(moduleId: string): Promise<{ id: string; path: string; templatePath: string }[]> {
+    public async getTemplateFiles(moduleId: string): Promise<TemplateMetadata[]> {
+        const module = await this.getModule(moduleId);
+        return module.templates ?? [];
+    }
+
+    public async getEntityFiles(moduleId: string, templateId: string): Promise<EntityMetadata[]> {
         const destinationRoot = resolve(this.destinationDirectory);
-        const modulePath = resolve(destinationRoot, moduleId);
+        const module = await this.getModule(moduleId);
+        const modulePath = resolve(destinationRoot, module.key);
 
         const items = await readdir(modulePath, {
             withFileTypes: true,
@@ -100,22 +48,47 @@ export class ModuleService {
             .map(item => resolve(item.parentPath, item.name).replace(destinationRoot, ''))
             .map(path => {
                 const parts = path.split('/');
-                const id = parts[parts.length - 1].replace('.yaml', '');
-                const templatePath = path.replace(id, 'plug');
-                return { id, path, templatePath };
-            });
+                const id = parts.pop().replace('.yaml', '');
+                const type = parts.pop();
+                const resolvedTemplateId = module.templates.find(t => t.type === type).id;
+                return { id, templateId: resolvedTemplateId, type };
+            })
+            .filter(meta => meta.templateId === templateId)
+        ;
     }
 
-    public async getTemplateFile(moduleId: string, templatePath: string): Promise<{ path: string; content: string }> {
-        const destinationRoot = resolve(this.sourceDirectory);
-        const templateFilePath = resolve(destinationRoot, templatePath.substring(1));
+    public async getTemplateFile(moduleId: string, templateId: string): Promise<TemplateFile> {
+        const module = await this.getModule(moduleId);
+        const templateFiles = module.templates ?? [];
+        const meta = templateFiles.find(meta => meta.id === templateId);
+        const path = this.formatPath(module.key, meta.type, 'template');
+        const fullpath = resolve(this.sourceDirectory, path.substring(1));
 
-        const contents = await readFile(templateFilePath, {
+        const contents = await readFile(fullpath, {
             encoding: 'utf-8',
         });
 
         return {
-            path: templatePath,
+            id: templateId,
+            type: meta.type,
+            content: contents,
+        }
+    }
+
+    public async getEntityFile(moduleId: string, templateId: string, entityId: string): Promise<EntityFile> {
+        const entityFiles = await this.getEntityFiles(moduleId, templateId);
+        const meta = entityFiles.find(meta => meta.id === entityId);
+        const path = this.formatPath(moduleId, meta.type, entityId);
+        const fullpath = resolve(this.destinationDirectory, path.substring(1));
+
+        const contents = await readFile(fullpath, {
+            encoding: 'utf-8',
+        });
+
+        return {
+            id: entityId,
+            templateId: templateId,
+            type: meta.type,
             content: contents,
         }
     }
@@ -139,4 +112,9 @@ export class ModuleService {
             throw err;
         }
     }
+
+    private formatPath(moduleId: string, entityType: string, id: string): string {
+        return `/${moduleId}/${entityType}/${id}.yaml`;
+    }
+
 }
