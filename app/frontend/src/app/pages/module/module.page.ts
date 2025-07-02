@@ -2,9 +2,9 @@ import { Component } from '@angular/core';
 import { TableComponent } from '../../components/table/table.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { TableAction, TableColumn, TableRow } from '../../components/table/table.interfaces';
+import { RestService } from '../../services/rest/rest.service';
 
 interface Template {
-  id: string;
   path: string;
 }
 
@@ -22,13 +22,14 @@ interface EntityMapping {
   selector: 'app-module-page',
   standalone: true,
   imports: [TableComponent],
+  providers: [RestService],
   templateUrl: './module.page.html',
   styleUrl: './module.page.css'
 })
 export class ModulePage {
 
   public templateColumns: TableColumn<Template>[];
-  public templateRows: TableRow<Template>[];
+  public templateRows: TableRow<Template>[] = [];
 
   public entityMappingColumns: TableColumn<EntityMapping>[];
   public entityMappingRows: TableRow<EntityMapping>[];
@@ -36,37 +37,20 @@ export class ModulePage {
 
   private moduleId?: string;
 
-  constructor(private route: ActivatedRoute, private router: Router) {
+  constructor(private route: ActivatedRoute, private router: Router, private rest: RestService) {
 
-    this.route.paramMap.subscribe(params => {
+    this.route.paramMap.subscribe(async params => {
         this.moduleId = params.get('moduleId') ?? undefined;
-    });
 
-    // const templateInputPath = '/Users/etauker/workspace/etauker/home-automation/app/backend/templateSource';
-    // const templateOutputPath = '/Users/etauker/workspace/etauker/home-automation/app/backend/templateDestination';
+        if (this.moduleId) {
+            const paths = await this.rest.getTemplateFiles(this.moduleId);
+            this.templateRows = paths.map((path: string) => ({ path }));
+        }
+    });
 
     this.templateColumns = [
       // { key: 'id', label: 'ID' },
       { key: 'path', label: 'Path' },
-    ];
-
-    this.templateRows = [
-      // {
-      //   id: '128ebda0-996d-4add-b777-99778956e1d8',
-      //   path: '/Users/etauker/workspace/etauker/home-automation/app/backend/templateSource/power_monitoring/history_stats',
-      // },
-      // {
-      //   id: 'b20d408c-e12a-464a-8428-43e361d64a87',
-      //   path: '/Users/etauker/workspace/etauker/home-automation/app/backend/templateSource/power_monitoring/template_binary_sensor',
-      // },
-      {
-        id: 'e06713d0-a475-4292-b83d-5d0fdafbbfea',
-        path: '/power_monitoring/template_sensor/plug.yaml',
-      },
-      {
-        id: '0045767f-9b1f-4dc1-844f-53a1d8b4bffc',
-        path: '/power_monitoring/utility_meter/plug.yaml',
-      },
     ];
 
     // Second table data

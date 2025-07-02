@@ -26,8 +26,8 @@ export class RestService {
     return firstValueFrom(response)
   }
 
-  public async getTemplates(moduleId: string): Promise<any> {
-    const endpoint = `${this.host}/modules/${moduleId}/templates`;
+  public async getTemplateFiles(moduleId: string): Promise<any> {
+    const endpoint = `${this.host}/modules/${moduleId}/template-files`;
     const response = this.http.get<any>(endpoint);
     return firstValueFrom(response)
   }

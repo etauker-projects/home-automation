@@ -17,12 +17,12 @@ export class ModuleService {
     }
 
     public async getModules(): Promise<Module[]> {
-        const moduleDirectory = resolve(this.sourceDirectory);
-        const metadataPath = resolve(moduleDirectory, '.metadata.json');
+        const sourceRoot = resolve(this.sourceDirectory);
+        const metadataPath = resolve(sourceRoot, '.metadata.json');
         const content = await readFile(metadataPath, 'utf-8');
         const metadata = JSON.parse(content);
 
-        const items = await readdir(moduleDirectory, {
+        const items = await readdir(sourceRoot, {
             withFileTypes: true,
             recursive: false,
             encoding: 'utf-8',
@@ -38,9 +38,24 @@ export class ModuleService {
                     });
                 }
             }
-
         }
 
         return metadata.modules;
+    }
+
+    public async getTemplateFiles(moduleId: string): Promise<string[]> {
+        const sourceRoot = resolve(this.sourceDirectory);
+        const modulePath = resolve(sourceRoot, moduleId);
+
+        const items = await readdir(modulePath, {
+            withFileTypes: true,
+            recursive: true,
+            encoding: 'utf-8',
+
+        });
+
+        return items
+            .filter(item => item.isFile())
+            .map(item => resolve(item.parentPath, item.name).replace(sourceRoot, ''))
     }
 }

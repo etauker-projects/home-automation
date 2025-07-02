@@ -25,7 +25,7 @@ export class ModuleController extends ApiController implements IController {
     public getRouter(prefix: string): express.Router {
         return this.registerEndpoints(prefix, [
             { method: 'get', endpoint: '', handler: this.getModules },
-            // { method: 'get', endpoint: '/:moduleId/template-files', handler: this.getTemplates },
+            { method: 'get', endpoint: '/:moduleId/template-files', handler: this.getTemplateFiles },
             // { method: 'get', endpoint: '/:moduleId/template-files/:templateId', handler: this.getTemplate },
             // { method: 'get', endpoint: '/:moduleId/entity-files', handler: this.getEntities },
         ]);
@@ -36,14 +36,11 @@ export class ModuleController extends ApiController implements IController {
         return { status: 200, body: modules };
     }
 
-    // private async getTemplates(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
-    //     // TODO: Replace with real data source
-    //     const { moduleId } = req.params;
-    //     return { status: 200, body: [
-    //         { id: 'plug', name: 'Plug Template', moduleId },
-    //         { id: 'light', name: 'Light Template', moduleId }
-    //     ]};
-    // }
+    private async getTemplateFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
+        const { moduleId } = req.params;
+        const modules = await this.service.getTemplateFiles(moduleId);
+        return { status: 200, body: modules };
+    }
 
     // private async getEntities(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<any>> {
     //     // TODO: Replace with real data source
