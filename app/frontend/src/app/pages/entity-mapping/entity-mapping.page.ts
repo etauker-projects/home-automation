@@ -8,6 +8,7 @@ import { EditorComponent } from '../../components/editor/editor.component';
 import { NGX_MONACO_EDITOR_CONFIG } from 'ngx-monaco-editor-v2';
 import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.component';
 import { RestService } from '../../services/rest/rest.service';
+import type { EntityFile } from '../module/module.interfaces';
 
 export interface Control {
     id: string;
@@ -37,6 +38,7 @@ export class EntityMappingPage {
 
     private moduleId?: string;
     private templateId?: string;
+    private templateType?: string;
     private entityId?: string;
 
     form: FormGroup;
@@ -67,6 +69,7 @@ export class EntityMappingPage {
 
                 rest.getTemplateFile(this.moduleId, this.templateId).then((data) => {
                     this.template = data.content;
+                    this.templateType = data.type;
                     const variables = this.extractVariables(this.template);
 
                     // TODO: split module and entity info into separate forms
@@ -226,9 +229,16 @@ export class EntityMappingPage {
         const str = stringify(this.previews.map(preview => parse(preview.output)), { indent: 4 });
 
         console.log('Saving string:', str);
-        // this.rest.postEntityFile(this.moduleId!, this.templatePath!, str).then(() => {
-        //     console.log('Entity file saved successfully');
-        // });
+        const file: EntityFile = {
+            id: this.entityId!,
+            templateId: this.templateId!,
+            type: this.templateType!,
+            content: str,
+        }
+
+        this.rest.postEntityFile(this.moduleId!, this.templateId!, file).then(() => {
+            console.log('Entity file saved successfully');
+        });
     }
 
     private getFormValues(): { [key: string]: string } {

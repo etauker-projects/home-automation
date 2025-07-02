@@ -93,21 +93,20 @@ export class ModuleService {
         }
     }
 
-    public async saveEntityFile(moduleId: string, templatePath: string, content: string): Promise<{ path: string; content: string }> {
-        const destinationRoot = resolve(this.destinationDirectory);
-        const templateFilePath = resolve(destinationRoot, templatePath.substring(1));
+    public async saveEntityFile(moduleId: string, templateId: string, file: EntityFile): Promise<EntityFile> {
+        const module = await this.getModule(moduleId);
+        const templateFiles = module.templates ?? [];
+        const meta = templateFiles.find(meta => meta.id === templateId);
+        const path = this.formatPath(module.key, meta.type, file.id);
+        const fullpath = resolve(this.destinationDirectory, path.substring(1));
 
         try {
-            await readFile(templateFilePath, { encoding: 'utf-8' });
-            throw new Error(`File already exists: ${templateFilePath}`);
+            await readFile(fullpath, { encoding: 'utf-8' });
+            throw new Error(`File already exists: ${fullpath}`);
         } catch (err: any) {
             if (err.code === 'ENOENT') {
-
-                await writeFile(templateFilePath, content, { encoding: 'utf-8', flag: 'wx' });
-                return {
-                    path: templatePath,
-                    content: content,
-                };
+                await writeFile(fullpath, file.content, { encoding: 'utf-8', flag: 'wx' });
+                return file;
             }
             throw err;
         }
