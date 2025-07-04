@@ -35,7 +35,7 @@ export class ModuleService {
             const payload = JSON.stringify({ modules });
             const sourceRoot = resolve(this.sourceDirectory);
             const metadataPath = resolve(sourceRoot, '.metadata.json');
-            await writeFile(metadataPath, payload, { encoding: 'utf-8', flag: 'wx' });
+            await writeFile(metadataPath, payload, { encoding: 'utf-8', flag: 'w' });
         }
         return this.getModule(module.id);
     }

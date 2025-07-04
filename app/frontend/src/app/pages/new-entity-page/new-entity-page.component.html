@@ -1,0 +1,11 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="entity-mapping-form">
+    <div>
+        <label for="templateId">Template ID:</label>
+        <input id="templateId" formControlName="templateId" required/>
+    </div>
+    <div>
+        <label for="entityId">Entity:</label>
+        <input id="entityId" formControlName="entityId" required/>
+    </div>
+    <button type="submit" [disabled]="form.invalid">Next</button>
+</form>

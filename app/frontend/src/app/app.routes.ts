@@ -13,4 +13,8 @@ export const routes: Routes = [
         path: 'modules/:moduleId/templates/:templateId/entities/:entityId',
         loadComponent: () => import('./pages/entity-mapping/entity-mapping.page').then(m => m.EntityMappingPage)
     },
+    {
+        path: 'modules/:moduleId/templates',
+        loadComponent: () => import('./pages/new-entity-page/new-entity-page.component').then(m => m.NewEntityPageComponent)
+    },
 ];

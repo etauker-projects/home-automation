@@ -3,7 +3,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableComponent } from '../../components/table/table.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule, type FormControl } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { EditorComponent } from '../../components/editor/editor.component';
 import { NGX_MONACO_EDITOR_CONFIG } from 'ngx-monaco-editor-v2';
 import { DiffEditorComponent } from '../../components/diff-editor/diff-editor.component';
@@ -37,9 +37,9 @@ export class EntityMappingPage {
     private readonly regexString = '\\${\\s*input\\.KEY\\s*}';
 
     private moduleId?: string;
-    private templateId?: string;
+    templateId?: string;
     private templateType?: string;
-    private entityId?: string;
+    entityId?: string;
 
     form: FormGroup;
 
@@ -56,6 +56,7 @@ export class EntityMappingPage {
 
     constructor(
         private route: ActivatedRoute,
+        private router: Router,
         private formBuilder: FormBuilder,
         private rest: RestService,
     ) {
@@ -66,12 +67,14 @@ export class EntityMappingPage {
             this.templateId = params.get('templateId') ?? undefined;
             this.entityId = params.get('entityId') ?? undefined;
 
+            // console.log(window.history.state.variables);
             if (this.moduleId && this.templateId && this.entityId) {
 
                 rest.getTemplateFile(this.moduleId, this.templateId).then((data) => {
                     this.template = data.content;
                     this.templateType = data.type;
                     const variables = this.extractVariables(this.template);
+                    const values = (window.history.state.variables as { [key: string]: string });
 
                     // TODO: split module and entity info into separate forms
                     this.controls = [
@@ -105,17 +108,17 @@ export class EntityMappingPage {
                             id: 'name',
                             label: 'Name',
                             readonly: false,
-                            control: this.formBuilder.control('', Validators.required),
+                            control: this.formBuilder.control(values?.['name'] ?? '', Validators.required),
                         },
                         {
                             id: 'id',
                             label: 'Id',
                             readonly: false,
-                            control: this.formBuilder.control('', Validators.required),
+                            control: this.formBuilder.control(values?.['id'] ?? '', Validators.required),
                         },
                     ];
 
-                    variables.forEach(variable => this.appendToForm(variable));
+                    variables.forEach(variable => this.appendToForm(variable, values?.[variable]));
 
                     // convenience: pre-fill ID based on the entered name
                     this.form.get('name')?.valueChanges.subscribe((value: string) => {
@@ -130,12 +133,12 @@ export class EntityMappingPage {
         });
     }
 
-    private appendToForm(variable: string | Control): void {
+    private appendToForm(variable: string | Control, value?: string): void {
         const control = typeof variable === 'string' ? {
             id: variable,
             label: this.toHumanReadable(variable),
             readonly: false,
-            control: this.formBuilder.control('', Validators.required),
+            control: this.formBuilder.control(value ?? '', Validators.required),
         } : variable;
 
         if (!this.controls.some(c => c.id === control.id)) {
@@ -222,8 +225,7 @@ export class EntityMappingPage {
         }
     }
 
-    onSave() {
-
+    async onSave() {
         if (this.previews.length === 0) {
             console.warn('No previews to save');
             return;
@@ -241,9 +243,8 @@ export class EntityMappingPage {
             content: str,
         }
 
-        this.rest.postEntityFile(this.moduleId!, this.templateId!, file).then(() => {
-            console.log('Entity file saved successfully');
-        });
+        await this.rest.postEntityFile(this.moduleId!, this.templateId!, file);
+        this.router.navigate([ '/modules', this.moduleId ]);
     }
 
     private getFormValues(): { [key: string]: string } {
