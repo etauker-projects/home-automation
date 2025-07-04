@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { readFile, readdir, writeFile } from 'fs/promises';
+import { readFile, readdir, rm, writeFile } from 'fs/promises';
 import type { AppConfiguration } from '../../app';
 import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
 
@@ -126,6 +126,20 @@ export class ModuleService {
             }
             throw err;
         }
+    }
+
+    public async deleteEntityFile(moduleId: string, templateId: string, entityId: string): Promise<void> {
+        const module = await this.getModule(moduleId);
+        const meta = (module.entities ?? []).find(meta => meta.id === entityId);
+        const path = this.formatPath(module.key, meta.type, meta.id);
+        const fullpath = resolve(this.destinationDirectory, path.substring(1));
+
+        await rm(fullpath, { maxRetries: 3 });
+        if (!module.entities) {
+            module.entities = [];
+        }
+        module.entities = module.entities.filter(meta => !(meta.templateId === templateId && meta.id === entityId));
+        await this.saveModule(module);
     }
 
     private formatPath(moduleId: string, entityType: string, id: string): string {

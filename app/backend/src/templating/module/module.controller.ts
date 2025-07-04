@@ -30,6 +30,7 @@ export class ModuleController extends ApiController implements IController {
             { method: 'get', endpoint: '/:moduleId/templates/:templateId', handler: this.getTemplateFile },
             { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
             { method: 'post', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.postEntityFile },
+            { method: 'delete', endpoint: '/:moduleId/templates/:templateId/entities/:entityId', handler: this.deleteEntityFile },
         ]);
     }
 
@@ -56,11 +57,16 @@ export class ModuleController extends ApiController implements IController {
         return { status: 200, body: modules };
     }
 
-    // TODO: fix type
     private async postEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityFile>> {
         const { moduleId, templateId } = req.params;
         const file = req.body;
         const entity = await this.service.saveEntityFile(moduleId, templateId, file);
         return { status: 200, body: entity };
+    }
+
+    private async deleteEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<void>> {
+        const { moduleId, templateId, entityId } = req.params;
+        const entity = await this.service.deleteEntityFile(moduleId, templateId, entityId);
+        return { status: 204, body: undefined };
     }
 }

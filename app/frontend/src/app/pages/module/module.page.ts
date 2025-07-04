@@ -30,11 +30,7 @@ export class ModulePage {
             this.moduleId = params.get('moduleId') ?? undefined;
 
             if (this.moduleId) {
-                // this.templateRows = await this.rest.getTemplateFiles(this.moduleId);
-
-                const templates = await this.rest.getTemplateFiles(this.moduleId);
-                const promises = templates.map(template => this.rest.getEntityFiles(this.moduleId!, template.id));
-                this.entityMappingRows = (await Promise.all(promises)).flat();
+                await this.refreshList();
             }
         });
 
@@ -66,10 +62,14 @@ export class ModulePage {
                 label: 'Edit',
                 // icon: 'edit',
                 handle: (row: TableRow<EntityMetadata>) => {
-                    this.router.navigate(
-                        ['/modules', this.moduleId, 'templates', row.templateId, 'entities', row.id],
-                        { state: { variables: row.variables } }
-                    );
+                    if (!row.managed) {
+                        console.warn('Unmanaged entity cannot be edited.')
+                    } else {
+                        this.router.navigate(
+                            ['/modules', this.moduleId, 'templates', row.templateId, 'entities', row.id],
+                            { state: { variables: row.variables } }
+                        );
+                    }
                 },
             },
             {
@@ -77,8 +77,12 @@ export class ModulePage {
                 label: 'Delete',
                 // icon: 'delete',
                 handle: async (row: TableRow<EntityMetadata>) => {
-                    console.log('Delete handle for row:', row);
-                    // this.rest.deleteEntityFile
+                    if (!row.managed) {
+                        console.warn('Unmanaged entity cannot be deleted.')
+                    } else {
+                        await this.rest.deleteEntityFile(this.moduleId!, row.templateId, row.id);
+                        await this.refreshList();
+                    }
                 },
             },
         ];
@@ -88,5 +92,13 @@ export class ModulePage {
         this.router.navigate(
             ['/modules', this.moduleId, 'templates'],
         );
+    }
+
+    async refreshList(): Promise<void> {
+        if (this.moduleId) {
+            const templates = await this.rest.getTemplateFiles(this.moduleId);
+            const promises = templates.map(template => this.rest.getEntityFiles(this.moduleId!, template.id));
+            this.entityMappingRows = (await Promise.all(promises)).flat();
+        }
     }
 }

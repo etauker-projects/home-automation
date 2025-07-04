@@ -31,3 +31,6 @@ scripts/health-data/output
 
 
 app/frontend/src/assets/monaco
+app/backend/templateSource/*
+app/backend/templateDestination/*
+# app/backend/templateSource/metadata
