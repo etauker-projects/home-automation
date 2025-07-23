@@ -158,6 +158,30 @@ services:
     labels:
       - production
 
+  govee2mqtt:
+    container_name: govee2mqtt
+    image: ghcr.io/wez/govee2mqtt:latest
+    profiles: [ production ]
+    network_mode: host  # host networking is required
+    depends_on: [ mosquitto ]
+    restart: unless-stopped
+    volumes:
+      - ./data/govee2mqtt/data:/app/data
+    #   - /run/udev:/run/udev:ro
+    env_file:
+      - ./data/govee2mqtt/config/.env
+    # ports:
+    #   - 8056:8056
+    environment:
+      - TZ=Europe/Dublin
+      - GOVEE_MQTT_HOST=localhost
+      - GOVEE_MQTT_PORT=1883
+      - GOVEE_TEMPERATURE_SCALE=C # C for Celsius or F for Fahrenheit
+      - RUST_LOG_STYLE=always # Always use colorized output
+      # - RUST_LOG=govee=trace # Enable for debug mode
+    labels:
+      - production
+
   # matter-server:
   #   image: ghcr.io/home-assistant-libs/python-matter-server:stable
   #   container_name: matter-server
