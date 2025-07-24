@@ -1,7 +1,12 @@
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="entity-mapping-form">
     <div>
         <label for="templateId">Template ID:</label>
-        <input id="templateId" formControlName="templateId" required/>
+        <select id="templateId" formControlName="templateId" required>
+            <option value="" disabled selected>Select a template</option>
+            <option *ngFor="let template of templates" [value]="template.id">
+                {{ template.id }} ({{ template.type }})
+            </option>
+        </select>
     </div>
     <div>
         <label for="entityId">Entity:</label>

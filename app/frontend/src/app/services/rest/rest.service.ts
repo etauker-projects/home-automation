@@ -45,6 +45,12 @@ export class RestService {
     return firstValueFrom(response)
   }
 
+  public async getUnmanagedEntityFiles(moduleId: string): Promise<EntityMetadata[]> {
+    const endpoint = `${this.host}/modules/${moduleId}/unmanaged/entities`;
+    const response = this.http.get<EntityMetadata[]>(endpoint);
+    return firstValueFrom(response)
+  }
+
   public async postEntityFile(moduleId: string, templateId: string, file: EntityFile): Promise<EntityFile> {
     const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities`;
     const response = this.http.post<EntityFile>(endpoint, file);

@@ -98,6 +98,7 @@ export class ModulePage {
         if (this.moduleId) {
             const templates = await this.rest.getTemplateFiles(this.moduleId);
             const promises = templates.map(template => this.rest.getEntityFiles(this.moduleId!, template.id));
+            promises.push(this.rest.getUnmanagedEntityFiles(this.moduleId!));
             this.entityMappingRows = (await Promise.all(promises)).flat();
         }
     }

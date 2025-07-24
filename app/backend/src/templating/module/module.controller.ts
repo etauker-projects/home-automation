@@ -5,15 +5,19 @@ import { IController } from '../../microservice/server/controller.interface';
 import * as express from 'express';
 import { ModuleService } from './module.service';
 import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
+import { MetadataService } from '../metadata/metadata.service';
+import { randomUUID } from 'crypto';
 
 export class ModuleController extends ApiController implements IController {
 
     private static instance: ModuleController;
     private service: ModuleService;
+    private metadata: MetadataService;
 
     constructor(connector: PersistenceConnector, config: AppConfiguration) {
         super(connector);
-        this.service = new ModuleService(config);
+        this.service = new ModuleService(config, this.logger);
+        this.metadata = new MetadataService(config, this.logger);
     }
 
     public static getInstance(connector: PersistenceConnector, config: AppConfiguration): ModuleController {
@@ -25,48 +29,89 @@ export class ModuleController extends ApiController implements IController {
 
     public getRouter(prefix: string): express.Router {
         return this.registerEndpoints(prefix, [
-            { method: 'get', endpoint: '', handler: this.getModules },
+            { method: 'get', endpoint: '/', handler: this.getModules },
             { method: 'get', endpoint: '/:moduleId/templates', handler: this.getTemplateFiles },
             { method: 'get', endpoint: '/:moduleId/templates/:templateId', handler: this.getTemplateFile },
             { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
+            { method: 'get', endpoint: '/:moduleId/unmanaged/entities', handler: this.getUnmanagedEntityFiles },
             { method: 'post', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.postEntityFile },
             { method: 'delete', endpoint: '/:moduleId/templates/:templateId/entities/:entityId', handler: this.deleteEntityFile },
         ]);
     }
 
     private async getModules(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<Module[]>> {
-        const modules = await this.service.getModules();
-        return { status: 200, body: modules };
+        const tracer = randomUUID();
+        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
+        const metadata = await this.metadata.getMetadata();
+        return { status: 200, body: metadata.modules };
     }
 
     private async getTemplateFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<TemplateMetadata[]>> {
+        const tracer = randomUUID();
+        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
         const { moduleId } = req.params;
-        const modules = await this.service.getTemplateFiles(moduleId);
-        return { status: 200, body: modules };
+        const metas = await this.metadata.getTemplates(tracer, moduleId);
+        return { status: 200, body: metas };
     }
 
     private async getTemplateFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<TemplateFile>> {
+        const tracer = randomUUID();
         const { moduleId, templateId } = req.params;
-        const template = await this.service.getTemplateFile(moduleId, templateId);
-        return { status: 200, body: template };
+        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
+        const meta = await this.metadata.getTemplate(moduleId, templateId);
+        this.logger.trace(`Template metadata ${ meta ? 'found' : 'not found'}`);
+        if (!meta.value) return { status: 404, body: undefined };
+        const templateFile = await this.service.getTemplateFile(meta.id, meta.value);
+        return { status: 200, body: templateFile };
     }
 
     private async getEntityFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityMetadata[]>> {
+        const tracer = randomUUID();
+        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
         const { moduleId, templateId } = req.params;
-        const modules = await this.service.getEntityFiles(moduleId, templateId);
-        return { status: 200, body: modules };
+
+        const module = await this.metadata.getModule(moduleId);
+        const entities = await this.metadata.getEntitiesForModule(tracer, module, templateId);
+        return { status: 200, body: entities };
+    }
+
+    private async getUnmanagedEntityFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityMetadata[]>> {
+        const tracer = randomUUID();
+        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
+        const { moduleId } = req.params;
+
+        const module = await this.metadata.getModule(moduleId);
+        const entities = await this.metadata.getUnmanagedEntitiesForModule(tracer, module);
+        return { status: 200, body: entities };
     }
 
     private async postEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityFile>> {
         const { moduleId, templateId } = req.params;
         const file = req.body;
-        const entity = await this.service.saveEntityFile(moduleId, templateId, file);
+
+        const metadata = { ...file };
+        delete metadata.file;
+
+        const module = await this.metadata.getModule(moduleId);
+        this.logger.trace(`Module ${ module ? 'found' : 'not found'}`);
+
+        if (!module) return { status: 404, body: undefined };
+
+        const [ entity ] = await Promise.all([
+            this.service.saveEntityFile(module.key, metadata.type, file),
+            this.metadata.upsertEntity(moduleId, templateId, metadata),
+        ]);
         return { status: 200, body: entity };
     }
 
     private async deleteEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<void>> {
         const { moduleId, templateId, entityId } = req.params;
-        const entity = await this.service.deleteEntityFile(moduleId, templateId, entityId);
+        await Promise.all([
+            this.service.deleteEntityFile(moduleId, templateId, entityId),
+            this.metadata.deleteEntity(moduleId, templateId, entityId),
+        ]);
         return { status: 204, body: undefined };
     }
+
+
 }

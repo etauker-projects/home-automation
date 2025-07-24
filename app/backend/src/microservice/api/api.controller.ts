@@ -8,7 +8,7 @@ import type { PersistenceConnector } from '../persistence/persistence.connector'
 
 export class ApiController {
 
-    private logger: LogService;
+    protected logger: LogService;
     private auth: AuthService;
     private router: express.Router;
     private stopped: boolean;
