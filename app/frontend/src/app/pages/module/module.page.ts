@@ -99,7 +99,19 @@ export class ModulePage {
             const templates = await this.rest.getTemplateFiles(this.moduleId);
             const promises = templates.map(template => this.rest.getEntityFiles(this.moduleId!, template.id));
             promises.push(this.rest.getUnmanagedEntityFiles(this.moduleId!));
-            this.entityMappingRows = (await Promise.all(promises)).flat();
+            const managedAndUnmanaged = (await Promise.all(promises)).flat();
+
+            // return true if entity is managed
+            const isManaged = (current: EntityMetadata) => current.managed;
+
+            // return true if entity does not have a managed counterpart
+            const hasNoManagedCounterpart = (current: EntityMetadata, all: EntityMetadata[]) => {
+                const hasManagedCounterpart = all.some(other => other.id === current.id && other.managed);
+                return !hasManagedCounterpart;
+            };
+
+            this.entityMappingRows = managedAndUnmanaged
+                .filter((current, _, all) => isManaged(current) || hasNoManagedCounterpart(current, all));
         }
     }
 }

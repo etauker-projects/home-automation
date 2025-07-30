@@ -103,27 +103,19 @@ export class EntityMappingPage {
                         //     control: this.formBuilder.control('/power_monitoring/template_sensor/office_desk_plug.yaml', Validators.required),
                         // },
 
-                        // standard variables for all templates
-                        {
-                            id: 'name',
-                            label: 'Name',
-                            readonly: false,
-                            control: this.formBuilder.control(values?.['name'] ?? '', Validators.required),
-                        },
-                        {
-                            id: 'id',
-                            label: 'Id',
-                            readonly: false,
-                            control: this.formBuilder.control(values?.['id'] ?? '', Validators.required),
-                        },
                     ];
+
+                    // standard variables for all templates
+                    this.appendToForm('id', values?.['id'] ?? this.entityId)
+                    this.appendToForm('name', values?.['name'] ?? this.toHumanReadable(this.entityId ?? ''));
 
                     variables.forEach(variable => this.appendToForm(variable, values?.[variable]));
 
                     // convenience: pre-fill ID based on the entered name
-                    this.form.get('name')?.valueChanges.subscribe((value: string) => {
+                    this.form.get('id')?.valueChanges.subscribe((value: string) => {
                         if (value) {
-                            this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
+                            const name = this.toHumanReadable(value);
+                            this.form.controls['name'].setValue(name);
                         }
                     });
 

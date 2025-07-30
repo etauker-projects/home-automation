@@ -106,7 +106,7 @@ export class MetadataService {
 
     public async upsertEntity(moduleId: string, templateId: string, entity: EntityMetadata): Promise<MetaResponse<EntityMetadata>> {
         const module = await this.getModule(moduleId);
-        if (module.entities) { module.entities = [] };
+        if (!module.entities) { module.entities = [] };
 
         const index = module.entities!.findIndex(meta => this.entityMatches(templateId, entity.id, meta));
 

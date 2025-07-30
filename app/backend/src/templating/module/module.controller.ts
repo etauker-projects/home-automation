@@ -97,6 +97,12 @@ export class ModuleController extends ApiController implements IController {
 
         if (!module) return { status: 404, body: undefined };
 
+        const exists = await this.service.entityFileExists(module.key, metadata.type, file);
+        if (exists) {
+            this.logger.warn(`Entity file already exists for '${module.key}/${metadata.type}/${file.id}'`);
+            return { status: 409, body: undefined };
+        }
+
         const [ entity ] = await Promise.all([
             this.service.saveEntityFile(module.key, metadata.type, file),
             this.metadata.upsertEntity(moduleId, templateId, metadata),

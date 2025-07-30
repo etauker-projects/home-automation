@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { readFile, readdir, rm, writeFile } from 'fs/promises';
+import { readFile, readdir, rm, writeFile, stat } from 'fs/promises';
 import type { AppConfiguration } from '../../app';
 import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
 import type { Identifier, MetaResponse } from '../metadata/metadata.interfaces';
@@ -21,6 +21,14 @@ export class ModuleService {
         const fullpath = resolve(this.sourceDirectory, path.substring(1));
         const contents = await readFile(fullpath, { encoding: 'utf-8' });
         return { ...meta, content: contents };
+    }
+
+    public async entityFileExists(moduleKey: string, templateType: string, meta: EntityMetadata): Promise<boolean> {
+        const path = this.formatPath(moduleKey, templateType, meta.id);
+        const fullpath = resolve(this.destinationDirectory, path.substring(1), '..');
+        const contents = await readdir(fullpath);
+        this.logger.debug(fullpath, '', contents);
+        return contents.includes(`${meta.id}.yaml`);
     }
 
     public async getEntityFile(moduleKey: string, templateType: string, meta: EntityMetadata): Promise<EntityFile> {

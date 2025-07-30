@@ -41,6 +41,7 @@ export class ApiController {
             const endpoint = registration.endpoint;
             const handler = async (req: express.Request, res: express.Response) => {
                 try {
+                    // TODO: change endpoint to context and add tracer there
                     const { status, body } = await registration.handler.bind(
                         this, endpoint,
                     )(req, res);
@@ -60,6 +61,7 @@ export class ApiController {
     protected parseError(error: any): IResponse<{ message: string }> {
         const status = typeof error?.code === 'number' ? error.code : 500;
         const message = error?.message || 'Unexpected error occurred';
+        this.logger.warn(`Uncaught error: ${ message }`, '', error);
         return { status, body: { message }};
     }
 
