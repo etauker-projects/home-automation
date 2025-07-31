@@ -110,7 +110,7 @@ export class MetadataService {
 
     public async deleteEntity(moduleId: string, templateId: string, entityId: string): Promise<void> {
         const module = await this.getModule(moduleId, true);
-        if (module.entities) { module.entities = [] };
+        if (!module.entities) { module.entities = [] };
         module.entities = module.entities?.filter(meta => !this.entityMatches(templateId, entityId, meta));
         await this.upsertModule(module);
     }
