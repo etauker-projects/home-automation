@@ -26,7 +26,6 @@ export class NewEntityPageComponent {
     ) {
         this.form = this.formBuilder.group({
             templateId: new FormControl('', Validators.required),
-            entityId: new FormControl('', Validators.required)
         });
         this.route.paramMap.subscribe(async params => {
             this.moduleId = params.get('moduleId') ?? undefined;
@@ -42,9 +41,9 @@ export class NewEntityPageComponent {
 
     onSubmit() {
         if (this.form.valid) {
-            const { templateId, entityId } = this.form.value;
+            const { templateId } = this.form.value;
             this.router.navigate(
-                ['/modules', this.moduleId, 'templates', templateId.trim(), 'entities', entityId.trim() ],
+                ['/modules', this.moduleId, 'templates', templateId.trim(), 'entities', 'new' ],
             );
         }
     }
