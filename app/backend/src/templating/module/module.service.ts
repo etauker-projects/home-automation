@@ -4,6 +4,7 @@ import type { AppConfiguration } from '../../app';
 import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
 import type { Identifier, MetaResponse } from '../metadata/metadata.interfaces';
 import { LogService } from '../../microservice/logs/log.service';
+import { DomainError } from '../../microservice/api/domain.error';
 
 
 export class ModuleService {
@@ -26,9 +27,21 @@ export class ModuleService {
     public async entityFileExists(moduleKey: string, templateType: string, meta: EntityMetadata): Promise<boolean> {
         const path = this.formatPath(moduleKey, templateType, meta.id);
         const fullpath = resolve(this.destinationDirectory, path.substring(1), '..');
-        const contents = await readdir(fullpath);
+        const contents = (await readdir(fullpath)).map(file => file.toLocaleLowerCase());
         this.logger.debug(fullpath, '', contents);
-        return contents.includes(`${meta.id}.yaml`);
+        return contents.includes(`${meta.id.toLocaleLowerCase()}.yaml`);
+    }
+
+    public async ensureEntityFileDoesNotExist(moduleKey: string, templateType: string, meta: EntityMetadata): Promise<void> {
+        const path = this.formatPath(moduleKey, templateType, meta.id);
+        const fullpath = resolve(this.destinationDirectory, path.substring(1));
+        const basepath = resolve(fullpath, '..');
+        const contents = (await readdir(basepath)).map(file => file.toLocaleLowerCase());
+
+        if (contents.includes(`${meta.id.toLocaleLowerCase()}.yaml`)) {
+            this.logger.debug(basepath, '', contents);
+            throw new DomainError(409, `Entity file exists for '${fullpath} (case insensitive)`);
+        }
     }
 
     public async getEntityFile(moduleKey: string, templateType: string, meta: EntityMetadata): Promise<EntityFile> {

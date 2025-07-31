@@ -58,10 +58,8 @@ export class ModuleController extends ApiController implements IController {
         const tracer = randomUUID();
         const { moduleId, templateId } = req.params;
         this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
-        const meta = await this.metadata.getTemplate(moduleId, templateId);
-        this.logger.trace(`Template metadata ${ meta ? 'found' : 'not found'}`);
-        if (!meta.value) return { status: 404, body: undefined };
-        const templateFile = await this.service.getTemplateFile(meta.id, meta.value);
+        const meta = await this.metadata.getTemplate(moduleId, templateId, true);
+        const templateFile = await this.service.getTemplateFile(meta!.id, meta!.value);
         return { status: 200, body: templateFile };
     }
 
@@ -92,16 +90,8 @@ export class ModuleController extends ApiController implements IController {
         const metadata = { ...file };
         delete metadata.file;
 
-        const module = await this.metadata.getModule(moduleId);
-        this.logger.trace(`Module ${ module ? 'found' : 'not found'}`);
-
-        if (!module) return { status: 404, body: undefined };
-
-        const exists = await this.service.entityFileExists(module.key, metadata.type, file);
-        if (exists) {
-            this.logger.warn(`Entity file already exists for '${module.key}/${metadata.type}/${file.id}'`);
-            return { status: 409, body: undefined };
-        }
+        const module = await this.metadata.getModule(moduleId, true);
+        await this.service.ensureEntityFileDoesNotExist(module.key, metadata.type, file);
 
         const [ entity ] = await Promise.all([
             this.service.saveEntityFile(module.key, metadata.type, file),
@@ -112,8 +102,12 @@ export class ModuleController extends ApiController implements IController {
 
     private async deleteEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<void>> {
         const { moduleId, templateId, entityId } = req.params;
+
+        const module = await this.metadata.getModule(moduleId, true);
+        const meta = await this.metadata.getTemplate(moduleId, templateId, true);
+
         await Promise.all([
-            this.service.deleteEntityFile(moduleId, templateId, entityId),
+            this.service.deleteEntityFile(module.key, meta.value!.type, entityId),
             this.metadata.deleteEntity(moduleId, templateId, entityId),
         ]);
         return { status: 204, body: undefined };

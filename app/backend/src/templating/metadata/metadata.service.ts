@@ -3,7 +3,7 @@ import { readdir, readFile, writeFile } from 'fs/promises';
 import type { AppConfiguration } from '../../app';
 import type { EntityMetadata, Identifier, Metadata, MetaResponse, ModuleMetadata, TemplateMetadata } from './metadata.interfaces';
 import type { LogService } from '../../microservice/logs/log.service';
-import type { Dirent } from 'fs';
+import { DomainError } from '../../microservice/api/domain.error';
 
 
 export class MetadataService {
@@ -29,10 +29,11 @@ export class MetadataService {
         const module = metadata?.modules?.find(module => module.id === moduleId);
 
         if (strict && !module) {
-            throw new Error(`Module with ID ${moduleId} not found`);
+            throw new DomainError(404, `Module with ID ${moduleId} not found`);
         }
 
         // TODO fix conditional return type
+        this.logger.trace(`Module ${ module ? 'found' : 'not found'}`);
         return module!;
     }
 
@@ -89,19 +90,29 @@ export class MetadataService {
         return templates;
     }
 
-    public async getTemplate(moduleId: string, templateId: string): Promise<MetaResponse<TemplateMetadata>> {
-        const module = await this.getModule(moduleId);
+    public async getTemplate(moduleId: string, templateId: string, strict: boolean = true): Promise<MetaResponse<TemplateMetadata> | undefined> {
+        const module = await this.getModule(moduleId, strict);
         const template = module?.templates?.find(template => template.id === templateId);
-        const id = this.formatId(module, template?.id, template?.type);
-        return { id, value: template }
+
+        if (strict && !template) {
+            throw new Error(`Template with ID ${templateId} not found`);
+        }
+
+        this.logger.trace(`Template metadata ${ template ? 'found' : 'not found'}`);
+
+        if (template) {
+            const id = this.formatId(module, template?.id, template?.type);
+            return { id, value: template }
+        }
+
+        return undefined;
     }
 
-    public async deleteEntity(moduleId: string, templateId: string, entityId: string): Promise<MetaResponse<EntityMetadata>> {
+    public async deleteEntity(moduleId: string, templateId: string, entityId: string): Promise<void> {
         const module = await this.getModule(moduleId, true);
         if (module.entities) { module.entities = [] };
         module.entities = module.entities?.filter(meta => !this.entityMatches(templateId, entityId, meta));
         await this.upsertModule(module);
-        return this.getEntity(moduleId, entityId);
     }
 
     public async upsertEntity(moduleId: string, templateId: string, entity: EntityMetadata): Promise<MetaResponse<EntityMetadata>> {

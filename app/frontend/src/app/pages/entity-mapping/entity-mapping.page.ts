@@ -39,7 +39,6 @@ export class EntityMappingPage {
     private moduleId?: string;
     templateId?: string;
     private templateType?: string;
-    entityId?: string;
 
     form: FormGroup;
 
@@ -65,10 +64,9 @@ export class EntityMappingPage {
         this.route.paramMap.subscribe(async params => {
             this.moduleId = params.get('moduleId') ?? undefined;
             this.templateId = params.get('templateId') ?? undefined;
-            this.entityId = params.get('entityId') ?? undefined;
 
             // console.log(window.history.state.variables);
-            if (this.moduleId && this.templateId && this.entityId) {
+            if (this.moduleId && this.templateId) {
 
                 rest.getTemplateFile(this.moduleId, this.templateId).then((data) => {
                     this.template = data.content;
@@ -106,16 +104,15 @@ export class EntityMappingPage {
                     ];
 
                     // standard variables for all templates
-                    this.appendToForm('id', values?.['id'] ?? this.entityId)
-                    this.appendToForm('name', values?.['name'] ?? this.toHumanReadable(this.entityId ?? ''));
+                    this.appendToForm('name', values?.['name'] ?? '');
+                    this.appendToForm('id', values?.['id'] ?? '');
 
                     variables.forEach(variable => this.appendToForm(variable, values?.[variable]));
 
                     // convenience: pre-fill ID based on the entered name
-                    this.form.get('id')?.valueChanges.subscribe((value: string) => {
+                    this.form.get('name')?.valueChanges.subscribe((value: string) => {
                         if (value) {
-                            const name = this.toHumanReadable(value);
-                            this.form.controls['name'].setValue(name);
+                            this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
                         }
                     });
 
@@ -226,12 +223,14 @@ export class EntityMappingPage {
         const str = stringify(this.previews.map(preview => parse(preview.output)), { indent: 4 });
 
         console.log('Saving string:', str);
+        const variables = this.previews.reduce((vars, preview) => ({ ...vars, ...preview.variables }), {})
         const file: EntityFile = {
-            id: this.entityId!,
+            // TODO: add required veriables (id, name, etc.) to type
+            id: (variables as any).id,
             templateId: this.templateId!,
             type: this.templateType!,
             managed: true,
-            variables: this.previews.reduce((vars, preview) => ({ ...vars, ...preview.variables }), {}),
+            variables: variables,
             content: str,
         }
 
