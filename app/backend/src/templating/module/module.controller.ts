@@ -28,17 +28,8 @@ export class ModuleController extends ApiController implements IController {
     }
 
     public getRouter(prefix: string): express.Router {
-        this.registerEndpointsV2(prefix, [
+        return this.registerEndpointsV2(prefix, [
             { method: 'get', endpoint: '/', handler: this.getModules },
-            // { method: 'get', endpoint: '/:moduleId/templates', handler: this.getTemplateFiles },
-            // { method: 'get', endpoint: '/:moduleId/templates/:templateId', handler: this.getTemplateFile },
-            // { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
-            // { method: 'get', endpoint: '/:moduleId/unmanaged/entities', handler: this.getUnmanagedEntityFiles },
-            // { method: 'post', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.postEntityFile },
-            // { method: 'delete', endpoint: '/:moduleId/templates/:templateId/entities/:entityId', handler: this.deleteEntityFile },
-        ]);
-        return this.registerEndpoints(prefix, [
-            // { method: 'get', endpoint: '/', handler: this.getModules },
             { method: 'get', endpoint: '/:moduleId/templates', handler: this.getTemplateFiles },
             { method: 'get', endpoint: '/:moduleId/templates/:templateId', handler: this.getTemplateFile },
             { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
@@ -48,49 +39,46 @@ export class ModuleController extends ApiController implements IController {
         ]);
     }
 
-    private async getModules(context: IRequestContext, req: express.Request, res: express.Response): Promise<IResponse<Module[]>> {
+    private async getModules(context: IRequestContext): Promise<IResponse<Module[]>> {
         const metadata = await this.metadata.getMetadata(context);
         return { status: 200, body: metadata.modules };
     }
 
-    private async getTemplateFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<TemplateMetadata[]>> {
-        const tracer = randomUUID();
-        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
+    private async getTemplateFiles(context: IRequestContext, req: express.Request): Promise<IResponse<TemplateMetadata[]>> {
         const { moduleId } = req.params;
-        const metas = await this.metadata.getTemplates(tracer, moduleId);
+        const metas = await this.metadata.getTemplates(context.tracer, moduleId);
         return { status: 200, body: metas };
     }
 
-    private async getTemplateFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<TemplateFile>> {
-        const tracer = randomUUID();
+    private async getTemplateFile(context: IRequestContext, req: express.Request): Promise<IResponse<TemplateFile>> {
         const { moduleId, templateId } = req.params;
-        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
+
         const meta = await this.metadata.getTemplate(moduleId, templateId, true);
-        const templateFile = await this.service.getTemplateFile(meta!.id, meta!.value);
+        if (!meta || !meta.value) {
+            return { status: 404, body: {} as TemplateFile };
+        }
+
+        const templateFile = await this.service.getTemplateFile(meta.id, meta.value);
         return { status: 200, body: templateFile };
     }
 
-    private async getEntityFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityMetadata[]>> {
-        const tracer = randomUUID();
-        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
+    private async getEntityFiles(context: IRequestContext, req: express.Request): Promise<IResponse<EntityMetadata[]>> {
         const { moduleId, templateId } = req.params;
 
         const module = await this.metadata.getModule(moduleId);
-        const entities = await this.metadata.getEntitiesForModule(tracer, module, templateId);
+        const entities = await this.metadata.getEntitiesForModule(context.tracer, module, templateId);
         return { status: 200, body: entities };
     }
 
-    private async getUnmanagedEntityFiles(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityMetadata[]>> {
-        const tracer = randomUUID();
-        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
+    private async getUnmanagedEntityFiles(context: IRequestContext, req: express.Request): Promise<IResponse<EntityMetadata[]>> {
         const { moduleId } = req.params;
 
         const module = await this.metadata.getModule(moduleId);
-        const entities = await this.metadata.getUnmanagedEntitiesForModule(tracer, module);
+        const entities = await this.metadata.getUnmanagedEntitiesForModule(context.tracer, module);
         return { status: 200, body: entities };
     }
 
-    private async postEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<EntityFile>> {
+    private async postEntityFile(context: IRequestContext, req: express.Request): Promise<IResponse<EntityFile>> {
         const { moduleId, templateId } = req.params;
         const file = req.body;
 
@@ -107,11 +95,14 @@ export class ModuleController extends ApiController implements IController {
         return { status: 200, body: entity };
     }
 
-    private async deleteEntityFile(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<void>> {
+    private async deleteEntityFile(context: IRequestContext, req: express.Request): Promise<IResponse<void>> {
         const { moduleId, templateId, entityId } = req.params;
 
         const module = await this.metadata.getModule(moduleId, true);
         const meta = await this.metadata.getTemplate(moduleId, templateId, true);
+        if (!meta) {
+            return { status: 404, body: undefined };
+        }
 
         await Promise.all([
             this.service.deleteEntityFile(module.key, meta.value!.type, entityId),
@@ -119,6 +110,5 @@ export class ModuleController extends ApiController implements IController {
         ]);
         return { status: 204, body: undefined };
     }
-
 
 }
