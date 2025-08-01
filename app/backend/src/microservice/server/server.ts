@@ -58,4 +58,8 @@ export class Server {
         });
     }
 
+    public getApp(): express.Application {
+        return this.app;
+    }
+
 }

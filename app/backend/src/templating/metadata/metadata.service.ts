@@ -4,6 +4,7 @@ import type { AppConfiguration } from '../../app';
 import type { EntityMetadata, Identifier, Metadata, MetaResponse, ModuleMetadata, TemplateMetadata } from './metadata.interfaces';
 import type { LogService } from '../../microservice/logs/log.service';
 import { DomainError } from '../../microservice/api/domain.error';
+import type { IRequestContext } from '../../microservice/api/endpoint.interface';
 
 
 export class MetadataService {
@@ -16,11 +17,14 @@ export class MetadataService {
         this.destinationDirectory = appconfig.outputDirectory;
     }
 
-    public async getMetadata(): Promise<Metadata> {
+    // TODO: make context required
+    public async getMetadata(context?: IRequestContext): Promise<Metadata> {
         const sourceRoot = resolve(this.sourceDirectory);
         const metadataPath = resolve(sourceRoot, '.metadata.json');
         const content = await readFile(metadataPath, 'utf-8');
+        this.logger.trace(`Metadata at '${ metadataPath }' read successfully`, context?.tracer);
         const metadata = JSON.parse(content) as Metadata;
+        this.logger.trace(`Metadata at '${ metadataPath }' parsed successfully`, context?.tracer);
         return metadata;
     }
 

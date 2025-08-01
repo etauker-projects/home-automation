@@ -10,3 +10,18 @@ export interface IEndpoint {
         res: Response,
     ) => Promise<IResponse<any>>;
 }
+
+export interface IRequestContext {
+    endpoint: string;
+    tracer: string;
+}
+
+export interface IEndpointV2 {
+    method: string;
+    endpoint: string;
+    handler: (
+        context: IRequestContext,
+        req: Request,
+        res: Response,
+    ) => Promise<IResponse<any>>;
+}

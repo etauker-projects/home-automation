@@ -1,5 +1,5 @@
 import type { AppConfiguration } from '../../app';
-import { ApiController, type IResponse } from '../../microservice/api/api.module';
+import { ApiController, type IRequestContext, type IResponse } from '../../microservice/api/api.module';
 import type { PersistenceConnector } from '../../microservice/persistence/persistence.connector';
 import { IController } from '../../microservice/server/controller.interface';
 import * as express from 'express';
@@ -28,8 +28,17 @@ export class ModuleController extends ApiController implements IController {
     }
 
     public getRouter(prefix: string): express.Router {
-        return this.registerEndpoints(prefix, [
+        this.registerEndpointsV2(prefix, [
             { method: 'get', endpoint: '/', handler: this.getModules },
+            // { method: 'get', endpoint: '/:moduleId/templates', handler: this.getTemplateFiles },
+            // { method: 'get', endpoint: '/:moduleId/templates/:templateId', handler: this.getTemplateFile },
+            // { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
+            // { method: 'get', endpoint: '/:moduleId/unmanaged/entities', handler: this.getUnmanagedEntityFiles },
+            // { method: 'post', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.postEntityFile },
+            // { method: 'delete', endpoint: '/:moduleId/templates/:templateId/entities/:entityId', handler: this.deleteEntityFile },
+        ]);
+        return this.registerEndpoints(prefix, [
+            // { method: 'get', endpoint: '/', handler: this.getModules },
             { method: 'get', endpoint: '/:moduleId/templates', handler: this.getTemplateFiles },
             { method: 'get', endpoint: '/:moduleId/templates/:templateId', handler: this.getTemplateFile },
             { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
@@ -39,10 +48,8 @@ export class ModuleController extends ApiController implements IController {
         ]);
     }
 
-    private async getModules(endpoint: string, req: express.Request, res: express.Response): Promise<IResponse<Module[]>> {
-        const tracer = randomUUID();
-        this.logger.trace(`[${req.method} ${endpoint}]`, tracer, req.params);
-        const metadata = await this.metadata.getMetadata();
+    private async getModules(context: IRequestContext, req: express.Request, res: express.Response): Promise<IResponse<Module[]>> {
+        const metadata = await this.metadata.getMetadata(context);
         return { status: 200, body: metadata.modules };
     }
 

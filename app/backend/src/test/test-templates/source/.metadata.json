@@ -1,0 +1,17 @@
+{
+    "modules": [
+        {
+            "id": "8ce9cdbe-1908-4206-af2a-8f2904142e37",
+            "key": "power_monitoring",
+            "name": "Power Monitoring",
+            "description": "Module for monitoring power usage and statistics.",
+            "templates": [
+                {
+                    "id": "84c09c8a-8b90-4262-b534-d4a5816e5aa4",
+                    "type": "template_sensor"
+                }
+            ],
+            "entities": []
+        }
+    ]
+}

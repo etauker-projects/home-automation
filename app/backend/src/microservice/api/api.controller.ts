@@ -1,6 +1,7 @@
 import * as express from 'express';
+import { randomUUID } from 'crypto';
 import { IncomingHttpHeaders } from 'http';
-import { HttpError, IEndpoint, IResponse } from './api.module';
+import { HttpError, IEndpoint, IResponse, type IEndpointV2, type IRequestContext } from './api.module';
 import { LogService, LogFactory } from '../logs/log.module';
 import { AuthService, AuthFactory, Token } from '../auth/auth.module';
 import type { PersistenceConnector } from '../persistence/persistence.connector';
@@ -30,6 +31,9 @@ export class ApiController {
         return this.stopped;
     }
 
+    /**
+     * @deprecated Use `registerEndpointsV2` instead.
+     */
     protected registerEndpoints(
         prefix: string,
         registrations: IEndpoint[]
@@ -41,13 +45,55 @@ export class ApiController {
             const endpoint = registration.endpoint;
             const handler = async (req: express.Request, res: express.Response) => {
                 try {
-                    // TODO: change endpoint to context and add tracer there
                     const { status, body } = await registration.handler.bind(
                         this, endpoint,
                     )(req, res);
+                    this.logger.trace(`Returning a ${status} response`, '', body);
                     res.status(status).json(body);
                 } catch (error) {
                     const { status, body } = this.parseError(error);
+                    this.logger.warn(`Uncaught error: [${status}] ${ body.message }`, '', error);
+
+                    res.status(status).json(body);
+                }
+            };
+
+            (this.router as any)[method](endpoint, handler);
+            this.logger.info(`-- ${ method.toUpperCase() } ${ prefix }${ endpoint }`);
+        });
+        return this.router;
+    }
+
+    /**
+     * V2 generates tracer and passes it to handlers inside a request context together with the endpoint.
+     * It also adds standardised logging of requests and responses.
+     */
+    protected registerEndpointsV2(
+        prefix: string,
+        registrations: IEndpointV2[]
+    ): express.Router {
+
+        this.logger.info('Registering  endpoints:');
+        registrations.forEach(registration => {
+            const tracer = randomUUID();
+            const method = registration.method;
+            const endpoint = registration.endpoint;
+            const context: IRequestContext = {
+                endpoint,
+                tracer,
+            };
+
+            const handler = async (req: express.Request, res: express.Response) => {
+                try {
+                    this.logger.trace(`[${req.method} ${context.endpoint}]`, context.tracer, req.params);
+                    const { status, body } = await registration.handler.bind(
+                        this, context,
+                    )(req, res);
+                    this.logger.trace(`Returning a ${status} response`, context.tracer, body);
+                    res.status(status).json(body);
+                } catch (error) {
+                    const { status, body } = this.parseError(error);
+                    this.logger.warn(`Uncaught error: [${status}] ${ body.message }`, context.tracer, error);
                     res.status(status).json(body);
                 }
             };
@@ -61,7 +107,6 @@ export class ApiController {
     protected parseError(error: any): IResponse<{ message: string }> {
         const status = typeof error?.code === 'number' ? error.code : 500;
         const message = error?.message || 'Unexpected error occurred';
-        this.logger.warn(`Uncaught error: ${ message }`, '', error);
         return { status, body: { message }};
     }
 
