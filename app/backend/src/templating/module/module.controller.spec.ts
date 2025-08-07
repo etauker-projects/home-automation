@@ -28,7 +28,7 @@ const server = new Server(serverConfig);
 const connector = {};
 server.register('/modules', ModuleController.getInstance(connector, appConfig));
 
-describe.only('ModuleController', () => {
+describe('ModuleController', () => {
     before(() => {
         server.start();
     });
@@ -52,12 +52,17 @@ describe.only('ModuleController', () => {
         expect(response.body[0].name).equals('Power Monitoring');
         expect(response.body[0].description).equals('Module for monitoring power usage and statistics.');
 
-
         expect(response.body[0].templates!.length).equals(1);
         expect(Object.keys(response.body[0].templates![0]).length).equals(2);
         expect(response.body[0].templates?.[0].id).equals('84c09c8a-8b90-4262-b534-d4a5816e5aa4');
         expect(response.body[0].templates?.[0].type).equals('template_sensor');
 
-        // TODO: add entity checks
+        expect(response.body[0].entities!.length).equals(1);
+        expect(response.body[0].entities?.[0].templateId).equals('c8166f12-e08d-4d1b-b4b1-e65b48297ec4');
+        expect(response.body[0].entities?.[0].type).equals('utility_meter');
+        expect(response.body[0].entities?.[0].managed).equals('true');
+        expect((response.body[0].entities?.[0] as any).content).undefined
+        expect(response.body[0].entities?.[0].variables.name).equals('Managed');
+        expect(response.body[0].entities?.[0].variables.id).equals('managed');
     });
 });

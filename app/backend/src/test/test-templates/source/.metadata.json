@@ -11,7 +11,18 @@
                     "type": "template_sensor"
                 }
             ],
-            "entities": []
+            "entities": [
+                {
+                    "id": "managed",
+                    "templateId": "c8166f12-e08d-4d1b-b4b1-e65b48297ec4",
+                    "type": "utility_meter",
+                    "managed": true,
+                    "variables": {
+                        "name": "Managed",
+                        "id": "managed"
+                    }
+                }
+            ]
         }
     ]
 }
