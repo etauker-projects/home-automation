@@ -51,22 +51,14 @@ export class ModuleService {
         return { ...meta, content: contents };
     }
 
-    public async saveEntityFile(moduleKey: string, templateType: string, file: EntityFile): Promise<EntityFile> {
+    public async saveEntityFile(moduleKey: string, templateType: string, file: EntityFile, overwrite: boolean = false): Promise<EntityFile> {
         const path = this.formatPath(moduleKey, templateType, file.id);
         const fullpath = resolve(this.destinationDirectory, path.substring(1));
+        const flag = overwrite ? 'w' : 'wx';
 
-        try {
-            this.logger.trace(`Attempting to write conetnts to file ${fullpath}`);
-            await readFile(fullpath, { encoding: 'utf-8' });
-            throw new Error(`File already exists: ${fullpath}`);
-        } catch (err: any) {
-            if (err.code === 'ENOENT') {
-                await writeFile(fullpath, file.content, { encoding: 'utf-8', flag: 'wx' });
-                delete file.content;
-                return file;
-            }
-            throw err;
-        }
+        await writeFile(fullpath, file.content, { encoding: 'utf-8', flag });
+        delete file.content;
+        return file;
     }
 
     public async deleteEntityFile(moduleKey: string, templateType: string, entityId: string): Promise<void> {

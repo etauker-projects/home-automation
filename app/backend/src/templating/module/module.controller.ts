@@ -35,6 +35,7 @@ export class ModuleController extends ApiController implements IController {
             { method: 'get', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.getEntityFiles },
             { method: 'get', endpoint: '/:moduleId/unmanaged/entities', handler: this.getUnmanagedEntityFiles },
             { method: 'post', endpoint: '/:moduleId/templates/:templateId/entities', handler: this.postEntityFile },
+            { method: 'put', endpoint: '/:moduleId/templates/:templateId/entities/:entityId', handler: this.putEntityFile },
             { method: 'delete', endpoint: '/:moduleId/templates/:templateId/entities/:entityId', handler: this.deleteEntityFile },
         ]);
     }
@@ -84,12 +85,31 @@ export class ModuleController extends ApiController implements IController {
 
         const metadata = { ...file };
         delete metadata.file;
+        delete metadata.content;
 
         const module = await this.metadata.getModule(moduleId, true);
         await this.service.ensureEntityFileDoesNotExist(module.key, metadata.type, file);
 
         const [ entity ] = await Promise.all([
             this.service.saveEntityFile(module.key, metadata.type, file),
+            this.metadata.upsertEntity(moduleId, templateId, metadata),
+        ]);
+        return { status: 200, body: entity };
+    }
+
+    private async putEntityFile(context: IRequestContext, req: express.Request): Promise<IResponse<EntityFile>> {
+        const { moduleId, templateId, entityId } = req.params;
+        const file = req.body;
+
+        const metadata = { ...file };
+        delete metadata.file;
+        delete metadata.content;
+
+        const module = await this.metadata.getModule(moduleId, true);
+        // await this.service.ensureEntityFileDoesNotExist(module.key, metadata.type, file);
+
+        const [ entity ] = await Promise.all([
+            this.service.saveEntityFile(module.key, metadata.type, file, true),
             this.metadata.upsertEntity(moduleId, templateId, metadata),
         ]);
         return { status: 200, body: entity };

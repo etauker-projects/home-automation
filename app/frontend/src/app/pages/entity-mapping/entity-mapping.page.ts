@@ -39,6 +39,7 @@ export class EntityMappingPage {
     private moduleId?: string;
     templateId?: string;
     private templateType?: string;
+    private entityId?: string;
 
     form: FormGroup;
 
@@ -64,6 +65,7 @@ export class EntityMappingPage {
         this.route.paramMap.subscribe(async params => {
             this.moduleId = params.get('moduleId') ?? undefined;
             this.templateId = params.get('templateId') ?? undefined;
+            this.entityId = params.get('entityId') ?? undefined;
 
             // console.log(window.history.state.variables);
             if (this.moduleId && this.templateId) {
@@ -103,15 +105,17 @@ export class EntityMappingPage {
 
                     ];
 
+                    const readonly = this.entityId !== undefined;
+
                     // standard variables for all templates
                     this.appendToForm('name', values?.['name'] ?? '');
-                    this.appendToForm('id', values?.['id'] ?? '');
+                    this.appendToForm('id', this.entityId ?? values?.['id'] ?? '', readonly);
 
                     variables.forEach(variable => this.appendToForm(variable, values?.[variable]));
 
                     // convenience: pre-fill ID based on the entered name
                     this.form.get('name')?.valueChanges.subscribe((value: string) => {
-                        if (value) {
+                        if (value && !readonly) {
                             this.form.controls['id'].setValue(value.toLowerCase().replace(/ /g, '_'));
                         }
                     });
@@ -122,11 +126,11 @@ export class EntityMappingPage {
         });
     }
 
-    private appendToForm(variable: string | Control, value?: string): void {
+    private appendToForm(variable: string | Control, value?: string, readonly: boolean = false): void {
         const control = typeof variable === 'string' ? {
             id: variable,
             label: this.toHumanReadable(variable),
-            readonly: false,
+            readonly: readonly,
             control: this.formBuilder.control(value ?? '', Validators.required),
         } : variable;
 
@@ -215,6 +219,9 @@ export class EntityMappingPage {
     }
 
     async onSave() {
+
+        const isEditMode = !!this.entityId ? true : false;
+
         if (this.previews.length === 0) {
             console.warn('No previews to save');
             return;
@@ -234,7 +241,12 @@ export class EntityMappingPage {
             content: str,
         }
 
-        await this.rest.postEntityFile(this.moduleId!, this.templateId!, file);
+        if (isEditMode) {
+            await this.rest.putEntityFile(this.moduleId!, this.templateId!, file);
+        } else {
+            await this.rest.postEntityFile(this.moduleId!, this.templateId!, file);
+        }
+
         this.router.navigate([ '/modules', this.moduleId ]);
     }
 

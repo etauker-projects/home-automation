@@ -57,6 +57,12 @@ export class RestService {
     return firstValueFrom(response);
   }
 
+  public async putEntityFile(moduleId: string, templateId: string, file: EntityFile): Promise<EntityFile> {
+    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities/${file.id}`;
+    const response = this.http.put<EntityFile>(endpoint, file);
+    return firstValueFrom(response);
+  }
+
   public async deleteEntityFile(moduleId: string, templateId: string, entityId: string): Promise<EntityFile> {
     const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities/${entityId}`;
     const response = this.http.delete<EntityFile>(endpoint);

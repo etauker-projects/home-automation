@@ -11,11 +11,13 @@ export const routes: Routes = [
     },
     {
         path: 'modules/:moduleId/templates/:templateId/entities/:entityId',
-        loadComponent: () => import('./pages/entity-mapping/entity-mapping.page').then(m => m.EntityMappingPage)
+        loadComponent: () => import('./pages/entity-mapping/entity-mapping.page').then(m => m.EntityMappingPage),
+        data: { mode: 'edit' }
     },
         {
         path: 'modules/:moduleId/templates/:templateId/entities/new',
-        loadComponent: () => import('./pages/entity-mapping/entity-mapping.page').then(m => m.EntityMappingPage)
+        loadComponent: () => import('./pages/entity-mapping/entity-mapping.page').then(m => m.EntityMappingPage),
+        data: { mode: 'crew' }
     },
     {
         path: 'modules/:moduleId/templates',
