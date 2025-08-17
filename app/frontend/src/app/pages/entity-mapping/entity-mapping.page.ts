@@ -65,7 +65,13 @@ export class EntityMappingPage {
         this.route.paramMap.subscribe(async params => {
             this.moduleId = params.get('moduleId') ?? undefined;
             this.templateId = params.get('templateId') ?? undefined;
-            this.entityId = params.get('entityId') ?? undefined;
+
+            if (!params.get('entityId') || params.get('entityId') === 'new') {
+                this.entityId = undefined;
+            } else {
+                this.entityId = params.get('entityId') ?? undefined;
+            }
+
 
             // console.log(window.history.state.variables);
             if (this.moduleId && this.templateId) {

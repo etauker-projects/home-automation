@@ -28,4 +28,11 @@ export class TableComponent<T extends { [key: string]: any }> implements OnChang
       action.handle(row);
     }
   }
+
+  onEnabledCheck(action: TableAction<T>, row: TableRow<T>) {
+    if (action && typeof action.enabled === 'function') {
+      return action.enabled(row);
+    }
+    return true;
+  }
 }

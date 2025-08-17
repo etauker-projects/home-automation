@@ -20,5 +20,6 @@ export interface TableAction<T extends { [key: string]: any }> {
     key: string;
     label: string;
     // icon?: string;
-    handle: (row: TableRow<T>) => void; // TODO: uncomment
+    handle: (row: TableRow<T>) => void;
+    enabled: (row: TableRow<T>) => boolean;
 }

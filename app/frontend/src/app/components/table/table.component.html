@@ -10,11 +10,13 @@
                 <td *ngFor="let column of columns" class="fd-table__cell">
                     <span *ngIf="column.key !== 'actions'">{{ row[column.key] }}</span>
                     <span *ngIf="column.key === 'actions'">
-                        <span
+                        <button
                             *ngFor="let action of actions"
+                            [disabled]="!onEnabledCheck(action, row)"
                             (click)="onActionClick(action, row)"
                             class="action"
-                        >{{ action.label }}</span>
+                            type="button"
+                        >{{ action.label }}</button>
                     </span>
                 </td>
             </tr>

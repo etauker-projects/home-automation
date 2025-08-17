@@ -38,6 +38,7 @@ export class HomePage {
         {
           key: 'navigate',
           label: 'Details',
+          enabled: (row: TableRow<Module>) => true,
           handle: (row: TableRow<Module>) => {
             this.router.navigate(['/modules', row.id]);
           },

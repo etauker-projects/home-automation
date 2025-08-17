@@ -61,6 +61,7 @@ export class ModulePage {
                 key: 'edit',
                 label: 'Edit',
                 // icon: 'edit',
+                enabled: (row: TableRow<EntityMetadata>) => row.managed,
                 handle: (row: TableRow<EntityMetadata>) => {
                     if (!row.managed) {
                         console.warn('Unmanaged entity cannot be edited.')
@@ -76,6 +77,7 @@ export class ModulePage {
                 key: 'delete',
                 label: 'Delete',
                 // icon: 'delete',
+                enabled: (row: TableRow<EntityMetadata>) => row.managed,
                 handle: async (row: TableRow<EntityMetadata>) => {
                     if (!row.managed) {
                         console.warn('Unmanaged entity cannot be deleted.')
