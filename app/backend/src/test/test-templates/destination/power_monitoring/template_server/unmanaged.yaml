@@ -1,0 +1,6 @@
+- name: Unmanaged Cost
+  unique_id: sensor.unmanged_cost
+  unit_of_measurement: "euro"
+  state_class: total_increasing
+  icon: mdi:currency-eur
+  state: 10

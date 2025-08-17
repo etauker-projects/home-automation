@@ -1,6 +1,7 @@
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="entity-mapping-form">
-    <div>
+    <div class="form-group">
         <label for="templateId">Template ID:</label>
+        <br />
         <select id="templateId" formControlName="templateId" required>
             <option value="" disabled selected>Select a template</option>
             <option *ngFor="let template of templates" [value]="template.id">
@@ -8,5 +9,6 @@
             </option>
         </select>
     </div>
-    <button type="submit" [disabled]="form.invalid">Next</button>
+    <br/>
+    <button type="submit" [disabled]="form.invalid" class="btn btn-primary">Next</button>
 </form>

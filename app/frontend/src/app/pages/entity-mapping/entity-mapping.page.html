@@ -5,12 +5,13 @@
         <label [for]="control.id">{{ control.label }}:</label>
         <input [id]="control.id" [formControlName]="control.id" required [readonly]="control.readonly" />
     </div>
-    <button type="submit" [disabled]="form.invalid">Preview</button>
+    <br/>
+    <button type="submit" [disabled]="form.invalid" class="btn btn-primary">Preview</button>
 </form>
 
-<section *ngFor="let preview of previews" class="text-comparison-section">
+<section *ngFor="let preview of previews" class="section">
     <h2>{{ preview.title }}</h2>
     <app-diff-editor [original]="preview.template" [modified]="preview.output"></app-diff-editor>
 </section>
 
-<button *ngIf="(previews?.length || 0) > 0" (click)="onSave()" class="entity-mapping-form">Save</button>
+<button *ngIf="(previews?.length || 0) > 0" (click)="onSave()" class="btn btn-primary">Save</button>
