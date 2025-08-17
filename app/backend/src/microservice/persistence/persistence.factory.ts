@@ -1,9 +1,9 @@
-// import { Extractor } from '../environment/extractor';
-// import type { IPersistenceConfig } from './persistence-config.interface';
-// // import { ConnectionPool } from './connection-pool';
-// import { PersistenceConnector } from './persistence.connector';
-// // import { PoolFactory } from './pool.factory';
-// // import { IPersistenceConfig, IPool, PersistenceConnector, PoolFactory } from '@etauker/connector-postgres';
+// import { Extractor } from '../environment/extractor.js';
+// import type { IPersistenceConfig } from './persistence-config.interface.js';
+// // import { ConnectionPool } from './connection-pool.js';
+// import { PersistenceConnector } from './persistence.connector.js';
+// // import { PoolFactory } from './pool.factory.js';
+// // import { IPersistenceConfig, IPool, PersistenceConnector, PoolFactory } from '@etauker/connector-postgres.js';
 
 // export class PersistenceFactory {
 

@@ -1,13 +1,13 @@
 import supertest from 'supertest';
-import { resolve } from 'path';
-import type { AppConfiguration } from '../../app';
-import { Server } from '../../microservice/server/server';
-import type { ServerConfig } from '../../microservice/server/server-config.interface';
-import { ModuleController } from './module.controller';
+import { resolve } from 'node:path';
+import type { AppConfiguration } from '../../app.js';
+import { Server } from '../../microservice/server/server.js';
+import type { ServerConfig } from '../../microservice/server/server-config.interface.js';
+import { ModuleController } from './module.controller.js';
 import { describe } from 'mocha';
 import { expect } from 'chai';
-import type { Module } from './module.interfaces';
-import type { IResponse } from '../../microservice/api/response.interface';
+import type { Module } from './module.interfaces.js';
+import type { IResponse } from '../../microservice/api/response.interface.js';
 
 const serverConfig: ServerConfig = {
     apiRoot: '/api',

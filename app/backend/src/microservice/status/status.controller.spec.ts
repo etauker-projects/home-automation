@@ -1,10 +1,10 @@
-import 'mocha';
+import 'mocha.js';
 import assert from 'assert';
 import moment from 'moment';
 import axios, { AxiosResponse } from 'axios';
-import { Server } from '../server/server';
-// import { StatusController } from './status.controller';
-// import { PersistenceConnectorMock } from '../persistence/persistence-connector.mock';
+import { Server } from '../server/server.js';
+// import { StatusController } from './status.controller.js';
+// import { PersistenceConnectorMock } from '../persistence/persistence-connector.mock.js';
 
 const port = 9999;
 const apiRoot = '/mixology/recipes';

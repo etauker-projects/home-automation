@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { IResponse } from './response.interface';
+import { IResponse } from './response.interface.js';
 
 export interface IEndpoint {
     method: string;

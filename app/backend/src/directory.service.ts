@@ -1,4 +1,4 @@
-// import getFolderSize from 'get-folder-size';
+// import getFolderSize from 'get-folder-size.js';
 
 export class DirectoryService {
     // appoach 1

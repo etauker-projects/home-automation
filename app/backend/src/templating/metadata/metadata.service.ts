@@ -1,10 +1,10 @@
-import { resolve } from 'path';
-import { readdir, readFile, writeFile } from 'fs/promises';
-import type { AppConfiguration } from '../../app';
-import type { EntityMetadata, Identifier, Metadata, MetaResponse, ModuleMetadata, TemplateMetadata } from './metadata.interfaces';
-import type { LogService } from '../../microservice/logs/log.service';
-import { DomainError } from '../../microservice/api/domain.error';
-import type { IRequestContext } from '../../microservice/api/endpoint.interface';
+import { resolve } from 'node:path';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
+import type { AppConfiguration } from '../../app.js';
+import type { EntityMetadata, Identifier, Metadata, MetaResponse, ModuleMetadata, TemplateMetadata } from './metadata.interfaces.js';
+import type { LogService } from '../../microservice/logs/log.service.js';
+import { DomainError } from '../../microservice/api/domain.error.js';
+import type { IRequestContext } from '../../microservice/api/endpoint.interface.js';
 
 
 export class MetadataService {

@@ -1,7 +1,7 @@
-// import sinon, { SinonStub } from 'sinon';
-// import type { IPersistenceResult, PersistenceTransaction } from './persistence.transaction';
-// import type { PersistenceConnector } from './persistence.connector';
-// import { PersistenceTransactionMock } from './persistence-transaction.mock';
+// import sinon, { SinonStub } from 'sinon.js';
+// import type { IPersistenceResult, PersistenceTransaction } from './persistence.transaction.js';
+// import type { PersistenceConnector } from './persistence.connector.js';
+// import { PersistenceTransactionMock } from './persistence-transaction.mock.js';
 
 // export class PersistenceConnectorMock {
 

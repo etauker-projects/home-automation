@@ -1,7 +1,7 @@
-export * from './category.type';
-export { Config as LogConfig } from './config.interface';
-export * from './entry';
-export * from './format.type';
-export * from './level.enum';
-export * from './log.factory';
-export * from './log.service';
+export * from './category.type.js';
+export { Config as LogConfig } from './config.interface.js';
+export * from './entry.js';
+export * from './format.type.js';
+export * from './level.enum.js';
+export * from './log.factory.js';
+export * from './log.service.js';

@@ -1,10 +1,10 @@
-import { resolve } from 'path';
-import { readFile, readdir, rm, writeFile, stat } from 'fs/promises';
-import type { AppConfiguration } from '../../app';
-import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
-import type { Identifier, MetaResponse } from '../metadata/metadata.interfaces';
-import { LogService } from '../../microservice/logs/log.service';
-import { DomainError } from '../../microservice/api/domain.error';
+import { resolve } from 'node:path';
+import { readFile, readdir, rm, writeFile, stat } from 'node:fs/promises';
+import type { AppConfiguration } from '../../app.js';
+import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces.js';
+import type { Identifier, MetaResponse } from '../metadata/metadata.interfaces.js';
+import { LogService } from '../../microservice/logs/log.service.js';
+import { DomainError } from '../../microservice/api/domain.error.js';
 
 
 export class ModuleService {

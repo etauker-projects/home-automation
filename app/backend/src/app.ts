@@ -1,5 +1,5 @@
 // import { MqttConnector } from './mqtt/mqtt-connector.js';
-// import { DiskService } from './disk.service';
+// import { DiskService } from './disk.service.js';
 
 
 // const directories = [
@@ -57,7 +57,7 @@
 //     }
 // });
 
-import { TemplateService } from './template/template.service';
+import { TemplateService } from './template/template.service.js';
 
 // const templatingService = new TemplatingService();
 
@@ -78,8 +78,8 @@ import { TemplateService } from './template/template.service';
 //     description: string;
 // }
 
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

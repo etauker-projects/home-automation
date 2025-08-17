@@ -1,8 +1,8 @@
-import { Level } from './level.enum';
-import { Category } from './category.type';
-import { Format } from './format.type';
-import { Config } from './config.interface';
-import { Entry } from './entry';
+import { Level } from './level.enum.js';
+import { Category } from './category.type.js';
+import { Format } from './format.type.js';
+import { Config } from './config.interface.js';
+import { Entry } from './entry.js';
 
 export class LogService {
 

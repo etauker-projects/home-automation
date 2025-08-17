@@ -1,6 +1,6 @@
-import moment from 'moment';
-import { Category } from './category.type';
 import { randomUUID } from 'node:crypto';
+import moment from 'moment';
+import { Category } from './category.type.js';
 
 export class Entry {
 

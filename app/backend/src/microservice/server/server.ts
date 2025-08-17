@@ -1,10 +1,10 @@
+import { Server as HttpServer } from 'node:http';
 import express from 'express';
-import { Server as HttpServer } from 'http';
-import { LogFactory } from '../logs/log.factory';
-import { LogService } from '../logs/log.service';
-import { ServerConfig } from './server-config.interface';
-import { IController } from './controller.interface';
 import cors from 'cors';
+import { LogFactory } from '../logs/log.factory.js';
+import { LogService } from '../logs/log.service.js';
+import { ServerConfig } from './server-config.interface.js';
+import { IController } from './controller.interface.js';
 
 export class Server {
 

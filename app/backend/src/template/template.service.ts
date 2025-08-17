@@ -1,7 +1,7 @@
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-import { readFile, readdir } from 'fs/promises';
-import type { AppConfiguration } from '../app';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+import { readFile, readdir } from 'node:fs/promises';
+import type { AppConfiguration } from '../app.js';
 
 // Polyfill __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);

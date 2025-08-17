@@ -1,8 +1,8 @@
-import { Level } from './level.enum';
-import { Config } from './config.interface';
-import { Format } from './format.type';
-import { LogService } from './log.service';
-import { Extractor } from '../environment/extractor';
+import { Level } from './level.enum.js';
+import { Config } from './config.interface.js';
+import { Format } from './format.type.js';
+import { LogService } from './log.service.js';
+import { Extractor } from '../environment/extractor.js';
 
 export class LogFactory {
 

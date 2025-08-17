@@ -1,7 +1,7 @@
 import assert from 'assert';
 
 export class TestHelper {
-    
+
     public static assertThrows(
         executeTest: Function,
         expectedCode: number,

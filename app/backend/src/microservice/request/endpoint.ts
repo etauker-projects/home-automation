@@ -1,5 +1,5 @@
 import axios, { AxiosRequestHeaders, AxiosResponse } from 'axios';
-import { EndpointRequestResponse } from './endpoint-request-response.interface';
+import { EndpointRequestResponse } from './endpoint-request-response.interface.js';
 
 type SupportedMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 

@@ -1,22 +1,22 @@
 import * as express from 'express';
-import { randomUUID } from 'crypto';
-import { IncomingHttpHeaders } from 'http';
-import { HttpError, IEndpoint, IResponse, type IEndpointV2, type IRequestContext } from './api.module';
-import { LogService, LogFactory } from '../logs/log.module';
-import { AuthService, AuthFactory, Token } from '../auth/auth.module';
-import type { PersistenceConnector } from '../persistence/persistence.connector';
+import { randomUUID } from 'node:crypto';
+import { IncomingHttpHeaders } from 'node:http';
+import { HttpError, IEndpoint, IResponse, type IEndpointV2, type IRequestContext } from './api.module.js';
+import { LogService, LogFactory } from '../logs/log.module.js';
+// import { AuthService, AuthFactory, Token } from '../auth/auth.module.js';
+import type { PersistenceConnector } from '../persistence/persistence.connector.js';
 
 
 export class ApiController {
 
     protected logger: LogService;
-    private auth: AuthService;
+    // private auth: AuthService;
     private router: express.Router;
     private stopped: boolean;
 
     constructor(connector: PersistenceConnector) {
         this.logger = LogFactory.makeService();
-        this.auth = AuthFactory.makeService();
+        // this.auth = AuthFactory.makeService();
         // eslint-disable-next-line new-cap
         this.router = express.Router();
         this.stopped = false;
@@ -137,37 +137,37 @@ export class ApiController {
         return authorizationHeader.replace(BEARER_REGEX, '');
     }
 
-    protected async verifyProvidedToken(
-        requiredRole?: string,
-        cookies: { [key: string]: string } = {},
-        headers: IncomingHttpHeaders = {},
-    ): Promise<Token> {
+    // protected async verifyProvidedToken(
+    //     requiredRole?: string,
+    //     cookies: { [key: string]: string } = {},
+    //     headers: IncomingHttpHeaders = {},
+    // ): Promise<Token> {
 
-        // extract fingerprint
-        const cookieName = this.auth.getCookieName();
-        const fingerprint: string = cookies[cookieName];
+    //     // extract fingerprint
+    //     const cookieName = this.auth.getCookieName();
+    //     const fingerprint: string = cookies[cookieName];
 
-        // extract bearer token
-        // NOTE: express converts incoming header names to lowercase
-        const headerName = 'authorization';
-        const authorizationHeader = this.validateAuthorizationHeader(headers[headerName]);
-        const bearerToken = this.extractBearerToken(authorizationHeader);
+    //     // extract bearer token
+    //     // NOTE: express converts incoming header names to lowercase
+    //     const headerName = 'authorization';
+    //     const authorizationHeader = this.validateAuthorizationHeader(headers[headerName]);
+    //     const bearerToken = this.extractBearerToken(authorizationHeader);
 
-        // verify token
-        if (await this.auth.verify(bearerToken, fingerprint, requiredRole)) {
-            return this.auth.decode(bearerToken);
-        } else {
-            throw new HttpError(401, 'Access denied');
-        }
-    }
+    //     // verify token
+    //     if (await this.auth.verify(bearerToken, fingerprint, requiredRole)) {
+    //         return this.auth.decode(bearerToken);
+    //     } else {
+    //         throw new HttpError(401, 'Access denied');
+    //     }
+    // }
 
-    protected runSecurityChecks(
-        permission: string,
-        cookies: any,
-        headers: any,
-    ): Promise<Token> {
-        return this.verifyProvidedToken(permission, cookies, headers);
-    }
+    // protected runSecurityChecks(
+    //     permission: string,
+    //     cookies: any,
+    //     headers: any,
+    // ): Promise<Token> {
+    //     return this.verifyProvidedToken(permission, cookies, headers);
+    // }
 
 }
 

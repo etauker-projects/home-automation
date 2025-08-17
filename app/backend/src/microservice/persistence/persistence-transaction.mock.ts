@@ -1,6 +1,6 @@
-// import { randomUUID } from 'crypto';
-// import sinon, { SinonStub } from 'sinon';
-// import { PersistenceTransaction, IPersistenceResult } from './persistence.transaction';
+// import { randomUUID } from 'crypto.js';
+// import sinon, { SinonStub } from 'sinon.js';
+// import { PersistenceTransaction, IPersistenceResult } from './persistence.transaction.js';
 
 // export class PersistenceTransactionMock {
 

@@ -1,5 +1,5 @@
-// import mysql from 'mysql2/promise';
-// import type { IPersistenceConfig } from './persistence-config.interface';
+// import mysql from 'mysql2/promise.js';
+// import type { IPersistenceConfig } from './persistence-config.interface.js';
 
 // export class ConnectionPool {
 

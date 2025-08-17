@@ -1,3 +1,3 @@
-export * from './meta';
-export * from './meta.dto';
-export * from './meta.mapper';
+export * from './meta.js';
+export * from './meta.dto.js';
+export * from './meta.mapper.js';

@@ -1,5 +1,5 @@
-import { Meta } from './meta';
-import { MetaDto } from './meta.dto';
+import { Meta } from './meta.js';
+import { MetaDto } from './meta.dto.js';
 
 export class MetaMapper {
 

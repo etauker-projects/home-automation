@@ -1,9 +1,9 @@
 /* eslint-disable require-await */
 import * as express from 'express';
-import { ApiController, IResponse } from '../api/api.module';
-import { Extractor } from '../environment/extractor';
-import { IController } from '../server/controller.interface';
-import type { PersistenceConnector } from '../persistence/persistence.connector';
+import { ApiController, IResponse } from '../api/api.module.js';
+import { Extractor } from '../environment/extractor.js';
+import { IController } from '../server/controller.interface.js';
+import type { PersistenceConnector } from '../persistence/persistence.connector.js';
 
 
 export class StatusController extends ApiController implements IController {

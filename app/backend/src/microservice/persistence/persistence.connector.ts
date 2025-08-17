@@ -1,9 +1,9 @@
-// import { IPersistenceConfig, IPool, PersistenceConnector, PoolFactory } from '@etauker/connector-postgres';
-// import { PersistenceConnector as Connector } from '@etauker/connector-postgres';
-// import mysql from 'mysql2/promise';
-// import { PersistenceTransaction } from './persistence.transaction';
-// // import type { ConnectionPool } from './connection-pool';
-// import type { IPersistenceConfig } from './persistence-config.interface';
+// import { IPersistenceConfig, IPool, PersistenceConnector, PoolFactory } from '@etauker/connector-postgres.js';
+// import { PersistenceConnector as Connector } from '@etauker/connector-postgres.js';
+// import mysql from 'mysql2/promise.js';
+// import { PersistenceTransaction } from './persistence.transaction.js';
+// // import type { ConnectionPool } from './connection-pool.js';
+// import type { IPersistenceConfig } from './persistence-config.interface.js';
 
 // export interface IQueryConfig {
 //     commit: boolean;

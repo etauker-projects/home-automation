@@ -1,5 +1,5 @@
-import { Config } from '@etauker-projects/security-auth-api-client';
+// import { Config } from '@etauker-projects/security-auth-api-client';
 
-export interface AuthConfig extends Config {
+// export interface AuthConfig extends Config {
 
-}
+// }

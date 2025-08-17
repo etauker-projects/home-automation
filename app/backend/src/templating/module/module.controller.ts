@@ -1,12 +1,11 @@
-import type { AppConfiguration } from '../../app';
-import { ApiController, type IRequestContext, type IResponse } from '../../microservice/api/api.module';
-import type { PersistenceConnector } from '../../microservice/persistence/persistence.connector';
-import { IController } from '../../microservice/server/controller.interface';
+import type { AppConfiguration } from '../../app.js';
+import { ApiController, type IRequestContext, type IResponse } from '../../microservice/api/api.module.js';
+import type { PersistenceConnector } from '../../microservice/persistence/persistence.connector.js';
+import { IController } from '../../microservice/server/controller.interface.js';
 import * as express from 'express';
-import { ModuleService } from './module.service';
-import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces';
-import { MetadataService } from '../metadata/metadata.service';
-import { randomUUID } from 'crypto';
+import { ModuleService } from './module.service.js';
+import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata } from './module.interfaces.js';
+import { MetadataService } from '../metadata/metadata.service.js';
 
 export class ModuleController extends ApiController implements IController {
 

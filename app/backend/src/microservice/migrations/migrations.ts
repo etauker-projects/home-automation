@@ -1,9 +1,9 @@
 // /* eslint-disable no-process-env */
 
-// import dotenv from 'dotenv';
-// import { IMigrationConfiguration } from '@etauker/connector-postgres';
-// import { PersistenceFactory } from '../persistence/persistence.factory';
-// import * as module from './migration.service';
+// import dotenv from 'dotenv.js';
+// import { IMigrationConfiguration } from '@etauker/connector-postgres.js';
+// import { PersistenceFactory } from '../persistence/persistence.factory.js';
+// import * as module from './migration.service.js';
 
 // dotenv.config({ path: 'config/.env' });
 

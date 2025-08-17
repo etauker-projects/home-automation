@@ -1,5 +1,5 @@
-import { Level } from './level.enum';
-import { Format } from './format.type';
+import { Level } from './level.enum.js';
+import { Format } from './format.type.js';
 
 export interface Config {
     readonly coloursEnabled: boolean;

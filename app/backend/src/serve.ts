@@ -1,13 +1,13 @@
 /* eslint-disable no-process-env */
 import dotenv from 'dotenv';
-// import { LogFactory } from './microservice/logs/log.module';
-import { Server } from './microservice/server/server';
-import { StatusController } from './microservice/status/status.controller';
-import { ModuleController } from './templating/module/module.controller';
+// import { LogFactory } from './microservice/logs/log.module.js';
+import { Server } from './microservice/server/server.js';
+import { StatusController } from './microservice/status/status.controller.js';
+import { ModuleController } from './templating/module/module.controller.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-// import { PersistenceFactory } from './microservice/persistence/persistence.factory';
-// import { IngredientGroupController } from './ingredient-group/ingredient-group.controller';
+// import { PersistenceFactory } from './microservice/persistence/persistence.factory.js';
+// import { IngredientGroupController } from './ingredient-group/ingredient-group.controller.js';
 
 dotenv.config({ path: 'config/.env' });
 
