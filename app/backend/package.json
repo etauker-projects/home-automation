@@ -12,8 +12,8 @@
     "push": "npm install && npm run lint && cross-env MODE=production npm run build && npm run test && git push --follow-tags",
     "start:prod": "node --es-module-specifier-resolution=node ./dist/serve.js",
     "migrations:prod": "node --es-module-specifier-resolution=node ./dist/migrations.js",
-    "build:image": "docker compose -f ./config/docker-compose.yml -p mixology-recipes build",
-    "start:image": "docker compose -f ./config/docker-compose.yml -p mixology-recipes up api"
+    "build:image": "docker compose -f ./config/docker-compose.yml -p home-automation build",
+    "start:image": "docker compose -f ./config/docker-compose.yml -p home-automation up api"
   },
   "keywords": [],
   "author": "",

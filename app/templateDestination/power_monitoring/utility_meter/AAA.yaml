@@ -1,0 +1,21 @@
+- aaa_energy_usage_hourly:
+      name: AAA Energy Usage Hourly
+      source: sensor.aaa_energy
+      cycle: hourly
+      unique_id: meter.aaa_energy_usage_hourly
+      offset: 0
+      delta_values: false
+- aaa_energy_usage_daily:
+      name: AAA Energy Usage Daily
+      source: sensor.aaa_energy
+      cycle: daily
+      unique_id: meter.aaa_energy_usage_daily
+      offset: 0
+      delta_values: false
+- aaa_energy_usage_monthly:
+      name: AAA Energy Usage Monthly
+      source: sensor.aaa_energy
+      cycle: monthly
+      unique_id: meter.aaa_energy_usage_monthly
+      offset: 0
+      delta_values: false

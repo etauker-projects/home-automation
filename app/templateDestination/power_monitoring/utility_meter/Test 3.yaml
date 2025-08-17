@@ -1,0 +1,21 @@
+- test_3_energy_usage_hourly:
+      name: Test 3 Energy Usage Hourly
+      source: sensor.test_3_energy
+      cycle: hourly
+      unique_id: meter.test_3_energy_usage_hourly
+      offset: 0
+      delta_values: false
+- test_3_energy_usage_daily:
+      name: Test 3 Energy Usage Daily
+      source: sensor.test_3_energy
+      cycle: daily
+      unique_id: meter.test_3_energy_usage_daily
+      offset: 0
+      delta_values: false
+- test_3_energy_usage_monthly:
+      name: Test 3 Energy Usage Monthly
+      source: sensor.test_3_energy
+      cycle: monthly
+      unique_id: meter.test_3_energy_usage_monthly
+      offset: 0
+      delta_values: false
