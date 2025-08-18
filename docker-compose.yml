@@ -64,6 +64,48 @@ services:
 #     networks:
 #       - home-automation
 
+  home-automation-backend:
+    build:
+      context: ./app/backend
+      dockerfile: ./config/main.dockerfile
+      labels:
+      - app=home-automation-backend
+      # args:
+      #   NPM_TOKEN: ${NPM_TOKEN}
+    profiles: [ home-automation ]
+    # depends_on: [ mosquitto ]
+    restart: unless-stopped
+    container_name: home-automation-backend
+    # env_file:
+    #   - ./app/backend/config/.env
+    # networks:
+    #   - home-automation
+    environment:
+      - LOGGER_LOG_LEVEL=INFO
+      - MODE=development
+      - PORT=9999
+    network_mode: host
+
+  home-automation-frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: ./config/main.dockerfile
+      labels:
+      - app=home-automation-frontend
+      # args:
+      #   NPM_TOKEN: ${NPM_TOKEN}
+    profiles: [ home-automation ]
+    # depends_on: [ mosquitto ]
+    restart: unless-stopped
+    container_name: home-automation-frontend
+    # env_file:
+    #   - ./app/frontend/config/.env
+    # networks:
+    #   - home-automation
+    # network_mode: host
+    # env:
+    #   PORT: 80
+
   home-assistant:
     container_name: home-assistant
     image: "ghcr.io/home-assistant/home-assistant:stable"
@@ -81,7 +123,7 @@ services:
     # devices:
     #   - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
     labels:
-      - production      
+      - production
 
 #   wyoming-piper:
 #     container_name: wyoming-piper
@@ -258,20 +300,20 @@ services:
 
 
   nginxproxymanager:
-    image: 'jc21/nginx-proxy-manager:latest' 
+    image: 'jc21/nginx-proxy-manager:latest'
     container_name: nginxproxymanager
-    restart: unless-stopped 
+    restart: unless-stopped
     # network_mode: host
     ports:
       - '80:80'
       - '81:81'
-      - '443:443' 
+      - '443:443'
     # networks:
     #   - proxy
     volumes:
       - ./data/nginx/data:/data
-      - ./data/nginx/letsencrypt:/etc/letsencrypt 
-    
+      - ./data/nginx/letsencrypt:/etc/letsencrypt
+
     # depends_on:
     #   - db
 
@@ -397,7 +439,7 @@ services:
   #   build:
   #     context: .
   #     dockerfile: ../postgres/config/main.dockerfile
-  #     # labels: 
+  #     # labels:
   #     # - app=postgres
   #   environment:
   #     POSTGRES_USER: 'npm'
@@ -430,13 +472,13 @@ services:
   #   devices:
   #     - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
   #   labels:
-  #     - development   
+  #     - development
   #   sysctls:
   #     - net.ipv6.conf.all.disable_ipv6=0
   #     - net.ipv4.conf.all.forwarding=1
   #     - net.ipv6.conf.all.forwarding=1
   #   # radio-url: spinel+hdlc+uart:///dev/ttyACM0
-  #   dns: 
+  #   dns:
   #     - 127.0.0.1
 
 # Network Name: thread-network
@@ -448,12 +490,12 @@ services:
 # On-Mesh Prefix: fd11:22::
 
 
-# docker run 
-  # --sysctl "net.ipv6.conf.all.disable_ipv6=0 net.ipv4.conf.all.forwarding=1 net.ipv6.conf.all.forwarding=1" 
-  # -p 8080:80 
-  # --dns=127.0.0.1 -it 
-  # --volume /dev/ttyACM0:/dev/ttyACM0 
-  # --privileged openthread/otbr 
+# docker run
+  # --sysctl "net.ipv6.conf.all.disable_ipv6=0 net.ipv4.conf.all.forwarding=1 net.ipv6.conf.all.forwarding=1"
+  # -p 8080:80
+  # --dns=127.0.0.1 -it
+  # --volume /dev/ttyACM0:/dev/ttyACM0
+  # --privileged openthread/otbr
   # --radio-url spinel+hdlc+uart:///dev/ttyACM0
 
 #   whoami:
@@ -529,6 +571,19 @@ services:
 #       - "traefik.http.routers.glances.entrypoints=web"
 #       - "traefik.http.services.glances.loadbalancer.server.port=61208"
 #       - "traefik.http.services.glances.loadbalancer.server.port=61209"
+
+  # ollama:
+  #   image: ollama/ollama
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_models:/models
+  #   command: ["ollama", "serve"]
+
+
+# volumes:
+#   ollama_models:
 
 # secrets:
 #   glances_password:
