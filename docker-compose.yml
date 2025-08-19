@@ -70,19 +70,14 @@ services:
       dockerfile: ./config/main.dockerfile
       labels:
       - app=home-automation-backend
-      # args:
-      #   NPM_TOKEN: ${NPM_TOKEN}
     profiles: [ home-automation ]
-    # depends_on: [ mosquitto ]
     restart: unless-stopped
     container_name: home-automation-backend
     # env_file:
     #   - ./app/backend/config/.env
-    # networks:
-    #   - home-automation
     environment:
       - LOGGER_LOG_LEVEL=INFO
-      - MODE=development
+      - MODE=production
       - PORT=9999
     network_mode: host
 
@@ -92,19 +87,13 @@ services:
       dockerfile: ./config/main.dockerfile
       labels:
       - app=home-automation-frontend
-      # args:
-      #   NPM_TOKEN: ${NPM_TOKEN}
     profiles: [ home-automation ]
-    # depends_on: [ mosquitto ]
     restart: unless-stopped
     container_name: home-automation-frontend
     # env_file:
     #   - ./app/frontend/config/.env
-    # networks:
-    #   - home-automation
-    # network_mode: host
-    # env:
-    #   PORT: 80
+    ports:
+      - '7001:80'
 
   home-assistant:
     container_name: home-assistant
