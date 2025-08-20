@@ -25,9 +25,11 @@ try {
     const __dirname = dirname(__filename);
 
     const appConfiguration = {
-        inputDirectory: resolve(__dirname, '../templateSource'),
-        outputDirectory: resolve(__dirname, '../templateDestination'),
+        inputDirectory: process.env['SOURCE_PATH'] ? resolve(process.env['SOURCE_PATH']) : resolve(__dirname, '../templateSource'),
+        outputDirectory: process.env['DESTINATION_PATH'] ? resolve(process.env['DESTINATION_PATH']) : resolve(__dirname, '../templateDestination'),
     };
+
+    console.log('Application configuration:', appConfiguration);
 
     const server = new Server({ port, apiRoot })
         .register('/v1/status', StatusController.getInstance(connector))

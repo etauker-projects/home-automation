@@ -79,7 +79,12 @@ services:
       - LOGGER_LOG_LEVEL=INFO
       - MODE=production
       - PORT=9999
+      - SOURCE_PATH=/config/source
+      - DESTINATION_PATH=/config/destination
     network_mode: host
+    volumes:
+      - ./data/home-automation/templates:/config/source
+      - ./data/hass/packages:/config/destination
 
   home-automation-frontend:
     build:

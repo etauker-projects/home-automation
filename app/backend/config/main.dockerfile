@@ -22,7 +22,7 @@ WORKDIR /workspace
 # ARG NPM_TOKEN
 RUN npm ci --omit=dev
 COPY --from=build /workspace/dist ./dist
-USER nobody
+# USER nobody
 
 EXPOSE 9999
 CMD npm run start:prod
