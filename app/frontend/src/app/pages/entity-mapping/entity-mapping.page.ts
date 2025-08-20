@@ -40,6 +40,7 @@ export class EntityMappingPage {
     templateId?: string;
     private templateType?: string;
     private entityId?: string;
+    private yamlType?: 'object' | 'array';
 
     form: FormGroup;
 
@@ -186,10 +187,12 @@ export class EntityMappingPage {
                 console.warn('No entities found in the template file');
                 this.previews = [];
             } else if (Array.isArray(entities)) {
+                console.log('Entities is an array');
+                this.yamlType = 'array';
                 this.previews = entities.map((entity, index) => {
 
                     const node = parse(JSON.stringify(entity));
-                    const template = stringify(node, { indent: 4 });
+                    const template = stringify(node, { indent: 2 });
                     const title = this.extractTitle(entity, `${index}`);
                     const variables = this.getFormValues();
 
@@ -202,12 +205,16 @@ export class EntityMappingPage {
 
                 });
             } else if (typeof entities === 'object') {
+                console.log('Entities is an object');
+                this.yamlType = 'object';
                 this.previews = Object.keys(entities).map(key => {
 
                     const json: { [key: string]: any } = {};
                     json[key] = entities[key];
-                    const node = parse(JSON.stringify(json));
-                    const template = stringify(node, { indent: 4 });
+                    const stringified = JSON.stringify(json);
+                    console.log('Stringified JSON:', stringified);
+                    const node = parse(stringified);
+                    const template = stringify(node, { indent: 2 });
                     const title = this.extractTitle(entities[key], key);
 
                     const variables = this.getFormValues();
@@ -216,6 +223,7 @@ export class EntityMappingPage {
                         title: title,
                         template: template,
                         output: this.substitueVariables(template, variables),
+                        key,
                         variables,
                     };
 
@@ -233,7 +241,12 @@ export class EntityMappingPage {
             return;
         }
 
-        const str = stringify(this.previews.map(preview => parse(preview.output)), { indent: 4 });
+        const outputs = this.previews.map(preview => parse(preview.output));
+
+        const str = this.yamlType === 'array'
+            ? stringify(this.previews.map(preview => parse(preview.output)), { indent: 2 })
+            : stringify(parse(this.previews.map(preview => preview.output).join('\n')), { indent: 2 })
+        ;
 
         console.log('Saving string:', str);
         const variables = this.previews.reduce((vars, preview) => ({ ...vars, ...preview.variables }), {})
