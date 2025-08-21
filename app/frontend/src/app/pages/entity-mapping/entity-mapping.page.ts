@@ -183,6 +183,7 @@ export class EntityMappingPage {
         if (this.form.valid) {
             const entities = parse(this.template);
 
+            // TODO replace with yaml service
             if (!entities) {
                 console.warn('No entities found in the template file');
                 this.previews = [];
