@@ -412,14 +412,14 @@ services:
   #   # sysctls:
   #   #   - net.ipv4.ip_local_port_range=1024 65000
 
-  hello:
-    image: crccheck/hello-world
-    container_name: hello
-    # networks:
-    #   - proxy
-    network_mode: host
-    environment:
-      - PORT=8888
+#  hello:
+#    image: crccheck/hello-world
+#    container_name: hello
+#    # networks:
+#    #   - proxy
+#    network_mode: host
+#    environment:
+#      - PORT=8888
 
   # hello-host:
   #   image: crccheck/hello-world
