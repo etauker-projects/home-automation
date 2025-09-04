@@ -3,6 +3,7 @@
 # tools for testing pub / sub from host cli
 sudo apt-get install -y mosquitto-clients
 
+# NOTE: using special characters in username / password can cause problems
 read_password () {
     if [ -z "$MOSQUITTO_PASSWORD" ]; then
         read -s -p "Mosquitto password: " password
@@ -41,7 +42,7 @@ touch $password_filepath
 touch $config_filepath
 
 temp_file="/tmp/passwd.tmp"
-docker run eclipse-mosquitto /bin/sh -c "touch $temp_file && mosquitto_passwd -b $temp_file $username $password && cat $temp_file && rm $temp_file" > $password_filepath
+docker run eclipse-mosquitto /bin/sh -c "touch $temp_file && mosquitto_passwd -b $temp_file "$username" "$password" && cat $temp_file && rm $temp_file" > $password_filepath
 
 cat  > $config_filepath << EOF
 listener 1883
