@@ -376,14 +376,55 @@ services:
   #   # sysctls:
   #   #   - net.ipv4.ip_local_port_range=1024 65000
 
-  hello:
-    image: crccheck/hello-world
-    container_name: hello
-    # networks:
-    #   - proxy
-    network_mode: host
+  blocky:
+    image: spx01/blocky
+    container_name: blocky
+    restart: unless-stopped
+    # Optional the instance hostname for logging purpose
+    hostname: dns.core.home
+    ports:
+      # - "53:53"
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "853:853" # DNS-over-TLS
+      # - "443:443/tcp" # DNS-over-HTTPS (DoH)
+      # - "4000:4000/tcp"
+
     environment:
-      - PORT=8888
+      - TZ=Europe/Dublin
+    volumes:
+      # Optional to synchronize the log timestamp with host
+      - /etc/localtime:/etc/localtime:ro
+      # config file
+      - ./data/blocky/config.yml:/app/config.yml:ro
+
+  # If blocky fails to start up due to port 53 being in use and `lsof -i :53` does not show any results, do the following:
+  # ```
+  # sudo nano /etc/systemd/resolved.conf
+  # # Update line containing DNSStubListener 
+  # # - from `#DNSStubListener=yes`
+  # # - to: `DNSStubListener=no`
+  # # Save and exit
+  # sudo ln -s --force /run/systemd/resolve/resolv.conf /etc/systemd/resolved.conf
+  # sudo systemctl restart systemd-resolved
+  # docker compose up -d blocky
+  #```
+  #
+  # TO Revert: 
+  # comment the DNSStubListener line 
+  # run `ln --symbolic --force /run/systemd/resolve/resolv.conf /etc/resolv.conf`
+  # sudo systemctl restart systemd-resolved
+  #
+  # More info: https://github.com/systemd/systemd/issues/14700
+
+#  hello:
+#    image: crccheck/hello-world
+#    container_name: hello
+#    # networks:
+#    #   - proxy
+#    network_mode: host
+#    environment:
+#      - PORT=8888
 
   # hello-host:
   #   image: crccheck/hello-world
