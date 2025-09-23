@@ -8,21 +8,21 @@ autoinstall:
 
   identity:
     hostname: '${HOSTNAME}'
-    # Mandatory if user-data is not provided
-    # username: etauker
-    # password: '${USER_ETAUKER_PASSWORD}'
+    username: etauker
+    password: '${USER_ETAUKER_PASSWORD}'
 
-  user-data:
-    users:
-      - name: etauker
-        # gecos: 'Ubuntu User'
-        passwd: '${USER_ETAUKER_PASSWORD}'
-        groups: adm, cdrom, dip, lxd, plugdev, sudo, docker
-        shell: /bin/zsh
-        lock_passwd: false
+  # TODO: find why this didn't work
+  # user-data:
+  #   users:
+  #     - name: etauker
+  #       # gecos: 'Ubuntu User'
+  #       passwd: '${USER_ETAUKER_PASSWORD}'
+  #       groups: adm, cdrom, dip, lxd, plugdev, sudo, docker
+  #       shell: /bin/zsh
+  #       lock_passwd: false
 
   interactive-sections:
-    - keyboard
+    # - keyboard
     - source
     - storage
 
@@ -131,4 +131,5 @@ autoinstall:
 
   # apt-get installations
   packages:
+  - curl
   - git
