@@ -50,6 +50,9 @@ echo "cd /srv/homeassistant && source bin/activate && hass &" > ~/scripts/start-
 # TODO: find out and document how to to run this at startup
 
 
+# WIP
+## Script for ubuntu autoinstall
+curl "https://gist.githubusercontent.com/etauker/66351b98f49d17dc91c2fe648e6396ce/raw/setup.bash" -o setup-tmp && chmod +x setup-tmp && bash setup-tmp && rm setup-tmp
 
 # SQL helpers
 SELECT entity_id, COUNT(*) as count FROM states GROUP BY entity_id ORDER BY count DESC LIMIT 10;

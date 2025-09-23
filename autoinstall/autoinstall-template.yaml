@@ -1,0 +1,135 @@
+autoinstall:
+
+  version: 1
+  locale: en_IE.UTF-8
+  timezone: "Europe/Dublin"
+  updates: all # install all updates before starting
+  shutdown: reboot # reboot after install
+
+  identity:
+    hostname: '${HOSTNAME}'
+    username: etauker
+    password: '${USER_ETAUKER_PASSWORD}'
+
+  # TODO: find why this didn't work
+  # user-data:
+  #   users:
+  #     - name: etauker
+  #       # gecos: 'Ubuntu User'
+  #       passwd: '${USER_ETAUKER_PASSWORD}'
+  #       groups: adm, cdrom, dip, lxd, plugdev, sudo, docker
+  #       shell: /bin/zsh
+  #       lock_passwd: false
+
+  interactive-sections:
+    # - keyboard
+    - source
+    - storage
+
+  refresh-installer:
+    update: true
+
+  # defaults for interactive sections
+  source:
+    search_drivers: true
+    id: ubuntu-desktop-minimal
+
+  ssh:
+    install-server: true
+    allow-pw: true
+
+    # # more suecure setup is to use only keys
+    # authorized-keys: []
+    # allow-pw: false
+
+  # reporting:
+  #   hook:
+  #     type: webhook
+  #     endpoint: http://example.com/endpoint/path
+
+  # early-commands:
+  #   - ping -c1 198.162.1.1
+
+  # keyboard:
+  #   layout: gb
+  #   variant: dvorak
+
+  network:
+
+    network:
+      version: 2
+      renderer: NetworkManager
+
+      ethernets:
+        eth0:
+          dhcp4: true
+          dhcp6: false
+
+  apt:
+    geoip: true
+    fallback: abort
+
+    mirror-selection:
+      primary:
+        - country-mirror
+
+      # sources:
+      #   my-ppa.list:
+      #     source: "deb http://ppa.launchpad.net/curtin-dev/test-archive/ubuntu $RELEASE main"
+      #     keyid: B59D 5F15 97A5 04B7 E230  6DCA 0620 BBCF 0368 3F77
+
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: scaled
+
+    config:
+      - type: disk
+        match:
+          size: smallest
+
+  # user-data:
+  #   disable_root: false
+
+  # # Can be useful later for post-install setup (e.g. dev script download)
+  # late-commands:
+  #   - sed -ie 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=30/' /target/etc/default/grub
+
+  # error-commands:
+  #   - tar c /var/log/installer | nc 192.168.0.1 1000
+
+  codecs:
+    install: true # installs ubuntu-restricted-addons
+
+  drivers:
+    install: true # installs available third-party drivers
+
+  # # might be useful in the future
+  # active-directory:
+  #   # Join the Active Directory domain as user "$ubuntu"
+  #   admin-name: $ubuntu
+  #   domain-name: ad.ubuntu.com
+
+  reporting:
+    builtin:
+      type: print
+
+    # # Later writing to a central syslog server might be useful
+    # central:
+    #   type: rsyslog
+    #   destination: "@192.168.0.1"
+
+  error-commands:
+    - tar -czf /installer-logs.tar.gz /var/log/installer/
+    - journalctl -b > /installer-journal.log
+
+  ### Apps
+  # snaps:
+  # - name: etcd
+  #   channel: edge
+  #   classic: false
+
+  # apt-get installations
+  packages:
+  - curl
+  - git
