@@ -253,42 +253,43 @@ services:
   #   labels:
   #     - development
 
-  jellyfin:
-    image: jellyfin/jellyfin:latest
-    profiles: [ production ]
-    container_name: jellyfin
-    # user: uid:gid
-    network_mode: host
-    volumes:
-      - ./data/jellyfin/config:/config
-      - ./data/jellyfin/cache:/cache
-      - type: bind
-        source: /mnt/synology-nas/video/movies
-        target: /movies
-      - type: bind
-        source: /mnt/synology-nas/video/tv-shows
-        target: /tv-shows
-      - type: bind
-        source: /mnt/synology-nas/audio/music
-        target: /music
-      - type: bind
-        source: /mnt/synology-nas/metadata/jellyfin
-        target: /metadata
-        read_only: false
-      # # Optional - extra fonts to be used during transcoding with subtitle burn-in
-      # - type: bind
-      #   source: /path/to/fonts
-      #   target: /usr/local/share/fonts/custom
-      #   read_only: true
-    restart: 'unless-stopped'
-    # Optional - alternative address used for autodiscovery
-    # environment:
-    #   - JELLYFIN_PublishedServerUrl=http://example.com
-    # Optional - may be necessary for docker healthcheck to pass if running in host network mode
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    environment:
-      PORT: 8096
+## Moved to entertainment server
+#  jellyfin:
+#    image: jellyfin/jellyfin:latest
+#    profiles: [ production ]
+#    container_name: jellyfin
+#    # user: uid:gid
+#    network_mode: host
+#    volumes:
+#      - ./data/jellyfin/config:/config
+#      - ./data/jellyfin/cache:/cache
+#      - type: bind
+#        source: /mnt/synology-nas/video/movies
+#        target: /movies
+#      - type: bind
+#        source: /mnt/synology-nas/video/tv-shows
+#        target: /tv-shows
+#      - type: bind
+#        source: /mnt/synology-nas/audio/music
+#        target: /music
+#      - type: bind
+#        source: /mnt/synology-nas/metadata/jellyfin
+#        target: /metadata
+#        read_only: false
+#      # # Optional - extra fonts to be used during transcoding with subtitle burn-in
+#      # - type: bind
+#      #   source: /path/to/fonts
+#      #   target: /usr/local/share/fonts/custom
+#      #   read_only: true
+#    restart: 'unless-stopped'
+#    # Optional - alternative address used for autodiscovery
+#    # environment:
+#    #   - JELLYFIN_PublishedServerUrl=http://example.com
+#    # Optional - may be necessary for docker healthcheck to pass if running in host network mode
+#    extra_hosts:
+#      - 'host.docker.internal:host-gateway'
+#    environment:
+#      PORT: 8096
 
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
@@ -427,6 +428,51 @@ services:
   #   restart: unless-stopped
   #   # sysctls:
   #   #   - net.ipv4.ip_local_port_range=1024 65000
+
+  # cd workspace/etauker/home-automation && sudo systemctl stop systemd-resolved && docker compose up -d blocky && sudo systemctl start systemd-resolved
+  blocky:
+    image: spx01/blocky
+    container_name: blocky
+    restart: unless-stopped
+    # Optional the instance hostname for logging purpose
+    hostname: dns.core.home
+    profiles: [ production ]
+    ports:
+      # - "53:53"
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "853:853" # DNS-over-TLS
+      # - "443:443/tcp" # DNS-over-HTTPS (DoH)
+      # - "4000:4000/tcp"
+
+    environment:
+      - TZ=Europe/Dublin
+    volumes:
+      # Optional to synchronize the log timestamp with host
+      - /etc/localtime:/etc/localtime:ro
+      # config file
+      - ./data/blocky/config.yml:/app/config.yml:ro
+    labels:
+      - production
+
+  # If blocky fails to start up due to port 53 being in use and `lsof -i :53` does not show any results, do the following:
+  # ```
+  # sudo nano /etc/systemd/resolved.conf
+  # # Update line containing DNSStubListener 
+  # # - from `#DNSStubListener=yes`
+  # # - to: `DNSStubListener=no`
+  # # Save and exit
+  # sudo ln -s --force /run/systemd/resolve/resolv.conf /etc/systemd/resolved.conf
+  # sudo systemctl restart systemd-resolved
+  # docker compose up -d blocky
+  #```
+  #
+  # TO Revert: 
+  # comment the DNSStubListener line 
+  # run `ln --symbolic --force /run/systemd/resolve/resolv.conf /etc/resolv.conf`
+  # sudo systemctl restart systemd-resolved
+  #
+  # More info: https://github.com/systemd/systemd/issues/14700
 
 #  hello:
 #    image: crccheck/hello-world
