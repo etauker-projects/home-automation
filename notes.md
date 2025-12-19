@@ -12,6 +12,7 @@ sqlite3 mydb.db        # Open/create database
 .quit                  # Exit
 
 ### Import / export
+.headers on
 .mode csv
 .import users.csv users
 .output out.csv
@@ -124,7 +125,35 @@ SELECT
 FROM statistics stat
 LEFT JOIN statistics_meta meta ON stat.metadata_id = meta.id
 WHERE start_utc LIKE '2025-10%'
-ORDER BY stat.created_ts DESC;
+AND (
+    meta.statistic_id LIKE '%hourly%'
+    OR meta.statistic_id LIKE '%daily%'
+    OR meta.statistic_id LIKE '%monthly%'
+    OR meta.statistic_id LIKE '%today%'
+    OR meta.statistic_id LIKE '%this_month%'
+)
+AND created IS NULL
+ORDER BY stat.created_ts DESC
+LIMIT 10;
 
+SELECT 
+    stat.id,
+    stat.metadata_id,
+    meta.statistic_id,
+    stat.state,
+    meta.unit_of_measurement AS unit,
+    STRFTIME('%Y-%m-%dT%H:%M:%fZ', stat.start_ts, 'unixepoch') AS start_utc,
+    STRFTIME('%Y-%m-%dT%H:%M:%fZ', stat.created_ts, 'unixepoch') AS created_utc,
+    stat.start_ts,
+    stat.created_ts
+FROM statistics stat
+LEFT JOIN statistics_meta meta ON stat.metadata_id = meta.id
+WHERE start_utc LIKE '2025-10%'
+AND (
+    meta.statistic_id LIKE '%_energy_usage_hourly%'
+    OR meta.statistic_id LIKE '%_energy_usage_daily%'
+    OR meta.statistic_id LIKE '%_energy_usage_monthly%'
+)
+ORDER BY stat.id ASC;
 
 ### TODO: look into long term statistics structure
