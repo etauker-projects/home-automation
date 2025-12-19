@@ -9,62 +9,63 @@ import type { EntityFile, EntityMetadata, Module, TemplateFile, TemplateMetadata
 })
 export class RestService {
 
-  private host: string = 'http://localhost:9999/home-automation/v1/templating';
+  private host: string = 'http://localhost:9999/home-automation';
+  // private host: string = 'http://home-automation-backend:9999/home-automation';
 
   constructor(
     private http: HttpClient,
   ) { }
 
   public async getStatus(): Promise<{ status: string, mode: string, time: string }> {
-    const endpoint = `http://localhost:9999/home-automation/v1/status`;
+    const endpoint = `${this.host}/v1/status`;
     const response = this.http.get<{ status: string, mode: string, time: string }>(endpoint);
     return firstValueFrom(response)
   }
 
   public async getModules(): Promise<Module[]> {
-    const endpoint = `${this.host}/modules`;
+    const endpoint = `${this.host}/v1/templating/modules`;
     const response = this.http.get<Module[]>(endpoint);
     return firstValueFrom(response)
   }
 
   public async getTemplateFiles(moduleId: string): Promise<TemplateMetadata[]> {
-    const endpoint = `${this.host}/modules/${moduleId}/templates`;
+    const endpoint = `${this.host}/v1/templating/modules/${moduleId}/templates`;
     const response = this.http.get<TemplateMetadata[]>(endpoint);
     return firstValueFrom(response)
   }
 
   public async getTemplateFile(moduleId: string, templateId: string): Promise<TemplateFile> {
-    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}`;
+    const endpoint = `${this.host}/v1/templating/modules/${moduleId}/templates/${templateId}`;
     const response = this.http.get<TemplateFile>(endpoint);
     return firstValueFrom(response);
   }
 
   public async getEntityFiles(moduleId: string, templateId: string): Promise<EntityMetadata[]> {
-    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities`;
+    const endpoint = `${this.host}/v1/templating/modules/${moduleId}/templates/${templateId}/entities`;
     const response = this.http.get<EntityMetadata[]>(endpoint);
     return firstValueFrom(response)
   }
 
   public async getUnmanagedEntityFiles(moduleId: string): Promise<EntityMetadata[]> {
-    const endpoint = `${this.host}/modules/${moduleId}/unmanaged/entities`;
+    const endpoint = `${this.host}/v1/templating/modules/${moduleId}/unmanaged/entities`;
     const response = this.http.get<EntityMetadata[]>(endpoint);
     return firstValueFrom(response)
   }
 
   public async postEntityFile(moduleId: string, templateId: string, file: EntityFile): Promise<EntityFile> {
-    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities`;
+    const endpoint = `${this.host}/v1/templating/modules/${moduleId}/templates/${templateId}/entities`;
     const response = this.http.post<EntityFile>(endpoint, file);
     return firstValueFrom(response);
   }
 
   public async putEntityFile(moduleId: string, templateId: string, file: EntityFile): Promise<EntityFile> {
-    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities/${file.id}`;
+    const endpoint = `${this.host}/v1/templating/modules/${moduleId}/templates/${templateId}/entities/${file.id}`;
     const response = this.http.put<EntityFile>(endpoint, file);
     return firstValueFrom(response);
   }
 
   public async deleteEntityFile(moduleId: string, templateId: string, entityId: string): Promise<EntityFile> {
-    const endpoint = `${this.host}/modules/${moduleId}/templates/${templateId}/entities/${entityId}`;
+    const endpoint = `${this.host}/v1/templating/modules/${moduleId}/templates/${templateId}/entities/${entityId}`;
     const response = this.http.delete<EntityFile>(endpoint);
     return firstValueFrom(response);
   }
