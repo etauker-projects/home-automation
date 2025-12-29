@@ -37,10 +37,15 @@ export interface JsonRequest {
 export class HomeAssistantClient {
   public readonly config: HomeAssistantConfig;
   public readonly server: express.Application;
+  public _listening: boolean = false;
 
   constructor(config: HomeAssistantConfig, server: express.Application) {
     this.config = config;
     this.server = server;
+  }
+
+  public listening(): boolean {
+    return this._listening;
   }
 
   async getUserList(onlyEnabled: boolean): Promise<any> {
@@ -74,8 +79,10 @@ export class HomeAssistantClient {
       endpoint: this.config.sendEndpoint,
       method: 'post',
       query: {},
-      body: `payload=${JSON.stringify({ text })}`,
-      headers: {},
+      body: { text },
+      headers: {
+        'Content-Type': 'application/json',
+      },
     }
 
     const response = await this.submitJson(config);
@@ -83,15 +90,15 @@ export class HomeAssistantClient {
   }
 
   listen(handler: (message: WebhookMessage) => void | Promise<void>) {
-    let active = true;
+    this._listening = true;
 
     const stop = () => {
-      active = false;
+      this._listening = false;
       // TODO: close the app if needed
     };
 
     this.server.post('/synology-chat-home-assistant-bot/hass-webhook', async (req, res) => {
-      if (!active) return;
+      if (!this._listening) return;
 
       try {
         const received: WebhookMessage = req.body;

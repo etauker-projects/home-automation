@@ -41,10 +41,15 @@ export interface JsonRequest {
 export class SynologyChatClient {
   public readonly config: SynologyChatConfig;
   private readonly app: express.Application;
+  public _listening: boolean = false;
 
   constructor(config: SynologyChatConfig, app: express.Application) {
     this.config = config;
     this.app = app;
+  }
+
+  public listening(): boolean {
+    return this._listening;
   }
 
   async getUserList(onlyEnabled: boolean): Promise<any> {
@@ -95,16 +100,15 @@ export class SynologyChatClient {
   }
 
   listen(handler: (message: WebhookMessage) => void | Promise<void>) {
-    let active = true;
+    this._listening = true;
 
     const stop = () => {
-      active = false;
+      this._listening = false;
       // TODO: close the app if needed
     };
 
     this.app.post('/synology-chat-home-assistant-bot/chat-webhook', async (req, res) => {
-      if (!active) return;
-
+      if (!this._listening) return;
       try {
         const received: WebhookMessage = req.body;
         const response = await handler(received);

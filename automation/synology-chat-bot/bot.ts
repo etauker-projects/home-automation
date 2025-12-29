@@ -42,3 +42,8 @@ app.listen(4000, () => {
   console.log('Synology Chat Bot listening on port 4000');
 });
 
+while (hass.listening() || synology.listening()) {
+  await new Promise(resolve => setTimeout(resolve, 60 * 1000));
+}
+
+// `cd ~/workspace/etauker/home-automation/automation/synology-chat-bot &&npm run start  >/dev/null 2>&1 < /dev/null &`
