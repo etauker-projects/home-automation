@@ -1,0 +1,305 @@
+services:
+
+  mosquitto:
+    container_name: mqtt-broker
+    image: eclipse-mosquitto:latest
+    profiles: [ production ]
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+      - ./data/mosquitto/log:/mosquitto/log
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      - production
+      - automation
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt:latest
+    profiles: [ production ]
+    network_mode: host
+    depends_on: [ mosquitto ]
+    restart: unless-stopped
+    # user: mosquitto:hass
+    # group_add:
+    #   - dialout
+    # user: 1000:1000
+    volumes:
+      - ./data/zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro
+    # ports:
+    #   # Frontend port
+    #   - 8080:8080
+    environment:
+      - TZ=Europe/Dublin
+      - ZIGBEE2MQTT_CONFIG_PERMIT_JOIN=true
+      - ZIGBEE2MQTT_CONFIG_MQTT_BASE_TOPIC=zigbee2mqtt
+      - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://localhost:1883
+      # - ZIGBEE2MQTT_CONFIG_MQTT_USER='!secret.yaml broker_user'
+      # - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD='!secret.yaml broker_password'
+      - ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED=true
+      - ZIGBEE2MQTT_CONFIG_MQTT_KEEPALIVE=60
+      - ZIGBEE2MQTT_CONFIG_MQTT_VERSION=5
+      - ZIGBEE2MQTT_CONFIG_MQTT_INCLUDE_DEVICE_INFORMATION=true
+      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=/dev/ttyUSB0
+      - ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED=true
+      - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=8080
+      # - ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN='!secret.yaml frontend_auth_token'
+      - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED=true
+      - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_DISCOVERY_TOPIC=homeassistant
+    devices:
+      - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyUSB0
+    labels:
+      - production
+      - automation
+
+  govee2mqtt:
+    container_name: govee2mqtt
+    image: ghcr.io/wez/govee2mqtt:latest
+    profiles: [ production ]
+    network_mode: host  # host networking is required
+    depends_on: [ mosquitto ]
+    restart: unless-stopped
+    volumes:
+      - ./data/govee2mqtt/data:/app/data
+    #   - /run/udev:/run/udev:ro
+    env_file:
+      - ./data/govee2mqtt/config/.env
+    # ports:
+    #   - 8056:8056
+    environment:
+      - TZ=Europe/Dublin
+      - GOVEE_MQTT_HOST=localhost
+      - GOVEE_MQTT_PORT=1883
+      - GOVEE_TEMPERATURE_SCALE=C # C for Celsius or F for Fahrenheit
+      - RUST_LOG_STYLE=always # Always use colorized output
+      # - RUST_LOG=govee=trace # Enable for debug mode
+    labels:
+      - production
+      - automation
+
+  home-assistant:
+    container_name: home-assistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    profiles: [ production ]
+    network_mode: host
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - ./data/hass:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+      - /mnt/synology-nas:/media
+    environment:
+      - TZ=Europe/Dublin
+    # devices:
+    #   - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
+    labels:
+      - production
+      - automation
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    profiles: [ production ]
+    network_mode: host
+    # ports:
+    #   - 3000:3000
+    volumes:
+      - ./data/homepage/config:/app/config
+      - ./data/homepage/resources:/app/public/resources
+      # - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: 192.168.5.2,dash.home
+      # PORT: 80
+    labels:
+      - production
+      - automation
+
+#   wyoming-piper:
+#     container_name: wyoming-piper
+#     image: rhasspy/wyoming-piper
+#     profiles: [ experimental ]
+#     ports:
+#       - "10200:10200"
+#     volumes:
+#       - "./data/piper:/data"
+#     command: [ "--voice", "en-gb-southern_english_female-low" ]
+#     restart: unless-stopped
+#     networks:
+#       - home-automation
+#     labels:
+#       - experimental
+#       - automation
+
+#   wyoming-whisper:
+#     container_name: wyoming-whisper
+#     image: rhasspy/wyoming-whisper
+#     profiles: [ experimental ]
+#     ports:
+#       - "10300:10300"
+#     volumes:
+#       - ./data/whisper:/data
+#     command: [ "--model", "small-int8", "--language", "en" ]
+#     restart: unless-stopped
+#     networks:
+#       - home-automation
+#     labels:
+#       - experimental
+#       - automation
+
+#   wyoming-openwakeword:
+#     container_name: wyoming-openwakeword
+#     image: rhasspy/wyoming-openwakeword
+#     profiles: [ experimental ]
+#     ports:
+#       - "10400:10400"
+#     volumes:
+#       - "./data/openwakeword:/custom"
+#     command: [ "--preload-model", "dobby", "--custom-model-dir", "/custom" ]
+#     restart: unless-stopped
+#     networks:
+#       - home-automation
+#     labels:
+#       - experimental
+#       - automation
+
+  # matter-server:
+  #   image: ghcr.io/home-assistant-libs/python-matter-server:stable
+  #   container_name: matter-server
+  #   restart: unless-stopped
+  #   profiles: [ development ]
+  #   network_mode: host
+  #   security_opt:
+  #     # Needed for Bluetooth via dbus
+  #     - apparmor:unconfined
+  #   volumes:
+  #     # Create an .env file that sets the USERDIR environment variable.
+  #     - ./data/matter-server/data:/data/
+  #     # Required for Bluetooth via D-Bus
+  #     - /run/dbus:/run/dbus:ro
+  #   # If you adjust command line, make sure to pass the default CMD arguments too:
+  #   #command: --storage-path /data --paa-root-cert-dir /data/credentials --bluetooth-adapter 0
+  #   labels:
+  #     - development
+#       - experimental
+#       - automation
+
+  nginxproxymanager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginxproxymanager
+    restart: unless-stopped
+    # network_mode: host
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    # networks:
+    #   - proxy
+    volumes:
+      - ./data/nginx/data:/data
+      - ./data/nginx/letsencrypt:/etc/letsencrypt
+    # depends_on:
+    #   - db
+    labels:
+      - production
+      - automation
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    profiles: [ production ]
+    network_mode: host
+    # ports:
+    #   - '3001:3001'
+    volumes:
+      - ./data/uptime-kuma:/app/data
+    labels:
+      - production
+      - automation
+
+  # otbr:
+  #   image: openthread/otbr:latest
+  #   container_name: otbr
+  #   restart: unless-stopped
+  #   profiles: [ development ]
+  #   privileged: true
+  #   # network_mode: host
+  #   ports:
+  #     - 3001:80
+  #   volumes:
+  #     - ./data/otbr/stage:/app/stage
+  #     - ./data/otbr/build:/app/build
+  #     # - /dev/ttyUSB1:/dev/ttyUSB0
+  #   environment:
+  #     HOMEPAGE_ALLOWED_HOSTS: gethomepage.dev # required, may need port. See gethomepage.dev/installation/#homepage_allowed_hosts
+  #     WEB_GUI: 1
+  #     OTBR_AGENT_OPTS: "-I wpan0"
+  #     # NETWORK_MANAGER: 1
+  #     # DHCPV6_PD: 1
+  #   devices:
+  #     - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
+  #   labels:
+  #     - development
+  #   sysctls:
+  #     - net.ipv6.conf.all.disable_ipv6=0
+  #     - net.ipv4.conf.all.forwarding=1
+  #     - net.ipv6.conf.all.forwarding=1
+  #   # radio-url: spinel+hdlc+uart:///dev/ttyACM0
+  #   dns:
+  #     - 127.0.0.1
+#     labels:
+#       - experimental
+#       - automation
+
+# Network Name: thread-network
+# Network Extended PAN ID: D37ABE78F27CCEF8
+# PAN ID: 0xA73F
+# Passphrase/Commissioner Credential: TMqNN0WnZednP5I9
+# Network Key: 5374fd956b114d68a8851bce216ac3c9
+# Channel: 15
+# On-Mesh Prefix: fd11:22::
+
+#   glances:
+#     container_name: glances
+#     image: nicolargo/glances:latest
+#     profiles: [ production ]
+#     restart: unless-stopped
+#     pid: host
+#     # user: root:root
+#     # privileged: true
+#     volumes:
+#       # - ./data/glances/passwd:/root/.config/glances/glances.pwd
+#       # - ./data/glances/glances.conf:/glances/conf/glances.conf
+#       - ./data/glances/glances.conf:/etc/glances/glances.conf
+#       - /var/run/docker.sock:/var/run/docker.sock:ro
+
+#     ports:
+#       - 61208:61208
+#       - 61209:61209
+#     environment:
+#       - "GLANCES_OPT=-w --password"
+#     secrets:
+#       - source: glances_password
+#         target: /root/.config/glances/glances.pwd
+#     networks:
+#       - home-automation
+#       - reverse-proxy
+#     labels:
+#       - "traefik.enable=true"
+#       - "traefik.http.routers.glances.rule=Host(`glances.etauker.ie`)"
+#       - "traefik.http.routers.glances.entrypoints=web"
+#       - "traefik.http.services.glances.loadbalancer.server.port=61208"
+#       - "traefik.http.services.glances.loadbalancer.server.port=61209"
+
+# secrets:
+#   glances_password:
+#     file: ./data/glances/glances.pwd
+
+networks:
+  proxy:
+    name: proxy
