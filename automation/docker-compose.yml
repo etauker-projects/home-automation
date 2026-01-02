@@ -1,5 +1,12 @@
 services:
 
+  hello-automation:
+   image: crccheck/hello-world
+   container_name: hello-automation
+   network_mode: host
+   environment:
+     - PORT=8000
+
   mosquitto:
     container_name: mqtt-broker
     image: eclipse-mosquitto:latest

@@ -1,0 +1,7 @@
+services:
+  hello-office:
+    image: crccheck/hello-world
+    container_name: hello-office
+    network_mode: host
+    environment:
+      - PORT=9000
