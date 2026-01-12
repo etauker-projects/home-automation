@@ -177,7 +177,7 @@ services:
       - --hass-websocket-uri
       - ws://192.168.5.2:8123/api/websocket
       - --hass-token
-      - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwNjUzYTY1YjEwOGQ0MThkYWQwOTBmNjMwNDhhZTY0NyIsImlhdCI6MTc2NzQ2MDQ4OCwiZXhwIjoyMDgyODIwNDg4fQ.Dn5AeeSpcRlZ1Tam_8RWTIYvlh-WGpZXeU4DzdL7dZQ
+      - <token>
       - --custom-sentences-dir
       - /custom_sentences
       - --retrain-on-start
