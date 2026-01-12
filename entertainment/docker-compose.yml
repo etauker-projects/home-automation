@@ -1,0 +1,7 @@
+services:
+  hello-entertainment:
+    image: crccheck/hello-world
+    container_name: hello-entertainment
+    network_mode: host
+    environment:
+      - PORT=7000

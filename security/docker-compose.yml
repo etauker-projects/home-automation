@@ -1,0 +1,7 @@
+services:
+  hello-security:
+    image: crccheck/hello-world
+    container_name: hello-security
+    network_mode: host
+    environment:
+      - PORT=5000

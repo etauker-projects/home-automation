@@ -18,6 +18,8 @@ services:
 #       - config/.env
 #     networks:
 #       - home-automation
+#     labels:
+#       - automation
 
 #   home-automation-api-host-mode:
 #     build:
@@ -34,20 +36,23 @@ services:
 #     container_name: home-automation-api-host-mode
 #     env_file:
 #       - config/.env
+#     labels:
+#       - automation
 
-  mosquitto:
-    container_name: mqtt-broker
-    image: eclipse-mosquitto:latest
-    profiles: [ production ]
-    network_mode: host
-    restart: unless-stopped
-    volumes:
-      - ./data/mosquitto/config:/mosquitto/config
-      - ./data/mosquitto/data:/mosquitto/data
-      - ./data/mosquitto/log:/mosquitto/log
-      - /etc/localtime:/etc/localtime:ro
-    labels:
-      - production
+  # mosquitto:
+  #   container_name: mqtt-broker
+  #   image: eclipse-mosquitto:latest
+  #   profiles: [ production ]
+  #   network_mode: host
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/mosquitto/config:/mosquitto/config
+  #     - ./data/mosquitto/data:/mosquitto/data
+  #     - ./data/mosquitto/log:/mosquitto/log
+  #     - /etc/localtime:/etc/localtime:ro
+  #   labels:
+  #     - production
+  #     - automation
 
 #   influxdb:
 #     container_name: influxdb
@@ -63,25 +68,29 @@ services:
 #       - 8086:8086
 #     networks:
 #       - home-automation
+#     labels:
+#       - experimental
+#       - automation
 
-  home-assistant:
-    container_name: home-assistant
-    image: "ghcr.io/home-assistant/home-assistant:stable"
-    profiles: [ production ]
-    network_mode: host
-    restart: unless-stopped
-    privileged: true
-    volumes:
-      - ./data/hass:/config
-      - /etc/localtime:/etc/localtime:ro
-      - /run/dbus:/run/dbus:ro
-      - /mnt/synology-nas:/media
-    environment:
-      - TZ=Europe/Dublin
-    # devices:
-    #   - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
-    labels:
-      - production      
+  # home-assistant:
+  #   container_name: home-assistant
+  #   image: "ghcr.io/home-assistant/home-assistant:stable"
+  #   profiles: [ production ]
+  #   network_mode: host
+  #   restart: unless-stopped
+  #   privileged: true
+  #   volumes:
+  #     - ./data/hass:/config
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /run/dbus:/run/dbus:ro
+  #     - /mnt/synology-nas:/media
+  #   environment:
+  #     - TZ=Europe/Dublin
+  #   # devices:
+  #   #   - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
+  #   labels:
+  #     - production
+  #     - automation
 
 #   wyoming-piper:
 #     container_name: wyoming-piper
@@ -94,6 +103,9 @@ services:
 #     restart: unless-stopped
 #     networks:
 #       - home-automation
+#     labels:
+#       - experimental
+#       - automation
 
 #   wyoming-whisper:
 #     container_name: wyoming-whisper
@@ -106,6 +118,9 @@ services:
 #     restart: unless-stopped
 #     networks:
 #       - home-automation
+#     labels:
+#       - experimental
+#       - automation
 
 #   wyoming-openwakeword:
 #     container_name: wyoming-openwakeword
@@ -118,69 +133,74 @@ services:
 #     restart: unless-stopped
 #     networks:
 #       - home-automation
+#     labels:
+#       - experimental
+#       - automation
 
-  zigbee2mqtt:
-    container_name: zigbee2mqtt
-    image: koenkk/zigbee2mqtt:latest
-    profiles: [ production ]
-    network_mode: host
-    depends_on: [ mosquitto ]
-    restart: unless-stopped
-    # user: mosquitto:hass
-    # group_add:
-    #   - dialout
-    # user: 1000:1000
-    volumes:
-      - ./data/zigbee2mqtt:/app/data
-      - /run/udev:/run/udev:ro
-    # ports:
-    #   # Frontend port
-    #   - 8080:8080
-    environment:
-      - TZ=Europe/Dublin
-      - ZIGBEE2MQTT_CONFIG_PERMIT_JOIN=true
-      - ZIGBEE2MQTT_CONFIG_MQTT_BASE_TOPIC=zigbee2mqtt
-      - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://localhost:1883
-      # - ZIGBEE2MQTT_CONFIG_MQTT_USER='!secret.yaml broker_user'
-      # - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD='!secret.yaml broker_password'
-      - ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED=true
-      - ZIGBEE2MQTT_CONFIG_MQTT_KEEPALIVE=60
-      - ZIGBEE2MQTT_CONFIG_MQTT_VERSION=5
-      - ZIGBEE2MQTT_CONFIG_MQTT_INCLUDE_DEVICE_INFORMATION=true
-      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=/dev/ttyUSB0
-      - ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED=true
-      - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=8080
-      # - ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN='!secret.yaml frontend_auth_token'
-      - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED=true
-      - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_DISCOVERY_TOPIC=homeassistant
-    devices:
-      - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyUSB0
-    labels:
-      - production
+  # zigbee2mqtt:
+  #   container_name: zigbee2mqtt
+  #   image: koenkk/zigbee2mqtt:latest
+  #   profiles: [ production ]
+  #   network_mode: host
+  #   depends_on: [ mosquitto ]
+  #   restart: unless-stopped
+  #   # user: mosquitto:hass
+  #   # group_add:
+  #   #   - dialout
+  #   # user: 1000:1000
+  #   volumes:
+  #     - ./data/zigbee2mqtt:/app/data
+  #     - /run/udev:/run/udev:ro
+  #   # ports:
+  #   #   # Frontend port
+  #   #   - 8080:8080
+  #   environment:
+  #     - TZ=Europe/Dublin
+  #     - ZIGBEE2MQTT_CONFIG_PERMIT_JOIN=true
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_BASE_TOPIC=zigbee2mqtt
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://localhost:1883
+  #     # - ZIGBEE2MQTT_CONFIG_MQTT_USER='!secret.yaml broker_user'
+  #     # - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD='!secret.yaml broker_password'
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED=true
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_KEEPALIVE=60
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_VERSION=5
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_INCLUDE_DEVICE_INFORMATION=true
+  #     - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=/dev/ttyUSB0
+  #     - ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED=true
+  #     - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=8080
+  #     # - ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN='!secret.yaml frontend_auth_token'
+  #     - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED=true
+  #     - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_DISCOVERY_TOPIC=homeassistant
+  #   devices:
+  #     - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyUSB0
+  #   labels:
+  #     - production
+  #     - automation
 
-  govee2mqtt:
-    container_name: govee2mqtt
-    image: ghcr.io/wez/govee2mqtt:latest
-    profiles: [ production ]
-    network_mode: host  # host networking is required
-    depends_on: [ mosquitto ]
-    restart: unless-stopped
-    volumes:
-      - ./data/govee2mqtt/data:/app/data
-    #   - /run/udev:/run/udev:ro
-    env_file:
-      - ./data/govee2mqtt/config/.env
-    # ports:
-    #   - 8056:8056
-    environment:
-      - TZ=Europe/Dublin
-      - GOVEE_MQTT_HOST=localhost
-      - GOVEE_MQTT_PORT=1883
-      - GOVEE_TEMPERATURE_SCALE=C # C for Celsius or F for Fahrenheit
-      - RUST_LOG_STYLE=always # Always use colorized output
-      # - RUST_LOG=govee=trace # Enable for debug mode
-    labels:
-      - production
+  # govee2mqtt:
+  #   container_name: govee2mqtt
+  #   image: ghcr.io/wez/govee2mqtt:latest
+  #   profiles: [ production ]
+  #   network_mode: host  # host networking is required
+  #   depends_on: [ mosquitto ]
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/govee2mqtt/data:/app/data
+  #   #   - /run/udev:/run/udev:ro
+  #   env_file:
+  #     - ./data/govee2mqtt/config/.env
+  #   # ports:
+  #   #   - 8056:8056
+  #   environment:
+  #     - TZ=Europe/Dublin
+  #     - GOVEE_MQTT_HOST=localhost
+  #     - GOVEE_MQTT_PORT=1883
+  #     - GOVEE_TEMPERATURE_SCALE=C # C for Celsius or F for Fahrenheit
+  #     - RUST_LOG_STYLE=always # Always use colorized output
+  #     # - RUST_LOG=govee=trace # Enable for debug mode
+  #   labels:
+  #     - production
+  #     - automation
 
   # matter-server:
   #   image: ghcr.io/home-assistant-libs/python-matter-server:stable
@@ -200,6 +220,8 @@ services:
   #   #command: --storage-path /data --paa-root-cert-dir /data/credentials --bluetooth-adapter 0
   #   labels:
   #     - development
+#       - experimental
+#       - automation
 
   jellyfin:
     image: jellyfin/jellyfin:latest
@@ -237,6 +259,9 @@ services:
       - 'host.docker.internal:host-gateway'
     environment:
       PORT: 8096
+    labels:
+      - production
+      - entertainment
 
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
@@ -255,25 +280,27 @@ services:
       # PORT: 80
     labels:
       - production
-
+      - automation
 
   nginxproxymanager:
-    image: 'jc21/nginx-proxy-manager:latest' 
+    image: 'jc21/nginx-proxy-manager:latest'
     container_name: nginxproxymanager
-    restart: unless-stopped 
+    restart: unless-stopped
     # network_mode: host
     ports:
       - '80:80'
       - '81:81'
-      - '443:443' 
+      - '443:443'
     # networks:
     #   - proxy
     volumes:
       - ./data/nginx/data:/data
-      - ./data/nginx/letsencrypt:/etc/letsencrypt 
-    
+      - ./data/nginx/letsencrypt:/etc/letsencrypt
     # depends_on:
     #   - db
+    labels:
+      - production
+      - automation
 
   uptime-kuma:
     image: louislam/uptime-kuma:1
@@ -287,6 +314,7 @@ services:
       - ./data/uptime-kuma:/app/data
     labels:
       - production
+      - automation
 
 # # More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
 #   pihole:
@@ -327,6 +355,9 @@ services:
 #       # Optional, if Pi-hole should get some more processing time
 #       - SYS_NICE
 #     restart: unless-stopped
+#     labels:
+#       - experimental
+#       - automation
 
   # dns-server:
   #   container_name: dns-server
@@ -375,6 +406,9 @@ services:
   #   restart: unless-stopped
   #   # sysctls:
   #   #   - net.ipv4.ip_local_port_range=1024 65000
+#     labels:
+#       - experimental
+#       - automation
 
   blocky:
     image: spx01/blocky
@@ -397,11 +431,14 @@ services:
       - /etc/localtime:/etc/localtime:ro
       # config file
       - ./data/blocky/config.yml:/app/config.yml:ro
+    labels:
+      - experimental
+      - automation
 
   # If blocky fails to start up due to port 53 being in use and `lsof -i :53` does not show any results, do the following:
   # ```
   # sudo nano /etc/systemd/resolved.conf
-  # # Update line containing DNSStubListener 
+  # # Update line containing DNSStubListener
   # # - from `#DNSStubListener=yes`
   # # - to: `DNSStubListener=no`
   # # Save and exit
@@ -410,8 +447,8 @@ services:
   # docker compose up -d blocky
   #```
   #
-  # TO Revert: 
-  # comment the DNSStubListener line 
+  # TO Revert:
+  # comment the DNSStubListener line
   # run `ln --symbolic --force /run/systemd/resolve/resolv.conf /etc/resolv.conf`
   # sudo systemctl restart systemd-resolved
   #
@@ -438,7 +475,7 @@ services:
   #   build:
   #     context: .
   #     dockerfile: ../postgres/config/main.dockerfile
-  #     # labels: 
+  #     # labels:
   #     # - app=postgres
   #   environment:
   #     POSTGRES_USER: 'npm'
@@ -471,14 +508,17 @@ services:
   #   devices:
   #     - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
   #   labels:
-  #     - development   
+  #     - development
   #   sysctls:
   #     - net.ipv6.conf.all.disable_ipv6=0
   #     - net.ipv4.conf.all.forwarding=1
   #     - net.ipv6.conf.all.forwarding=1
   #   # radio-url: spinel+hdlc+uart:///dev/ttyACM0
-  #   dns: 
+  #   dns:
   #     - 127.0.0.1
+#     labels:
+#       - experimental
+#       - automation
 
 # Network Name: thread-network
 # Network Extended PAN ID: D37ABE78F27CCEF8
@@ -489,12 +529,12 @@ services:
 # On-Mesh Prefix: fd11:22::
 
 
-# docker run 
-  # --sysctl "net.ipv6.conf.all.disable_ipv6=0 net.ipv4.conf.all.forwarding=1 net.ipv6.conf.all.forwarding=1" 
-  # -p 8080:80 
-  # --dns=127.0.0.1 -it 
-  # --volume /dev/ttyACM0:/dev/ttyACM0 
-  # --privileged openthread/otbr 
+# docker run
+  # --sysctl "net.ipv6.conf.all.disable_ipv6=0 net.ipv4.conf.all.forwarding=1 net.ipv6.conf.all.forwarding=1"
+  # -p 8080:80
+  # --dns=127.0.0.1 -it
+  # --volume /dev/ttyACM0:/dev/ttyACM0
+  # --privileged openthread/otbr
   # --radio-url spinel+hdlc+uart:///dev/ttyACM0
 
 #   whoami:

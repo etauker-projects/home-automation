@@ -1,0 +1,7 @@
+services:
+  hello-hobbies:
+    image: crccheck/hello-world
+    container_name: hello-hobbies
+    network_mode: host
+    environment:
+      - PORT=6000
