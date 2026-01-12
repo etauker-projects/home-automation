@@ -39,20 +39,20 @@ services:
 #     labels:
 #       - automation
 
-  mosquitto:
-    container_name: mqtt-broker
-    image: eclipse-mosquitto:latest
-    profiles: [ production ]
-    network_mode: host
-    restart: unless-stopped
-    volumes:
-      - ./data/mosquitto/config:/mosquitto/config
-      - ./data/mosquitto/data:/mosquitto/data
-      - ./data/mosquitto/log:/mosquitto/log
-      - /etc/localtime:/etc/localtime:ro
-    labels:
-      - production
-      - automation
+  # mosquitto:
+  #   container_name: mqtt-broker
+  #   image: eclipse-mosquitto:latest
+  #   profiles: [ production ]
+  #   network_mode: host
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/mosquitto/config:/mosquitto/config
+  #     - ./data/mosquitto/data:/mosquitto/data
+  #     - ./data/mosquitto/log:/mosquitto/log
+  #     - /etc/localtime:/etc/localtime:ro
+  #   labels:
+  #     - production
+  #     - automation
 
 #   influxdb:
 #     container_name: influxdb
@@ -72,25 +72,25 @@ services:
 #       - experimental
 #       - automation
 
-  home-assistant:
-    container_name: home-assistant
-    image: "ghcr.io/home-assistant/home-assistant:stable"
-    profiles: [ production ]
-    network_mode: host
-    restart: unless-stopped
-    privileged: true
-    volumes:
-      - ./data/hass:/config
-      - /etc/localtime:/etc/localtime:ro
-      - /run/dbus:/run/dbus:ro
-      - /mnt/synology-nas:/media
-    environment:
-      - TZ=Europe/Dublin
-    # devices:
-    #   - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
-    labels:
-      - production
-      - automation
+  # home-assistant:
+  #   container_name: home-assistant
+  #   image: "ghcr.io/home-assistant/home-assistant:stable"
+  #   profiles: [ production ]
+  #   network_mode: host
+  #   restart: unless-stopped
+  #   privileged: true
+  #   volumes:
+  #     - ./data/hass:/config
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /run/dbus:/run/dbus:ro
+  #     - /mnt/synology-nas:/media
+  #   environment:
+  #     - TZ=Europe/Dublin
+  #   # devices:
+  #   #   - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
+  #   labels:
+  #     - production
+  #     - automation
 
 #   wyoming-piper:
 #     container_name: wyoming-piper
@@ -137,70 +137,70 @@ services:
 #       - experimental
 #       - automation
 
-  zigbee2mqtt:
-    container_name: zigbee2mqtt
-    image: koenkk/zigbee2mqtt:latest
-    profiles: [ production ]
-    network_mode: host
-    depends_on: [ mosquitto ]
-    restart: unless-stopped
-    # user: mosquitto:hass
-    # group_add:
-    #   - dialout
-    # user: 1000:1000
-    volumes:
-      - ./data/zigbee2mqtt:/app/data
-      - /run/udev:/run/udev:ro
-    # ports:
-    #   # Frontend port
-    #   - 8080:8080
-    environment:
-      - TZ=Europe/Dublin
-      - ZIGBEE2MQTT_CONFIG_PERMIT_JOIN=true
-      - ZIGBEE2MQTT_CONFIG_MQTT_BASE_TOPIC=zigbee2mqtt
-      - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://localhost:1883
-      # - ZIGBEE2MQTT_CONFIG_MQTT_USER='!secret.yaml broker_user'
-      # - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD='!secret.yaml broker_password'
-      - ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED=true
-      - ZIGBEE2MQTT_CONFIG_MQTT_KEEPALIVE=60
-      - ZIGBEE2MQTT_CONFIG_MQTT_VERSION=5
-      - ZIGBEE2MQTT_CONFIG_MQTT_INCLUDE_DEVICE_INFORMATION=true
-      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=/dev/ttyUSB0
-      - ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED=true
-      - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=8080
-      # - ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN='!secret.yaml frontend_auth_token'
-      - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED=true
-      - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_DISCOVERY_TOPIC=homeassistant
-    devices:
-      - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyUSB0
-    labels:
-      - production
-      - automation
+  # zigbee2mqtt:
+  #   container_name: zigbee2mqtt
+  #   image: koenkk/zigbee2mqtt:latest
+  #   profiles: [ production ]
+  #   network_mode: host
+  #   depends_on: [ mosquitto ]
+  #   restart: unless-stopped
+  #   # user: mosquitto:hass
+  #   # group_add:
+  #   #   - dialout
+  #   # user: 1000:1000
+  #   volumes:
+  #     - ./data/zigbee2mqtt:/app/data
+  #     - /run/udev:/run/udev:ro
+  #   # ports:
+  #   #   # Frontend port
+  #   #   - 8080:8080
+  #   environment:
+  #     - TZ=Europe/Dublin
+  #     - ZIGBEE2MQTT_CONFIG_PERMIT_JOIN=true
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_BASE_TOPIC=zigbee2mqtt
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://localhost:1883
+  #     # - ZIGBEE2MQTT_CONFIG_MQTT_USER='!secret.yaml broker_user'
+  #     # - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD='!secret.yaml broker_password'
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED=true
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_KEEPALIVE=60
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_VERSION=5
+  #     - ZIGBEE2MQTT_CONFIG_MQTT_INCLUDE_DEVICE_INFORMATION=true
+  #     - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=/dev/ttyUSB0
+  #     - ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED=true
+  #     - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=8080
+  #     # - ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN='!secret.yaml frontend_auth_token'
+  #     - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED=true
+  #     - ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_DISCOVERY_TOPIC=homeassistant
+  #   devices:
+  #     - /dev/serial/by-id/usb-Silicon_Labs_Sonoff_Zigbee_3.0_USB_Dongle_Plus_0001-if00-port0:/dev/ttyUSB0
+  #   labels:
+  #     - production
+  #     - automation
 
-  govee2mqtt:
-    container_name: govee2mqtt
-    image: ghcr.io/wez/govee2mqtt:latest
-    profiles: [ production ]
-    network_mode: host  # host networking is required
-    depends_on: [ mosquitto ]
-    restart: unless-stopped
-    volumes:
-      - ./data/govee2mqtt/data:/app/data
-    #   - /run/udev:/run/udev:ro
-    env_file:
-      - ./data/govee2mqtt/config/.env
-    # ports:
-    #   - 8056:8056
-    environment:
-      - TZ=Europe/Dublin
-      - GOVEE_MQTT_HOST=localhost
-      - GOVEE_MQTT_PORT=1883
-      - GOVEE_TEMPERATURE_SCALE=C # C for Celsius or F for Fahrenheit
-      - RUST_LOG_STYLE=always # Always use colorized output
-      # - RUST_LOG=govee=trace # Enable for debug mode
-    labels:
-      - production
-      - automation
+  # govee2mqtt:
+  #   container_name: govee2mqtt
+  #   image: ghcr.io/wez/govee2mqtt:latest
+  #   profiles: [ production ]
+  #   network_mode: host  # host networking is required
+  #   depends_on: [ mosquitto ]
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/govee2mqtt/data:/app/data
+  #   #   - /run/udev:/run/udev:ro
+  #   env_file:
+  #     - ./data/govee2mqtt/config/.env
+  #   # ports:
+  #   #   - 8056:8056
+  #   environment:
+  #     - TZ=Europe/Dublin
+  #     - GOVEE_MQTT_HOST=localhost
+  #     - GOVEE_MQTT_PORT=1883
+  #     - GOVEE_TEMPERATURE_SCALE=C # C for Celsius or F for Fahrenheit
+  #     - RUST_LOG_STYLE=always # Always use colorized output
+  #     # - RUST_LOG=govee=trace # Enable for debug mode
+  #   labels:
+  #     - production
+  #     - automation
 
   # matter-server:
   #   image: ghcr.io/home-assistant-libs/python-matter-server:stable

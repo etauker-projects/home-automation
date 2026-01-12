@@ -14,9 +14,9 @@ services:
     network_mode: host
     restart: unless-stopped
     volumes:
-      - ./data/mosquitto/config:/mosquitto/config
-      - ./data/mosquitto/data:/mosquitto/data
-      - ./data/mosquitto/log:/mosquitto/log
+      - ../data/mosquitto/config:/mosquitto/config
+      - ../data/mosquitto/data:/mosquitto/data
+      - ../data/mosquitto/log:/mosquitto/log
       - /etc/localtime:/etc/localtime:ro
     labels:
       - production
@@ -34,7 +34,7 @@ services:
     #   - dialout
     # user: 1000:1000
     volumes:
-      - ./data/zigbee2mqtt:/app/data
+      - ../data/zigbee2mqtt:/app/data
       - /run/udev:/run/udev:ro
     # ports:
     #   # Frontend port
@@ -70,10 +70,10 @@ services:
     depends_on: [ mosquitto ]
     restart: unless-stopped
     volumes:
-      - ./data/govee2mqtt/data:/app/data
+      - ../data/govee2mqtt/data:/app/data
     #   - /run/udev:/run/udev:ro
     env_file:
-      - ./data/govee2mqtt/config/.env
+      - ../data/govee2mqtt/config/.env
     # ports:
     #   - 8056:8056
     environment:
@@ -95,7 +95,7 @@ services:
     restart: unless-stopped
     privileged: true
     volumes:
-      - ./data/hass:/config
+      - ../data/hass:/config
       - /etc/localtime:/etc/localtime:ro
       - /run/dbus:/run/dbus:ro
       - /mnt/synology-nas:/media
@@ -116,8 +116,8 @@ services:
     # ports:
     #   - 3000:3000
     volumes:
-      - ./data/homepage/config:/app/config
-      - ./data/homepage/resources:/app/public/resources
+      - ../data/homepage/config:/app/config
+      - ../data/homepage/resources:/app/public/resources
       # - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations
     environment:
       HOMEPAGE_ALLOWED_HOSTS: 192.168.5.2,dash.home
@@ -126,53 +126,92 @@ services:
       - production
       - automation
 
-#   wyoming-piper:
-#     container_name: wyoming-piper
-#     image: rhasspy/wyoming-piper
-#     profiles: [ experimental ]
-#     ports:
-#       - "10200:10200"
-#     volumes:
-#       - "./data/piper:/data"
-#     command: [ "--voice", "en-gb-southern_english_female-low" ]
-#     restart: unless-stopped
-#     networks:
-#       - home-automation
-#     labels:
-#       - experimental
-#       - automation
+  wyoming-piper:
+    container_name: wyoming-piper
+    image: rhasspy/wyoming-piper
+    profiles: [ experimental ]
+    ports:
+      - "10200:10200"
+    volumes:
+      - "../data/piper:/data"
+    command: [ "--voice", "en-gb-southern_english_female-low" ]
+    restart: unless-stopped
+    # networks:
+    #   - home-automation
+    labels:
+      - experimental
+      - automation
 
-#   wyoming-whisper:
-#     container_name: wyoming-whisper
-#     image: rhasspy/wyoming-whisper
-#     profiles: [ experimental ]
-#     ports:
-#       - "10300:10300"
-#     volumes:
-#       - ./data/whisper:/data
-#     command: [ "--model", "small-int8", "--language", "en" ]
-#     restart: unless-stopped
-#     networks:
-#       - home-automation
-#     labels:
-#       - experimental
-#       - automation
+  wyoming-whisper:
+    container_name: wyoming-whisper
+    image: rhasspy/wyoming-whisper
+    profiles: [ experimental ]
+    ports:
+      - "10300:10300"
+    volumes:
+      - ../data/whisper:/data
+    command: [ "--model", "small-int8", "--language", "en" ]
+    restart: unless-stopped
+    # networks:
+    #   - home-automation
+    labels:
+      - experimental
+      - automation
 
-#   wyoming-openwakeword:
-#     container_name: wyoming-openwakeword
-#     image: rhasspy/wyoming-openwakeword
-#     profiles: [ experimental ]
-#     ports:
-#       - "10400:10400"
-#     volumes:
-#       - "./data/openwakeword:/custom"
-#     command: [ "--preload-model", "dobby", "--custom-model-dir", "/custom" ]
-#     restart: unless-stopped
-#     networks:
-#       - home-automation
-#     labels:
-#       - experimental
-#       - automation
+  wyoming-speech-to-phrase:
+    container_name: wyoming-speech-to-phrase
+    image: rhasspy/wyoming-speech-to-phrase
+    profiles: [ experimental ]
+    # ports:
+    #   - "10500:10500"
+    volumes:
+      - ../data/speech-to-phrase/models:/models
+      - ../data/speech-to-phrase/train:/train
+      - ../data/custom_sentences:/custom_sentences
+    network_mode: host
+    # command: [ "--model", "small-int8", "--language", "en" ]
+    # volumes:
+    #   - /path/to/download/models:/models
+    #   - /path/to/train:/train
+    command:
+      - --hass-websocket-uri
+      - ws://192.168.5.2:8123/api/websocket
+      - --hass-token
+      - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwNjUzYTY1YjEwOGQ0MThkYWQwOTBmNjMwNDhhZTY0NyIsImlhdCI6MTc2NzQ2MDQ4OCwiZXhwIjoyMDgyODIwNDg4fQ.Dn5AeeSpcRlZ1Tam_8RWTIYvlh-WGpZXeU4DzdL7dZQ
+      - --custom-sentences-dir
+      - /custom_sentences
+      - --retrain-on-start
+    # stdin_open: true   # equivalent to -it
+    # tty: true
+    # environment:
+    #   - PORT=10500
+    restart: unless-stopped
+    labels:
+      - experimental
+      - automation
+
+# docker run -it -p 10300:10300 \
+#   -v /path/to/download/models:/models \
+#   -v /path/to/train:/train rhasspy/wyoming-speech-to-phrase \
+#   --hass-websocket-uri 'ws://homeassistant.local:8123/api/websocket' \
+#   --hass-token '<LONG_LIVED_ACCESS_TOKEN>' \
+#   --retrain-on-start
+
+  # wyoming-openwakeword:
+  #   container_name: wyoming-openwakeword
+  #   image: rhasspy/wyoming-openwakeword
+  #   profiles: [ experimental ]
+  #   ports:
+  #     - "10400:10400"
+  #   volumes:
+  #     - "../data/openwakeword:/custom"
+  #   command: [ "--preload-model", "dobby", "--custom-model-dir", "/custom" ]
+  #   restart: unless-stopped
+  #   networks:
+  #     - home-automation
+  #   labels:
+  #     - experimental
+  #     - automation
 
   # matter-server:
   #   image: ghcr.io/home-assistant-libs/python-matter-server:stable
@@ -185,7 +224,7 @@ services:
   #     - apparmor:unconfined
   #   volumes:
   #     # Create an .env file that sets the USERDIR environment variable.
-  #     - ./data/matter-server/data:/data/
+  #     - ../data/matter-server/data:/data/
   #     # Required for Bluetooth via D-Bus
   #     - /run/dbus:/run/dbus:ro
   #   # If you adjust command line, make sure to pass the default CMD arguments too:
@@ -207,8 +246,8 @@ services:
     # networks:
     #   - proxy
     volumes:
-      - ./data/nginx/data:/data
-      - ./data/nginx/letsencrypt:/etc/letsencrypt
+      - ../data/nginx/data:/data
+      - ../data/nginx/letsencrypt:/etc/letsencrypt
     # depends_on:
     #   - db
     labels:
@@ -224,7 +263,7 @@ services:
     # ports:
     #   - '3001:3001'
     volumes:
-      - ./data/uptime-kuma:/app/data
+      - ../data/uptime-kuma:/app/data
     labels:
       - production
       - automation
@@ -239,8 +278,8 @@ services:
   #   ports:
   #     - 3001:80
   #   volumes:
-  #     - ./data/otbr/stage:/app/stage
-  #     - ./data/otbr/build:/app/build
+  #     - ../data/otbr/stage:/app/stage
+  #     - ../data/otbr/build:/app/build
   #     # - /dev/ttyUSB1:/dev/ttyUSB0
   #   environment:
   #     HOMEPAGE_ALLOWED_HOSTS: gethomepage.dev # required, may need port. See gethomepage.dev/installation/#homepage_allowed_hosts
@@ -280,9 +319,9 @@ services:
 #     # user: root:root
 #     # privileged: true
 #     volumes:
-#       # - ./data/glances/passwd:/root/.config/glances/glances.pwd
-#       # - ./data/glances/glances.conf:/glances/conf/glances.conf
-#       - ./data/glances/glances.conf:/etc/glances/glances.conf
+#       # - ../data/glances/passwd:/root/.config/glances/glances.pwd
+#       # - ../data/glances/glances.conf:/glances/conf/glances.conf
+#       - ../data/glances/glances.conf:/etc/glances/glances.conf
 #       - /var/run/docker.sock:/var/run/docker.sock:ro
 
 #     ports:
@@ -305,7 +344,7 @@ services:
 
 # secrets:
 #   glances_password:
-#     file: ./data/glances/glances.pwd
+#     file: ../data/glances/glances.pwd
 
 networks:
   proxy:
