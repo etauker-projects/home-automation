@@ -1,7 +1,7 @@
 /* eslint-disable no-process-env */
 import { AuthServer } from './auth.server.js';
 import { LogFactory, type LogService } from './logs/logs.module.js';
-import { PersistenceConnectorMock } from './test/persistence-connector.mock.js';
+import { PersistenceConnectorMock } from './persistence/persistence.module.js';
 
 let logger: LogService;
 let authServer: AuthServer;

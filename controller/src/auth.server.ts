@@ -5,7 +5,7 @@ import { PersistenceConnector } from './persistence/persistence.module.js';
 // import { RoleController } from './roles/role.controller.js';
 // import { SessionController } from './sessions/session.controller.js';
 // import { UserController } from './users/user.controller.js';
-import { PersistenceFactory } from './persistence/persistence.factory.js';
+// import { PersistenceFactory } from './persistence/persistence.factory.js';
 import { Server } from './server/server.js';
 
 export class AuthServer extends Server<AuthServer> {
@@ -18,15 +18,15 @@ export class AuthServer extends Server<AuthServer> {
     }
 
     public setConnector(connector?: PersistenceConnector): AuthServer {
-        if (!connector) {
-            this.logger.trace('No persistence connector provided, creating new one from environment variables');
-            const config = PersistenceFactory.makeConfig();
-            this.logger.debug('Read persistence configuration', undefined, { ...config, password: '=====' });
-            connector = PersistenceFactory.makeConnector(config);
-            this.logger.trace('PersistenceConnector instantiated');
-        }
+        // if (!connector) {
+        //     this.logger.trace('No persistence connector provided, creating new one from environment variables');
+        //     const config = PersistenceFactory.makeConfig();
+        //     this.logger.debug('Read persistence configuration', undefined, { ...config, password: '=====' });
+        //     connector = PersistenceFactory.makeConnector(config);
+        //     this.logger.trace('PersistenceConnector instantiated');
+        // }
 
-        this._connector = connector;
+        this._connector = connector!;
         this.logger.trace('Persistence connector set');
         return this;
     }

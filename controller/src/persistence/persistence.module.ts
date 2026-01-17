@@ -4,3 +4,4 @@ export * from './persistence-connector.js';
 // export * from './model/persistence-results.interface.js';
 // export * from './transaction/persistence-transaction.js';
 // export * from './transaction/persistence-transaction.mock.js';
+export * from './persistence-connector.mock.js';
