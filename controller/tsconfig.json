@@ -1,8 +1,10 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
   "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "outDir": "./dist",
-    "rootDir": "./"
+    "rootDir": "./src"
   },
   "include": ["**/*.ts"],
   "exclude": ["dist"]

@@ -10,8 +10,8 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx --watch --env-file .env src/index.ts",
-    "start": "node--env-file .env dist/index.js",
+    "dev": "tsx --watch --inspect-brk=9229 --env-file .env src/serve.ts",
+    "start": "node --env-file .env dist/serve.js",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest",
     "test:run": "vitest --run",
@@ -24,18 +24,28 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "argon2": "^0.44.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "moment": "^2.30.1",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@tsconfig/node24": "^24.0.3",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
+    "@types/pg": "^8.16.0",
     "@vitest/coverage-v8": "^4.0.13",
     "@vitest/eslint-plugin": "^1.4.3",
     "eslint": "^9.39.1",
     "eslint-plugin-perfectionist": "^4.15.1",
     "prettier": "^3.6.2",
+    "sinon": "^17.0.1",
+    "@types/sinon": "^17.0.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.47.0",
