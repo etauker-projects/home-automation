@@ -3,5 +3,7 @@ services:
     image: crccheck/hello-world
     container_name: hello-office
     network_mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PORT=9000
