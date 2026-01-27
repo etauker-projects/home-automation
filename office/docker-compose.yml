@@ -1,9 +1,60 @@
 services:
+
   hello-office:
     image: crccheck/hello-world
     container_name: hello-office
-    network_mode: host
+    networks:
+      - proxy
+    ports:
+      - "9000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless
+    restart: unless-stopped
+    depends_on:
+      - paperless-postgress
+      - paperless-redis
+    networks:
+      - paperless
+      - proxy
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data/paperless/data:/usr/src/paperless/data
+      - ./data/paperless/media:/usr/src/paperless/media
+      - ./data/paperless/export:/usr/src/paperless/export
+      - ./data/paperless/consume:/usr/src/paperless/consume
+    env_file: paperless.env
     environment:
-      - PORT=9000
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_DBHOST: paperless-postgress
+
+  paperless-redis:
+    image: docker.io/library/redis:8
+    container_name: paperless-redis
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - paperless
+
+  paperless-postgress:
+    image: docker.io/library/postgres:18
+    container_name: paperless-postgress
+    restart: unless-stopped
+    volumes:
+      - ./data/postgresql/pgdata:/var/lib/postgresql
+    networks:
+      - paperless
+    env_file: paperless-postgress.env
+
+networks:
+  paperless:
+    name: paperless
+    external: false
+  proxy:
+    name: proxy
+    external: true
