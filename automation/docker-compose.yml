@@ -130,6 +130,20 @@ services:
       - production
       - automation
 
+  zone-configurator:
+    image: everythingsmarthome/everything-presence-mmwave-configurator:latest
+    container_name: zone-configurator
+    restart: unless-stopped
+    network_mode: host
+    # ports:
+    #   - "3002:3000"
+    env_file: ./zone-configurator.env
+    environment:
+      PORT: 3002
+      HA_BASE_URL: http://localhost:8123
+    volumes:
+      - ../data/zone-configurator/config:/config
+
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
@@ -200,7 +214,7 @@ services:
       - --hass-websocket-uri
       - ws://192.168.5.2:8123/api/websocket
       - --hass-token
-      - <token>
+      - ${HASS_TOKEN}
       - --custom-sentences-dir
       - /custom_sentences
       - --retrain-on-start
@@ -209,6 +223,7 @@ services:
     # environment:
     #   - PORT=10500
     restart: unless-stopped
+    env_file: ./wyoming-speech-to-phrase.env
     labels:
       - experimental
       - automation
