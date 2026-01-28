@@ -1,11 +1,32 @@
 services:
 
   hello-automation:
-   image: crccheck/hello-world
-   container_name: hello-automation
-   network_mode: host
-   environment:
+    image: crccheck/hello-world
+    container_name: hello-automation
+    networks:
+      - proxy
+    environment:
      - PORT=8000
+
+  caddy:
+    build: .
+    container_name: caddy
+    restart: unless-stopped
+    # command: ["caddy", "run", "--watch"]
+    env_file:
+      - ./caddy.env
+    volumes:
+      - ../data/caddy/conf:/etc/caddy
+      # - ../data/caddy/site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - proxy
+    ports:
+      - "443:443"
+      - "80:80"
 
   mosquitto:
     container_name: mqtt-broker
@@ -101,6 +122,8 @@ services:
       - /mnt/synology-nas:/media
     environment:
       - TZ=Europe/Dublin
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # devices:
     #   - /dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_82d56869a0dced11bac7e62d62c613ac-if00-port0:/dev/ttyUSB0
     labels:
@@ -234,25 +257,25 @@ services:
 #       - experimental
 #       - automation
 
-  nginxproxymanager:
-    image: 'jc21/nginx-proxy-manager:latest'
-    container_name: nginxproxymanager
-    restart: unless-stopped
-    # network_mode: host
-    ports:
-      - '80:80'
-      - '81:81'
-      - '443:443'
-    # networks:
-    #   - proxy
-    volumes:
-      - ../data/nginx/data:/data
-      - ../data/nginx/letsencrypt:/etc/letsencrypt
-    # depends_on:
-    #   - db
-    labels:
-      - production
-      - automation
+  # nginxproxymanager:
+  #   image: 'jc21/nginx-proxy-manager:latest'
+  #   container_name: nginxproxymanager
+  #   restart: unless-stopped
+  #   # network_mode: host
+  #   ports:
+  #     - '80:80'
+  #     - '81:81'
+  #     - '443:443'
+  #   # networks:
+  #   #   - proxy
+  #   volumes:
+  #     - ../data/nginx/data:/data
+  #     - ../data/nginx/letsencrypt:/etc/letsencrypt
+  #   # depends_on:
+  #   #   - db
+  #   labels:
+  #     - production
+  #     - automation
 
   uptime-kuma:
     image: louislam/uptime-kuma:1
@@ -345,6 +368,10 @@ services:
 # secrets:
 #   glances_password:
 #     file: ../data/glances/glances.pwd
+
+volumes:
+  caddy_data:
+  caddy_config:
 
 networks:
   proxy:
