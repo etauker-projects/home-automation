@@ -22,6 +22,8 @@ services:
       - proxy
     ports:
       - "8001:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data/paperless/data:/usr/src/paperless/data
       - ./data/paperless/media:/usr/src/paperless/media
