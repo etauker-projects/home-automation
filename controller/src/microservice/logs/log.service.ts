@@ -1,4 +1,4 @@
-import { Level } from './level.enum.js';
+import { type Level, values } from './level.type.js';
 import { Category } from './category.type.js';
 import { Format } from './format.type.js';
 import { Config } from './config.interface.js';
@@ -76,8 +76,8 @@ export class LogService {
     //                HELPERS
     // ===========================================
     private isCategoryEnabled(category: Category): boolean {
-        const value: number = Level[category];
-        return value <= this.logLevel;
+        const value: number = values[category];
+        return value <= values[this.logLevel];
     }
 
     private getColour(level: Category) {

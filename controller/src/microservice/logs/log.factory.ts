@@ -1,4 +1,4 @@
-import { Level } from './level.enum.js';
+import { type Level, values } from './level.type.js';
 import { Config } from './config.interface.js';
 import { Format } from './format.type.js';
 import { LogService } from './log.service.js';
@@ -20,12 +20,12 @@ export class LogFactory {
      * configuration using values from environment variables.
      */
     public static makeConfig(overrides: Partial<Config> = {}): Config {
-        const level: string = Extractor.extractEnum('LOGGER_LOG_LEVEL', Object.keys(Level), Level.ALL.toString());
+        const level: string = Extractor.extractEnum('LOGGER_LOG_LEVEL', Object.keys(values), 'ALL');
         const format: string = Extractor.extractEnum('LOGGER_OUTPUT_FORMAT', [ 'JSON', 'BASIC', 'GROUP' ], 'GROUP');
 
         return {
             coloursEnabled: Extractor.extractBoolean('LOGGER_COLOURS_ENABLED', true),
-            logLevel: Level[level],
+            logLevel: level as Level,
             outputFormat: format as Format,
             ...overrides,
         };

@@ -1,4 +1,4 @@
-import { Level } from './level.enum.js';
+import { Level } from './level.type.js';
 import { Format } from './format.type.js';
 
 export interface Config {
