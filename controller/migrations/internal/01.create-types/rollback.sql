@@ -1,0 +1,3 @@
+DROP TYPE IF EXISTS failure_action CASCADE;
+DROP TYPE IF EXISTS migration_status CASCADE;
+DROP TYPE IF EXISTS action_type CASCADE;

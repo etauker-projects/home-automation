@@ -1,1 +1,0 @@
-export type TokenAlgorithm = 'HS256' | 'HS512';
