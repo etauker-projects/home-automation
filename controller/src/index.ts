@@ -1,5 +1,32 @@
-import { Server } from './server.js';
+/* eslint-disable no-process-env */
 
-const server = new Server(3000);
+import { LogFactory, type LogService } from './microservice/logs/log.module.js';
+import { Server } from './microservice/server/server.js';
 
-server.start();
+
+let logger: LogService;
+let server: Server;
+
+try {
+
+    const port = parseInt(process.env?.PORT || '9999');
+    logger = LogFactory.makeService();
+    server = new Server({ port, apiRoot: '/api' });
+    server.start();
+
+} catch (error: any) {
+
+    if (logger!) logger.error(error?.message);
+        else console.log(error);
+
+    // authServer!?.stop();
+    server!?.stop();
+
+    // keeps pod running 1 minute to allow reading kubernetes logs
+    const timeoutMs = process.env?.APP_CRASH_TIMEOUT_MS
+        ? parseInt(process.env?.APP_CRASH_TIMEOUT_MS, 10)
+        : 60000
+    ;
+
+    setTimeout(() => process.exit(1), timeoutMs);
+}
