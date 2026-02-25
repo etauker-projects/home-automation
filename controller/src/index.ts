@@ -14,7 +14,7 @@ try {
     logger = LogFactory.makeService();
 
     server = new Server({ port, apiRoot: '/api' });
-    server.register('/status', StatusController.getInstance());
+    server.register('/status/v1', StatusController.getInstance());
     server.start();
 
 } catch (error: any) {

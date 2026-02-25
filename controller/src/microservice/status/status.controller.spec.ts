@@ -1,18 +1,16 @@
-import 'mocha';
-import assert from 'assert';
+import { assert } from 'vitest';
 import moment from 'moment';
 import axios from 'axios';
 import { Server } from '../server/server.js';
 import { StatusController } from './status.controller.js';
 
 const port = 9999;
-const apiRoot = '/mixology/recipes';
-const prefix = '/v1/status';
+const apiRoot = '/api';
+const prefix = '/status/v1';
 
 describe(prefix, () => {
 
     let server: Server;
-    // let connector: PersistenceConnectorMock;
 
     beforeEach(() => {
         // process.env['JWT_SECRET'] = 'test-secret';
