@@ -1,7 +1,7 @@
 import * as express from 'express';
 import { IncomingHttpHeaders } from 'http';
 import { LogFactory } from '../logs/log.module.js';
-import { AuthService, AuthFactory, Token } from '../auth/auth.module.js';
+// import { AuthService, AuthFactory, Token } from '../auth/auth.module.js';
 import type { PersistenceConnector } from '../persistence/persistence.connector.js';
 import {
     type IEndpoint,
@@ -12,11 +12,11 @@ import {
 
 export class ApiController extends ApiControllerBase {
 
-    private auth: AuthService;
+    // private auth: AuthService;
 
-    constructor(connector: PersistenceConnector) {
+    constructor(connector?: PersistenceConnector) {
         super(LogFactory.makeService());
-        this.auth = AuthFactory.makeService();
+        // this.auth = AuthFactory.makeService();
     }
 
     protected registerEndpoints(
@@ -80,37 +80,37 @@ export class ApiController extends ApiControllerBase {
         return authorizationHeader.replace(BEARER_REGEX, '');
     }
 
-    protected async verifyProvidedToken(
-        requiredRole?: string,
-        cookies: any = {},
-        headers: IncomingHttpHeaders = {},
-    ): Promise<Token> {
+    // protected async verifyProvidedToken(
+    //     requiredRole?: string,
+    //     cookies: any = {},
+    //     headers: IncomingHttpHeaders = {},
+    // ): Promise<Token> {
 
-        // extract fingerprint
-        const cookieName = this.auth.getCookieName();
-        const fingerprint: string = cookies[cookieName];
+    //     // extract fingerprint
+    //     const cookieName = this.auth.getCookieName();
+    //     const fingerprint: string = cookies[cookieName];
 
-        // extract bearer token
-        // NOTE: express converts incoming header names to lowercase
-        const headerName = 'authorization';
-        const authorizationHeader = this.validateAuthorizationHeader(headers[headerName]);
-        const bearerToken = this.extractBearerToken(authorizationHeader);
+    //     // extract bearer token
+    //     // NOTE: express converts incoming header names to lowercase
+    //     const headerName = 'authorization';
+    //     const authorizationHeader = this.validateAuthorizationHeader(headers[headerName]);
+    //     const bearerToken = this.extractBearerToken(authorizationHeader);
 
-        // verify token
-        if (await this.auth.verify(bearerToken, fingerprint, requiredRole)) {
-            return this.auth.decode(bearerToken);
-        } else {
-            throw new HttpError(401, 'Access denied');
-        }
-    }
+    //     // verify token
+    //     if (await this.auth.verify(bearerToken, fingerprint, requiredRole)) {
+    //         return this.auth.decode(bearerToken);
+    //     } else {
+    //         throw new HttpError(401, 'Access denied');
+    //     }
+    // }
 
-    protected runSecurityChecks(
-        permission: string,
-        cookies: any,
-        headers: any,
-    ): Promise<Token> {
-        return this.verifyProvidedToken(permission, cookies, headers);
-    }
+    // protected runSecurityChecks(
+    //     permission: string,
+    //     cookies: any,
+    //     headers: any,
+    // ): Promise<Token> {
+    //     return this.verifyProvidedToken(permission, cookies, headers);
+    // }
 
 }
 

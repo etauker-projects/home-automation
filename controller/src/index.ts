@@ -2,6 +2,7 @@
 
 import { LogFactory, type LogService } from './microservice/logs/log.module.js';
 import { Server } from './microservice/server/server.js';
+import { StatusController } from './microservice/status/status.module.js';
 
 
 let logger: LogService;
@@ -11,7 +12,9 @@ try {
 
     const port = parseInt(process.env?.PORT || '9999');
     logger = LogFactory.makeService();
+
     server = new Server({ port, apiRoot: '/api' });
+    server.register('/status', StatusController.getInstance());
     server.start();
 
 } catch (error: any) {
