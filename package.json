@@ -29,7 +29,7 @@
     "stop-all": "npm run stop automation && npm run stop-entertainment && npm run stop-hobbies && npm run stop-office && npm run stop-security",
     "start": "docker compose --profile production up --detach",
     "stop": "docker compose --profile production down",
-    "update-hass": "docker compose pull home-assistant && docker compose up home-assistant --remove-orphans -d && docker image prune",
+    "update-hass": "cd automation && docker compose pull home-assistant && docker compose up home-assistant --remove-orphans -d && docker image prune",
     "docker-ps": "docker ps --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Networks}}\t{{.Image}}'",
     "restart-wifi": "sudo bash ./scripts/wifi-reconnect.sh",
     "reconnect-hass": "bash ./scripts/hass-reconnect.sh"

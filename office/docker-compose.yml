@@ -21,37 +21,67 @@ services:
       - paperless
       - proxy
     ports:
-      - "8001:8000"
+      - "9001:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./data/paperless/data:/usr/src/paperless/data
-      - ./data/paperless/media:/usr/src/paperless/media
-      - ./data/paperless/export:/usr/src/paperless/export
-      - ./data/paperless/consume:/usr/src/paperless/consume
-    env_file: paperless.env
+      - ../data/office/paperless/data:/usr/src/paperless/data
+      - ../data/office/paperless/media:/usr/src/paperless/media
+      - ../data/office/paperless/export:/usr/src/paperless/export
+      - ../data/office/paperless/consume:/usr/src/paperless/consume
+
+    # Reference: http://docs.paperless-ngx.com/configuration
     environment:
+      # Database and Redis configuration
       PAPERLESS_REDIS: redis://paperless-redis:6379
       PAPERLESS_DBHOST: paperless-postgress
+      # File permissions for consumption directory
+      USERMAP_UID: 1000
+      USERMAP_GID: 1000
+      # Proxy config
+      PAPERLESS_URL: https://paperless.office.etauker.com
+      PAPERLESS_ALLOWED_HOSTS: paperless.office.etauker.com
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: https://paperless.office.etauker.com
+      PAPERLESS_USE_X_FORWARD_HOST: true
+      PAPERLESS_USE_X_FORWARD_PORT: true
+      PAPERLESS_USE_X_FORWARD_PROTO: true
+      # Time, language and locale
+      PAPERLESS_TIME_ZONE: Europe/Dublin
+      PAPERLESS_OCR_LANGUAGE: eng
+      # PAPERLESS_OCR_LANGUAGES=tur ces   # Additional languages to install for OCR
 
   paperless-redis:
     image: docker.io/library/redis:8
     container_name: paperless-redis
     restart: unless-stopped
     volumes:
-      - ./data/redis:/data
+      - ../data/office/redis:/data
     networks:
       - paperless
+    # environment:
+    #   UID: 1000
+    #   GID: 1000
 
   paperless-postgress:
     image: docker.io/library/postgres:18
     container_name: paperless-postgress
     restart: unless-stopped
     volumes:
-      - ./data/postgresql/pgdata:/var/lib/postgresql
+      - ../data/office/postgresql/pgdata:/var/lib/postgresql
     networks:
       - paperless
     env_file: paperless-postgress.env
+
+  excalidraw:
+    image: excalidraw/excalidraw:latest
+    container_name: excalidraw
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - "9002:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   paperless:

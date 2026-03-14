@@ -2,6 +2,71 @@ services:
   hello-security:
     image: crccheck/hello-world
     container_name: hello-security
-    network_mode: host
+    networks:
+      - proxy
     environment:
-      - PORT=5000
+      - PORT=5001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  security-postgres:
+    image: postgres:15
+    container_name: security-postgres
+    env_file:
+      - security-postgres.env
+    volumes:
+      - ./data/postgresql/pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    # labels:
+    #   - authentik
+    networks:
+      - authentik
+    # healthcheck:
+    #   interval: 30s
+    #   retries: 5
+    #   start_period: 20s
+    #   test:
+    #   - CMD-SHELL
+    #   - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+    #   timeout: 5s
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2025.12.4
+    container_name: authentik-server
+    env_file:
+      - authentik.env
+    command: "server"
+    depends_on:
+      - security-postgres
+    ports:
+      - "5002:9000"
+      - "5003:9443"
+    volumes:
+      - ./data/authentik/media:/media
+      - ./data/authentik/templates:/templates
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - authentik
+      - proxy
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2025.12.4
+    container_name: authentik-worker
+    env_file:
+      - authentik.env
+    command: "worker"
+    depends_on:
+      - security-postgres
+    restart: unless-stopped
+    networks:
+      - authentik
+
+networks:
+  authentik:
+    name: authentik
+    external: false
+  proxy:
+    name: proxy
+    external: true

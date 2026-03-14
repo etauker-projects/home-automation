@@ -75,3 +75,16 @@ sudo chown --recursive <user>:<group> <directory>
 
 # Mounting network drive
 - https://obie.hashnode.dev/ubuntu-server-permanently-mounting-samba-shares
+
+## Mounts
+```
+//192.168.2.2/video /mnt/synology-nas/video cifs username=home-assistant,password=<hashed password>,iocharset=utf8
+//192.168.2.2/audio /mnt/synology-nas/audio cifs username=home-assistant,password=<hashed password>,iocharset=utf8
+//192.168.2.2/metadata /mnt/synology-nas/metadata cifs username=home-assistant,password=<hashed password>,iocharset=utf8
+//192.168.2.2/inbox /mnt/synology-nas/inbox cifs username=home-assistant,password=<hashed password>,iocharset=utf8,uid=1003,gid=983,rw,nounix,dir_mode=0670,file_mode=0670
+//192.168.2.2/metadata /mnt/synology-nas/metadata cifs username=home-assistant,password=<hashed password>,iocharset=utf8
+//192.168.2.2/backups /mnt/synology-nas/backups cifs username=home-assistant,password=<hashed password>,iocharset=utf8
+```
+
+## Logs 
+- `dmesg | tail -50`
