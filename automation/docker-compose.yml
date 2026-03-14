@@ -28,6 +28,18 @@ services:
       - "443:443"
       - "80:80"
 
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PORT=8001
+    volumes:
+      - ../data/automation/uptime-kuma:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   mosquitto:
     container_name: mqtt-broker
     image: eclipse-mosquitto:latest
@@ -331,20 +343,6 @@ services:
   #     - production
   #     - automation
 
-  uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: uptime-kuma
-    restart: unless-stopped
-    profiles: [ production ]
-    network_mode: host
-    # ports:
-    #   - '3001:3001'
-    volumes:
-      - ../data/uptime-kuma:/app/data
-    labels:
-      - production
-      - automation
-
   # otbr:
   #   image: openthread/otbr:latest
   #   container_name: otbr
@@ -430,3 +428,4 @@ volumes:
 networks:
   proxy:
     name: proxy
+    external: true

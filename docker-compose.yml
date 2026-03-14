@@ -302,20 +302,6 @@ services:
       - production
       - automation
 
-  uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: uptime-kuma
-    restart: unless-stopped
-    profiles: [ production ]
-    network_mode: host
-    # ports:
-    #   - '3001:3001'
-    volumes:
-      - ./data/uptime-kuma:/app/data
-    labels:
-      - production
-      - automation
-
 # # More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
 #   pihole:
 #     container_name: pihole
