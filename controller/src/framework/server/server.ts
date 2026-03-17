@@ -1,4 +1,5 @@
 import express from 'express';
+import session from 'express-session';
 import { Server as HttpServer } from 'http';
 import { LogFactory } from '../logs/log.factory.js';
 import { LogService } from '../logs/log.service.js';
@@ -20,6 +21,24 @@ export class Server {
         this.app = express();
         this.apiRoot = config.apiRoot ?? '/api';
         this.port = config.port ?? 9999;
+
+        this.app.set('trust proxy', 1);
+
+        // TODO: review security options
+        this.app.use(
+            session({
+                name: "oidc-session",
+                secret: process.env.SESSION_SECRET!,
+                resave: false,
+                saveUninitialized: true,  // Must be true to create session before redirect
+                cookie: {
+                    secure: true,      // REQUIRED for HTTPS in production
+                    httpOnly: true,
+                    sameSite: "lax",
+                    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+                }
+            })
+        );
     }
 
     public register(endpoint: string, controller: IController): Server {
