@@ -5,3 +5,39 @@ services:
     network_mode: host
     environment:
       - PORT=7000
+
+  # # Note: not yet running in entertainment directory
+  # jellyfin:
+  #   image: jellyfin/jellyfin:latest
+  #   container_name: jellyfin
+  #   network_mode: host
+  #   volumes:
+  #     - ../data/entertainment/jellyfin/config:/config
+  #     - ../data/entertainment/jellyfin/cache:/cache
+  #     - type: bind
+  #       source: /mnt/synology-nas/video/movies
+  #       target: /movies
+  #     - type: bind
+  #       source: /mnt/synology-nas/video/tv-shows
+  #       target: /tv-shows
+  #     - type: bind
+  #       source: /mnt/synology-nas/audio/music
+  #       target: /music
+  #     - type: bind
+  #       source: /mnt/synology-nas/metadata/jellyfin
+  #       target: /metadata
+  #       read_only: false
+  #     # # Optional - extra fonts to be used during transcoding with subtitle burn-in
+  #     # - type: bind
+  #     #   source: /path/to/fonts
+  #     #   target: /usr/local/share/fonts/custom
+  #     #   read_only: true
+  #   restart: 'unless-stopped'
+  #   # Optional - alternative address used for autodiscovery
+  #   # environment:
+  #   #   - JELLYFIN_PublishedServerUrl=http://example.com
+  #   # Optional - may be necessary for docker healthcheck to pass if running in host network mode
+  #   extra_hosts:
+  #     - 'host.docker.internal:host-gateway'
+  #   environment:
+  #     PORT: 7001
