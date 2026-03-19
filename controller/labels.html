@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Labels - A4 Printable</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        /* A4 page setup */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Print-specific styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .page {
+                margin: 0;
+                box-shadow: none;
+                page-break-after: always;
+            }
+
+            .page:last-child {
+                page-break-after: auto;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* Header styles */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #333;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        /* Label grid layout - 3x3 grid for maximum labels per A4 page */
+        .label-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 60mm);
+            grid-template-rows: repeat(3, 90mm);
+            gap: 5mm;
+            justify-content: center;
+            margin-bottom: 10mm;
+        }
+
+        /* Individual label styles - exactly 6cm x 9cm */
+        .label {
+            width: 60mm;
+            height: 90mm;
+            border: 2px solid #333;
+            border-radius: 4px;
+            padding: 8mm 8mm 6mm 8mm;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: left;
+            page-break-inside: avoid;
+        }
+
+        .label-header {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .label-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 3px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .label-subtitle {
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+        }
+
+        .label-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            text-align: center;
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            gap: 15px;
+        }
+
+        /* Category-based background colors */
+        .category-pasta { background: #ffe4cd; }
+        .category-rice { background: #e2d8f1; }
+        .category-noodles { background: #d1ecf1; }
+        /* .category-flour { background: #f8d7da; } */
+        .category-baking-ingredients { background: #d4edda; }
+        .category-sugar { background: #fff3cd; }
+
+        .label-detail-line {
+            margin: 2px 0;
+            text-align: center;
+            /* font: italic 1.1rem "Fira Code"; */
+        }
+
+        .label-footer {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #eee;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 5mm;
+            padding-top: 8px;
+            border-top: 1px solid #bdc3c7;
+            font-size: 10px;
+            color: #7f8c8d;
+        }
+
+        /* Print button */
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s ease;
+            z-index: 1000;
+        }
+
+        .print-button:hover {
+            background: #2980b9;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Print Button (hidden when printing) -->
+    <button class="print-button no-print" onclick="window.print()">🖨️ Print Labels</button>
+
+    <!-- Pages will be dynamically generated here -->
+    <div id="pages-container"></div>
+
+    <script>
+        // Products data embedded from products.json
+        const productsData = [
+            {
+                "product": "Spaghetti Pasta",
+                "category": "Pasta",
+                "brand": "Combino",
+                "shops": ["Lidl"],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "portionCooked": 210,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 79,
+                "minCookingTime": 8,
+                "maxCookingTime": 9,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Fusilli Pasta",
+                "category": "Pasta",
+                "brand": "Combino",
+                "shops": ["Lidl"],
+                "portionRaw": 80,
+                "portionRawUnits": "g",
+                "portionCooked": 168,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 63.2,
+                "minCookingTime": 7,
+                "maxCookingTime": 8,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Penne Pasta",
+                "category": "Pasta",
+                "brand": "Combino",
+                "shops": ["Lidl"],
+                "portionRaw": 80,
+                "portionRawUnits": "g",
+                "portionCooked": 168,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 63.2,
+                "minCookingTime": 9,
+                "maxCookingTime": 11,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Vermicelli Noodles",
+                "category": "Noodles",
+                "brand": "House of Asia",
+                "shops": [],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 76,
+                "minCookingTime": 5,
+                "maxCookingTime": 6,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Vermicelli Noodles",
+                "category": "Noodles",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 50,
+                "portionRawUnits": "g",
+                "portionCooked": 193,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 39.5,
+                "minCookingTime": 8,
+                "maxCookingTime": 10,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Flat Rice Noodles",
+                "category": "Noodles",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 50,
+                "portionRawUnits": "g",
+                "portionCooked": 175,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 46.6,
+                "minCookingTime": 10,
+                "maxCookingTime": 12,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Long Grain Rice",
+                "category": "Rice",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 75,
+                "portionRawUnits": "g",
+                "portionCooked": 190,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 44.3,
+                "minCookingTime": 13,
+                "maxCookingTime": 15,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Basmati Rice",
+                "category": "Rice",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 75,
+                "portionRawUnits": "g",
+                "portionCooked": 210,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 55.7,
+                "minCookingTime": 10,
+                "maxCookingTime": 10,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Paella Rice",
+                "category": "Rice",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "portionCooked": 300,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 77,
+                "minCookingTime": 18,
+                "maxCookingTime": 20,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Risotto Arborio Rice",
+                "category": "Rice",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 75,
+                "portionRawUnits": "g",
+                "portionCooked": 250,
+                "portionCookedUnits": "g",
+                "carbsPerPortion": 60.5,
+                "minCookingTime": 14,
+                "maxCookingTime": 15,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Premium Sushi Rice",
+                "category": "Rice",
+                "brand": "Shinode Original",
+                "shops": [],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 78,
+                "minCookingTime": 15,
+                "maxCookingTime": 15,
+                "cookingTimeUnits": "mins"
+            },
+            {
+                "product": "Self Raising White Flour",
+                "category": "Baking Ingredients",
+                "brand": "Freee",
+                "shops": ["Tesco"],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 80
+            },
+            {
+                "product": "Plain White Flour",
+                "category": "Baking Ingredients",
+                "brand": "Freee",
+                "shops": ["Tesco"],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 80
+            },
+            {
+                "product": "Sultanas",
+                "category": "Baking Ingredients",
+                "brand": "Belbake",
+                "shops": ["Lidl"],
+                "portionRaw": 30,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 20.8
+            },
+            {
+                "product": "Porridge Oats",
+                "category": "Baking Ingredients",
+                "brand": "Kearney's",
+                "shops": ["Lidl"],
+                "portionRaw": 40,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 23.8
+            },
+            {
+                "product": "Porridge Oats (Ground)",
+                "category": "Baking Ingredients",
+                "brand": "Kearney's",
+                "shops": ["Lidl"],
+                "portionRaw": 40,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 23.8
+            },
+            {
+                "product": "Caster Sugar",
+                "category": "Sugar",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 100
+            },
+            {
+                "product": "Demarara Sugar",
+                "category": "Sugar",
+                "brand": "",
+                "shops": [],
+                "portionRaw": 100,
+                "portionRawUnits": "g",
+                "carbsPerPortion": 100
+            }
+        ];
+
+        // Load products data and generate labels
+        function loadProducts() {
+            generateLabels(productsData);
+        }
+
+        function generateLabels(products) {
+            const container = document.getElementById('pages-container');
+            const labelsPerPage = 9;
+            const totalPages = Math.ceil(products.length / labelsPerPage);
+
+            for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+                const page = document.createElement('div');
+                page.className = 'page';
+
+                // // Add header
+                // const header = document.createElement('div');
+                // header.className = 'header';
+                // header.innerHTML = `
+                //     <h1>Product Labels</h1>
+                //     <p>Kitchen & Pantry - Cooking Reference</p>
+                // `;
+                // page.appendChild(header);
+
+                // Add label grid
+                const grid = document.createElement('div');
+                grid.className = 'label-grid';
+
+                const startIdx = pageNum * labelsPerPage;
+                const endIdx = Math.min(startIdx + labelsPerPage, products.length);
+
+                for (let i = startIdx; i < endIdx; i++) {
+                    const product = products[i];
+                    const label = createLabel(product);
+                    grid.appendChild(label);
+                }
+
+                page.appendChild(grid);
+
+                // // Add footer
+                // const footer = document.createElement('div');
+                // footer.className = 'footer';
+                // const currentDate = new Date().toLocaleDateString('en-GB', {
+                //     year: 'numeric',
+                //     month: 'long',
+                //     day: 'numeric'
+                // });
+                // footer.innerHTML = `<p>Generated: ${currentDate} | Page ${pageNum + 1} of ${totalPages}</p>`;
+                // page.appendChild(footer);
+
+                container.appendChild(page);
+            }
+        }
+
+        function createLabel(product) {
+            const label = document.createElement('div');
+            label.className = 'label';
+
+            // Header container (title + subtitle + horizontal rule)
+            const header = document.createElement('div');
+            header.className = 'label-header';
+
+            // Title
+            const title = document.createElement('div');
+            title.className = 'label-title';
+            title.textContent = product.product;
+            header.appendChild(title);
+
+            // Subtitle (Brand and Shops)
+            let subtitleText = '';
+            if (product.brand) {
+                subtitleText = product.brand;
+            }
+            if (product.shops && product.shops.length > 0) {
+                const shopsText = product.shops.join(', ');
+                if (subtitleText) {
+                    subtitleText += ` (${shopsText})`;
+                } else {
+                    subtitleText = shopsText;
+                }
+            }
+
+            if (subtitleText) {
+                const subtitle = document.createElement('div');
+                subtitle.className = 'label-subtitle';
+                subtitle.textContent = subtitleText;
+                header.appendChild(subtitle);
+            }
+
+            label.appendChild(header);
+
+            // Details - two line format centered (or one line if no cooked portion)
+            const details = document.createElement('div');
+            details.className = 'label-details';
+
+            // Add category-based color class
+            if (product.category) {
+                const categoryClass = 'category-' + product.category.toLowerCase().replace(/\s+/g, '-');
+                details.classList.add(categoryClass);
+            }
+
+            const hasCooked = product.portionCooked && product.portionCookedUnits;
+
+            if (hasCooked) {
+                let firstLine = '';
+                if (product.portionRaw && product.portionRawUnits) {
+                    firstLine = `<strong>${product.portionRaw}${product.portionRawUnits}</strong> raw = <strong>${product.portionCooked}${product.portionCookedUnits}</strong> cooked`;
+                }
+
+                if (firstLine) {
+                    const line1 = document.createElement('div');
+                    line1.className = 'label-detail-line';
+                    line1.innerHTML = firstLine;
+                    details.appendChild(line1);
+                }
+
+                // Second line: "=> 79g carbs"
+                if (product.carbsPerPortion) {
+                    const line2 = document.createElement('div');
+                    line2.className = 'label-detail-line';
+                    line2.innerHTML = `=> <strong>${product.carbsPerPortion}g</strong> carbs`;
+                    details.appendChild(line2);
+                }
+            } else {
+                let firstLine = '';
+                if (product.portionRaw && product.portionRawUnits) {
+                    firstLine = `<strong>${product.portionRaw}${product.portionRawUnits}</strong> raw`;
+                }
+
+                if (firstLine) {
+                    const line1 = document.createElement('div');
+                    line1.className = 'label-detail-line';
+                    line1.innerHTML = firstLine;
+                    details.appendChild(line1);
+                }
+
+                // Second line: "=> 79g carbs"
+                if (product.carbsPerPortion) {
+                    const line2 = document.createElement('div');
+                    line2.className = 'label-detail-line';
+                    line2.innerHTML = `=> <strong>${product.carbsPerPortion}g</strong> carbs`;
+                    details.appendChild(line2);
+                }
+            }
+
+            label.appendChild(details);
+
+            // Footer with cooking time
+            const footer = document.createElement('div');
+            footer.className = 'label-footer';
+
+            if (product.minCookingTime && product.maxCookingTime) {
+                const cookTimeText = product.minCookingTime === product.maxCookingTime
+                    ? `${product.minCookingTime}${product.cookingTimeUnits}`
+                    : `${product.minCookingTime}-${product.maxCookingTime}${product.cookingTimeUnits}`;
+                footer.textContent = `Cooking time: ${cookTimeText}`;
+            // } else if (product.shops && product.shops.length > 0) {
+            //     footer.textContent = `Available at: ${product.shops.join(', ')}`;
+            } else {
+                footer.textContent = '\u00A0'; // Non-breaking space to maintain layout
+            }
+
+            label.appendChild(footer);
+
+            return label;
+        }
+
+        // Load products on page load
+        loadProducts();
+
+        // Add keyboard shortcut for printing (Ctrl+P / Cmd+P)
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>
