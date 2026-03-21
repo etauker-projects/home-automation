@@ -44,9 +44,10 @@ export class ApiController {
                     if (response) {
                         const { status, body } = response;
                         res.status(status).json(body);
-                    } else if (!res.closed) {
-                        res.status(200).send();
                     }
+                    //  else if (!res.closed) {
+                        // res.status(200).send();
+                    // }
                     // res.status(status).json(body);
                 } catch (error) {
                     const { status, body } = this.parseError(error);

@@ -13,18 +13,6 @@ export const routes: Routes = [
         loadComponent: () => import('./home-page/home-page').then(m => m.HomePage),
     },
     {
-        title: 'Login',
-        path: 'ui/login',
-        pathMatch: 'full',
-        loadComponent: () => import('./login-page/login-page').then(m => m.LoginPage),
-    },
-    {
-        title: 'Logout',
-        path: 'ui/logout',
-        pathMatch: 'full',
-        loadComponent: () => import('./logout-page/logout-page').then(m => m.LogoutPage),
-    },
-    {
         title: 'Not Found',
         path: 'ui/not-found',
         pathMatch: 'full',
@@ -36,6 +24,18 @@ export const routes: Routes = [
         pathMatch: 'full',
         loadComponent: () => import('./unexpected-error-page/unexpected-error-page').then(m => m.UnexpectedErrorPage),
     },
+        {
+        title: 'Login',
+        path: 'ui/login',
+        pathMatch: 'full',
+        loadComponent: () => import('./login-page/login-page').then(m => m.LoginPage),
+    },
+    // {
+    //     title: 'Logout',
+    //     path: 'auth/logout',
+    //     pathMatch: 'full',
+    //     loadComponent: () => import('./logout-page/logout-page').then(m => m.LogoutPage),
+    // },
     {
         path: '**',
         redirectTo: 'ui/home',

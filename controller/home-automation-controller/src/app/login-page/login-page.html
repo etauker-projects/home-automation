@@ -1,5 +1,16 @@
 <div class="login-container">
-  <h1>Logging In...</h1>
-  <p>You will be redirected to the authentication provider.</p>
-  <p>If you are not redirected automatically, please ensure your environment is configured correctly.</p>
+
+  <h1>Login</h1>
+
+  @if (redirecting) {
+    <h2>Logging In...</h2>
+    <p>You will be redirected to the authentication provider.</p>
+    <p>If you are not redirected automatically, please ensure your environment is configured correctly.</p>
+  }
+
+  @else {
+    <p>Please click the button below to log in.</p>
+    <button (click)="onLogin($event)">Log In</button>
+  }
+
 </div>

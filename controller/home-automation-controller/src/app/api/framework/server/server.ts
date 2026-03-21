@@ -25,7 +25,7 @@ export class Server {
 
         this.app.set('trust proxy', 1);
 
-        // TODO: review security options
+        const production = process.env['NODE_ENV'] === 'production';
         this.app.use(
             session({
                 name: "oidc-session",
@@ -33,13 +33,17 @@ export class Server {
                 resave: false,
                 saveUninitialized: true,  // Must be true to create session before redirect
                 cookie: {
-                    secure: true,      // REQUIRED for HTTPS in production
+                    secure: production,
                     httpOnly: true,
-                    sameSite: "lax",
+                    sameSite: production ? "lax" : 'strict',
                     maxAge: 24 * 60 * 60 * 1000, // 24 hours
                 }
             })
         );
+    }
+
+    public getApp(): express.Application {
+        return this.app;
     }
 
     public register(endpoint: string, controller: IController): Server {

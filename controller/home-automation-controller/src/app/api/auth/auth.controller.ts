@@ -3,6 +3,9 @@ import * as express from 'express';
 
 import {
     authorizationCodeGrant,
+    buildAuthorizationUrl,
+    calculatePKCECodeChallenge,
+    randomPKCECodeVerifier,
     type Configuration
 } from "openid-client";
 
@@ -41,26 +44,70 @@ export class AuthController extends ApiController implements IController {
         //     .catch(error => this.logger.error('Error during OIDC discovery:', 'startup', error));
     }
 
-    // ===========================================
-    //               STATIC FUNCTIONS
-    // ===========================================
     public static getInstance(oidcConfig: Configuration): AuthController {
-        if (!AuthController.instance) {
-            AuthController.instance = new AuthController(oidcConfig);
-        }
-        return AuthController.instance;
+        return AuthController.instance = AuthController.instance ?? new AuthController(oidcConfig);
     }
 
-
-    // ===========================================
-    //               PUBLIC FUNCTIONS
-    // ===========================================
     public getRouter(prefix: string): express.Router {
         this.prefix = prefix;
         return this.registerEndpoints(this.router, prefix, [
-            { method: 'get', endpoint: '/callback', handler: this.onAuthenticated },
+            { method: 'get', endpoint: '/login', handler: this.login },
             { method: 'get', endpoint: '/logout', handler: this.logout },
+            { method: 'get', endpoint: '/callback', handler: this.callback },
         ]);
+    }
+
+    public async login(
+        endpoint: string,
+        req: express.Request,
+        res: express.Response,
+    ): Promise<void | IResponse<any>> {
+        this.logger.trace(this.prefix + endpoint);
+
+        try {
+            if (!this.oidcConfig) {
+                this.logger.error('OIDC configuration is not initialized');
+                res.redirect('/ui/unexpected-error?message=Authentication%20not%20configured');
+                return;
+            }
+
+            // Generate PKCE code verifier and challenge
+            const codeVerifier = randomPKCECodeVerifier();
+            const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
+
+            // Generate state for CSRF protection
+            const state = randomPKCECodeVerifier();
+
+            // Store code verifier and state in session
+            req.session.codeVerifier = codeVerifier;
+            req.session.state = state;
+
+            // Build authorization URL
+            const authUrl = buildAuthorizationUrl(this.oidcConfig, {
+                redirect_uri: process.env['AUTHENTIK_REDIRECT_URI']!,
+                scope: 'openid email profile entitlements',
+                code_challenge: codeChallenge,
+                code_challenge_method: 'S256',
+                state: state,
+            });
+
+            this.logger.debug('Initiating login, redirecting to:', '',  authUrl.href);
+
+            // Save session before redirecting
+            req.session.save((err) => {
+                if (err) {
+                        this.logger.error('Session save error:', '', err);
+                        res.status(500).redirect('/ui/unexpected-error?message=Session%20save%20failed');
+                        return;
+                }
+                this.logger.trace('Redirecting to auth URL:', '', authUrl.href);
+                res.redirect(authUrl.href);
+                return;
+            });
+        } catch (error) {
+            this.logger.error('Error during login initiation:', '', error);
+            return;
+        }
     }
 
     public async logout(
@@ -68,6 +115,7 @@ export class AuthController extends ApiController implements IController {
         req: express.Request,
         res: express.Response,
     ): Promise<void | IResponse<any>> {
+        this.logger.trace(this.prefix + endpoint);
 
         req.session.destroy(err => {
             if (err) {
@@ -81,12 +129,13 @@ export class AuthController extends ApiController implements IController {
         return;
     }
 
-    public async onAuthenticated(
+    public async callback(
         endpoint: string,
         req: express.Request,
         res: express.Response,
     ): Promise<void | IResponse<any>> {
         try {
+            this.logger.trace(this.prefix + endpoint);
             // Create a full URL from the request for authorizationCodeGrant
             // Use the actual protocol and host from the request (forwarded by reverse proxy)
             const protocol = req.protocol;
