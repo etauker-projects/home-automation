@@ -27,8 +27,8 @@ services:
     volumes:
       - ../data/office/paperless/data:/usr/src/paperless/data
       - ../data/office/paperless/media:/usr/src/paperless/media
-      - ../data/office/paperless/export:/usr/src/paperless/export
-      - ../data/office/paperless/consume:/usr/src/paperless/consume
+      - /data/paperless/export:/usr/src/paperless/export
+      - /data/paperless/consume:/usr/src/paperless/consume
 
     # Reference: http://docs.paperless-ngx.com/configuration
     environment:
@@ -36,8 +36,9 @@ services:
       PAPERLESS_REDIS: redis://paperless-redis:6379
       PAPERLESS_DBHOST: paperless-postgress
       # File permissions for consumption directory
-      USERMAP_UID: 1000
-      USERMAP_GID: 1000
+      # USERMAP_UID: 1000
+      # USERMAP_GID: 1000
+      user: 1000:984
       # Proxy config
       PAPERLESS_URL: https://paperless.office.etauker.com
       PAPERLESS_ALLOWED_HOSTS: paperless.office.etauker.com

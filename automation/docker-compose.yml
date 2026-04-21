@@ -55,6 +55,45 @@ services:
       - production
       - automation
 
+  n8n:
+    container_name: n8n
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    network_mode: host
+    # networks:
+    #   - proxy
+    # ports:
+    #   - "5678:5678"
+    user: 1000:984
+    environment:
+      - GENERIC_TIMEZONE=Europe/Dublin
+      - TZ=Europe/Dublin
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_MIGRATE_FS_STORAGE_PATH=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - NODES_EXCLUDE="[]"
+      - DIR_PRINTER_PAPERLESS=/home/node/.n8n-files/printer/paperless
+      - DIR_PRINTER_SYNOLOGY=/home/node/.n8n-files/printer/synology-inbox
+      - DIR_PAPERLESS_CONSUME=/home/node/.n8n-files/paperless/consume
+      - DIR_PAPERLESS_EXPORT=/home/node/.n8n-files/paperless/export
+      - DIR_SYNOLOGY_INBOX=/home/node/.n8n-files/synology/inbox
+      - DIR_SYNOLOGY_DOCS=/home/node/.n8n-files/synology/docs
+      - DIR_TESTS=/home/node/.n8n-files/n8n/tests
+    volumes:
+      - ../data/n8n/data:/home/node/.n8n
+      - /data/printer/paperless:/home/node/.n8n-files/printer/paperless:rw
+      - /data/printer/synology:/home/node/.n8n-files/printer/synology-inbox:rw
+      - /data/paperless/consume:/home/node/.n8n-files/paperless/consume:rw
+      - /data/paperless/export:/home/node/.n8n-files/paperless/export:rw
+      - /mnt/synology-nas/inbox/scans:/home/node/.n8n-files/synology/inbox:rw
+      - /mnt/synology-nas/inbox/docs:/home/node/.n8n-files/synology/docs:rw
+      - /data/n8n/tests:/home/node/.n8n-files/n8n/tests:rw
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - production
+      - automation
+
   zigbee2mqtt:
     container_name: zigbee2mqtt
     image: koenkk/zigbee2mqtt:latest
