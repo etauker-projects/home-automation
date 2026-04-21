@@ -10,6 +10,7 @@ import { Server } from './framework/server/server';
 import { StatusController } from './status/status.controller';
 import { AuthController } from './auth/auth.controller';
 import { Extractor } from './framework/environment/extractor';
+import { PaperlessConnector } from './paperless/paperless.connector.ts';
 
 // TODO: consider moving to separate controller / service
 const oidcConfig: Configuration = await discovery(
@@ -107,6 +108,7 @@ server.register('/ui', {
     getRouter: () => uiRouter,
     stop: () => Promise.resolve(true)
 });
+new PaperlessConnector().download();
 
 server.start();
 
