@@ -10,7 +10,8 @@ import { Server } from './framework/server/server';
 import { StatusController } from './status/status.controller';
 import { AuthController } from './auth/auth.controller';
 import { Extractor } from './framework/environment/extractor';
-import { PaperlessConnector } from './paperless/paperless.connector.ts';
+import { FileMonitoringService } from './file-system/file-monitoring.service.ts';
+import { FileSystemService } from './file-system/file-system.service.ts';
 
 // TODO: consider moving to separate controller / service
 const oidcConfig: Configuration = await discovery(
@@ -108,7 +109,36 @@ server.register('/ui', {
     getRouter: () => uiRouter,
     stop: () => Promise.resolve(true)
 });
-new PaperlessConnector().download();
+
+/* Document Processing */
+
+// Key directories:
+const DIR_PRINTER_PAPERLESS = Extractor.extractString('DIR_PRINTER_PAPERLESS');   // printer scans to paperless consume directory (monitored by this service)
+const DIR_PAPERLESS_CONSUME = Extractor.extractString('DIR_PAPERLESS_CONSUME');   // paperless consume directory (paperless detects and processes files here)
+const DIR_PAPERLESS_EXPORT = Extractor.extractString('DIR_PAPERLESS_EXPORT');    // paperless export directory (files processed by paperless are exported here)
+const DIR_SYNOLOGY_DOCS = Extractor.extractString('DIR_SYNOLOGY_DOCS');       // doument storage on the NAS
+
+const fileMonitor = new FileMonitoringService();
+const fileSystem = new FileSystemService();
+
+// Step 1: monitor DIR_PRINTER_PAPERLESS and move files to DIR_PAPERLESS_CONSUME
+fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
+    add: async (filePath) => {
+        console.log(`New file detected: ${filePath}`);
+        fileSystem.moveFile(filePath, DIR_PAPERLESS_CONSUME)
+            .then((newPath) => console.log(`File moved to paperless consume directory: ${newPath}`))
+            .catch((error) => console.error(`Error moving file to paperless consume directory: ${error}`));
+    }
+}, {
+    awaitWriteFinish: {
+        stabilityThreshold: 180000,
+        pollInterval: 500,
+    },
+});
+
+// Step 2: paperless ingests the files
+// Step 3: export from paperless to DIR_PAPERLESS_EXPORT
+// Step 4: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
 
 server.start();
 
