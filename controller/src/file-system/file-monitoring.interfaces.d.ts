@@ -32,7 +32,7 @@ export interface MonitorInfo {
   };
 }
 
-interface MonitorState {
+export interface MonitorState {
   watcher: FSWatcher;
   info: MonitorInfo;
 }

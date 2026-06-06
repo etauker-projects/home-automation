@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import chokidar, { WatchOptions } from 'chokidar';
+import chokidar from 'chokidar';
+import type { ChokidarOptions, FSWatcher } from 'chokidar';
 import type { DirectoryMonitorCallbacks, MonitorHandle, MonitorInfo, MonitorState } from './file-monitoring.interfaces';
 
 export class FileMonitoringService {
     private readonly monitors = new Map<string, MonitorState>();
 
     constructor(
-        private readonly defaultOptions: WatchOptions = {
+        private readonly defaultOptions: ChokidarOptions = {
             ignoreInitial: true,
             awaitWriteFinish: {
                 stabilityThreshold: 5000,
@@ -15,10 +16,10 @@ export class FileMonitoringService {
         },
     ) { }
 
-    public monitorDirectory(directory: string, callbacks: DirectoryMonitorCallbacks, options?: WatchOptions): MonitorHandle {
+    public monitorDirectory(directory: string, callbacks: DirectoryMonitorCallbacks, options?: ChokidarOptions): MonitorHandle {
         const id = randomUUID();
 
-        const watcher = chokidar.watch(directory, {
+        const watcher: FSWatcher = chokidar.watch(directory, {
             ...this.defaultOptions,
             ...options,
         });
