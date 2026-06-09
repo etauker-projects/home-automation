@@ -84,7 +84,7 @@ interface PaperlessResult {
     mime_type: string;
 }
 
-interface PaperlessMetadata extends PaperlessIterator{
+interface PaperlessMetadata extends PaperlessIterator {
     results: PaperlessResult[];
 }
 
@@ -107,7 +107,8 @@ interface EnhancedResult {
     notes: any[];
     customFields: { [key: string]: string };
     pageCount: number;
-    // mime_type: string;
+    mimeType: string;
+    path: string;
 }
 
 export class PaperlessConnector {
@@ -127,29 +128,27 @@ export class PaperlessConnector {
     private tags: { [key: number]: string } = {};
     private users: { [key: number]: string } = {};
 
-    public async download(): Promise<any> {
+    public async download(page: number = 1): Promise<EnhancedResult[]> {
+        console.log(`Fetching documents (page ${page})`);
         const changedSince = '2026-01-01';
-        const original = await this.searchDocuments(changedSince);
+        const original = await this.searchDocuments(changedSince, page);
 
         if (original.results.length === 0) {
             console.log('No documents found.');
-            return;
+            return [];
         }
 
-        const metadata = await this.enhanceResult(original.results[0]);
-        console.log('Enhanced metadata:', metadata);
+        console.log(`Processing (page ${page})`);
+        const results = await Promise.all(original.results.map(res => this.enhanceResult(res)));
+        const upstream = original.next ? await this.download(page + 1) : [];
 
-        const paths = this.determineOutputPaths(metadata);
-        console.log('Output path', paths);
-
-
-        // TODO ; recursively create storage_path directory on NAS
-        // TODO: download and move to storage_path directory on NAS
+        console.log(`Done (page ${page})`);
+        return [...results, ...upstream];
     }
 
     // TODO: implement API call
     // curl -s -H "Authorization: Token $TOKEN" "$API/documents/?modified__gte=2026-01-01&page=1&page_size=10" | jq
-    public async searchDocuments(changedSince: string): Promise<PaperlessMetadata> {
+    public async searchDocuments(changedSince: string, page: number): Promise<PaperlessMetadata> {
 
         const response = await this.connector.call<PaperlessMetadata>({
             method: 'GET',
@@ -157,12 +156,13 @@ export class PaperlessConnector {
             query: {
                 modified__gte: changedSince,
                 // page: 1,
-                page_size: 1
+                page: page,
+                page_size: 10
             },
             headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
         });
 
-        console.log('response', response);
+        // console.log('response', response);
         return response.data;
 
         // const mockedResponse: PaperlessMetadata = {
@@ -248,52 +248,63 @@ export class PaperlessConnector {
             notes: result.notes,
             customFields,
             pageCount: result.page_count,
+            mimeType: result.mime_type,
+            path: this.formatPath(
+                result.title,
+                correspondent,
+                documentType,
+                result.created ?? '0000-00-00',
+                result.mime_type,
+                customFields,
+            ),
         });
     }
 
-    private async resolveCorrespondentName(id: number): Promise<string | undefined> {
+    private async resolveCorrespondentName(id: number): Promise<string> {
         if (this.correspondents[id]) {
             return this.correspondents[id];
         }
 
+        const fallbackCorrespondent = 'Unknown Correspondent';
         return this.connector.call<{ results: PaperlessCorrespondent[] }>({
             method: 'GET',
             url: `/api/correspondents/`,
             headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
         }).then(response => {
             const results = response.data.results;
-            console.log('Fetched correspondents:', results);
+            // console.log('Fetched correspondents:', results);
             this.correspondents = results.reduce((acc, item) => {
                 acc[item.id] = item.name;
                 return acc;
             }, {} as { [key: number]: string });
-            return this.correspondents[id];
+            return this.correspondents[id] ?? fallbackCorrespondent;
         }).catch(err => {
             console.error(`Failed to resolve correspondent name for ID ${id}`, err);
-            return undefined;
+            return fallbackCorrespondent;
         });
     }
 
-    private async resolveDocumentTypeName(id: number): Promise<string | undefined> {
+    private async resolveDocumentTypeName(id: number): Promise<string> {
         if (this.documentTypes[id]) {
             return this.documentTypes[id];
         }
 
+        const fallbackDocumentType = 'Unknown Document Type';
         return this.connector.call<{ results: PaperlessDocumentType[] }>({
             method: 'GET',
             url: `/api/document_types/`,
             headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
         }).then(response => {
             const results = response.data.results;
-            console.log('Fetched document types:', results);
+            // console.log('Fetched document types:', results);
             this.documentTypes = results.reduce((acc, item) => {
                 acc[item.id] = item.name;
                 return acc;
             }, {} as { [key: number]: string });
-            return this.documentTypes[id];
+            return this.documentTypes[id] ?? fallbackDocumentType;
         }).catch(err => {
             console.error(`Failed to resolve document type name for ID ${id}`, err);
-            return undefined;
+            return fallbackDocumentType;
         });
     }
 
@@ -334,7 +345,7 @@ export class PaperlessConnector {
             headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
         }).then(response => {
             const results = response.data.results;
-            console.log('Fetched tags:', results);
+            // console.log('Fetched tags:', results);
             this.tags = results.reduce((acc, item) => {
                 acc[item.id] = item.name;
                 return acc;
@@ -362,7 +373,7 @@ export class PaperlessConnector {
             headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
         }).then(response => {
             const results = response.data.results;
-            console.log('Fetched custom fields:', results);
+            // console.log('Fetched custom fields:', results);
             this.customFields = results.reduce((acc, item) => {
                 acc[item.id] = item.name;
                 return acc;
@@ -379,50 +390,220 @@ export class PaperlessConnector {
         });
     }
 
+    // private formatPath(correspondent: string, documentType: string, created: string, mimeType: string, customFields: Record<string, string>): string {
+    //     created = created?.split('T')?.[0];
+    //     const createdYear = created.split('-')[0];
+    //     const accountNumber = customFields['Account Number'];
+    //     const externalId = customFields['External ID'];
+
+    //     let path = `${createdYear}/${documentType}/${correspondent}/`
+    //     path += accountNumber ? `${accountNumber}/` : ''
+
+    //     let filename = `[${created}] `;
+    //     filename += documentType ? `${correspondent} - ${documentType}` : correspondent;
+    //     filename += externalId ? ` (${externalId})` : '';
+    //     filename += this.findExtension(mimeType);
+    //     path += filename;
+
+    //     return path;
+    // }
+
+    private formatPath(title: string, correspondent: string, documentType: string, created: string, mimeType: string, customFields: Record<string, string>): string {
+        created = created?.split('T')?.[0];
+        const createdYear = created.split('-')[0];
+        const accountNumber = customFields['Account Number'];
+        const externalId = customFields['External ID'];
+
+
+        if (!title) {
+            title = documentType ? `${correspondent} - ${documentType}` : correspondent;
+        }
+
+        if (externalId && !title.includes(externalId)) {
+            title += ` (${externalId})`;
+        }
+
+        let path = `${createdYear}/${documentType}/${correspondent}/`;
+        path += accountNumber ? `${accountNumber}/` : '';
+        path += `${title}.${this.findExtension(mimeType)}`;
+
+        return path;
+    }
+
+    private findExtension(mimeType: string): string {
+        switch (mimeType) {
+            case 'application/pdf':
+                return 'pdf';
+            case 'image/jpeg':
+                return 'jpg';
+            case 'image/png':
+                return 'png';
+            default:
+                return 'unknown';
+        }
+    }
+
     // private async resolveUserName(id: number): Promise<string | undefined> {
     //     // TODO: if not found, fetch from API and cache
     //     return this.users[id];
     // }
 
-    private determineOutputPaths(metadata: EnhancedResult): string[] {
-        const paths = [];
+    // private determineOutputPaths(metadata: EnhancedResult): string[] {
+    //     const paths = [ this.formatFinancialPath('', '', metadata) ];
 
-        if (metadata.documentType === 'Invoice') {
-            if (metadata.tags.includes('Electricity')) {
-                paths.push(this.formatBillPath('Electricity', metadata));
-            }
-            if (metadata.tags.includes('Gas')) {
-                paths.push(this.formatBillPath('Gas', metadata));
-            }
-            if (metadata.tags.includes('Internet')) {
-                paths.push(this.formatBillPath('Internet', metadata));
-            }
-            if (metadata.tags.includes('Bins')) {
-                paths.push(this.formatBillPath('Bins', metadata));
-            }
-        }
+        // if (metadata.tags.includes('Banking')) {
+        //     if (metadata.tags.includes('Current')) {
+        //         paths.push(this.formatFinancialPath('Banking', 'Current', metadata));
+        //     }
+        //     if (metadata.tags.includes('Savings')) {
+        //         paths.push(this.formatFinancialPath('Banking', 'Savings', metadata));
+        //     }
+        //     if (metadata.tags.includes('Shares')) {
+        //         paths.push(this.formatFinancialPath('Banking', 'Shares', metadata));
+        //     }
+        // }
 
-        if (paths.length === 0) {
-            paths.push('Unclassified/' + metadata.title);
-        }
+        // if (metadata.tags.includes('Work')) {
+        //     if (metadata.tags.includes('Payslip')) {
+        //         paths.push(this.formatFinancialPath('Work', 'Payslip', metadata));
+        //     }
+        // }
 
-        return paths;
-    }
+        // if (metadata.tags.includes('Tax')) {
+        //     if (metadata.tags.includes('Capital Gains')) {
+        //         paths.push(this.formatFinancialPath('Tax', 'Capital Gains', metadata));
+        //     }
+        // }
 
-    private formatBillPath(subType: string, metadata: EnhancedResult): string {
-        const correspondent = metadata.correspondent ?? 'Unknown Correspondent';
-        const documentType = metadata.documentType;
-        const createdDate = metadata.created.split('T')[0];
-        const accountNumber = metadata.customFields['Account Number'];
-        const externalId = metadata.customFields['External ID'];
+        // if (metadata.tags.includes('Meter Readings')) {
+        //     if (metadata.tags.includes('Gas')) {
+        //         paths.push(this.formatFinancialPath('Meter Readings', 'Gas', metadata));
+        //     }
+        //     if (metadata.tags.includes('Electricity')) {
+        //         paths.push(this.formatFinancialPath('Meter Readings', 'Electricity', metadata));
+        //     }
+        // }
 
-        let path = `Financial/Bills/${subType}/`;
-        path += accountNumber ? `${correspondent} - ${accountNumber}` : correspondent;
-        path += `/[${createdDate}] `;
-        path += documentType ? `${correspondent} - ${documentType}` : correspondent;
-        path += externalId ? ` ${externalId}` : '';
-        path += '.pdf';
-        return path;
-    }
+        // if (metadata.tags.includes('Bills')) {
+        //     if (metadata.tags.includes('Electricity')) {
+        //         paths.push(this.formatFinancialPath('Bills', 'Electricity', metadata));
+        //     }
+        //     if (metadata.tags.includes('Gas')) {
+        //         paths.push(this.formatFinancialPath('Bills', 'Gas', metadata));
+        //     }
+        //     if (metadata.tags.includes('Internet')) {
+        //         paths.push(this.formatFinancialPath('Bills', 'Internet', metadata));
+        //     }
+        //     if (metadata.tags.includes('Bins')) {
+        //         paths.push(this.formatFinancialPath('Bills', 'Bins', metadata));
+        //     }
+        // }
+
+        // if (metadata.tags.includes('Insurance')) {
+        //     if (metadata.tags.includes('House')) {
+        //         paths.push(this.formatFinancialPath('Insurance', 'House', metadata));
+        //     }
+        //     if (metadata.tags.includes('Motor')) {
+        //         paths.push(this.formatFinancialPath('Insurance', 'Motor', metadata));
+        //     }
+        //     if (metadata.tags.includes('Travel')) {
+        //         paths.push(this.formatFinancialPath('Insurance', 'Travel', metadata));
+        //     }
+        //     if (metadata.tags.includes('Medical')) {
+        //         paths.push(this.formatFinancialPath('Insurance', 'Medical', metadata));
+        //     }
+        //     if (metadata.tags.includes('Dental')) {
+        //         paths.push(this.formatFinancialPath('Insurance', 'Dental', metadata));
+        //     }
+        //     if (metadata.tags.includes('Optical')) {
+        //         paths.push(this.formatFinancialPath('Insurance', 'Optical', metadata));
+        //     }
+        // }
+
+        // if (metadata.tags.includes('Expenses')) {
+        //     if (metadata.tags.includes('House')) {
+        //         paths.push(this.formatFinancialPath('Expenses', 'House', metadata));
+        //     }
+        //     if (metadata.tags.includes('Motor')) {
+        //         paths.push(this.formatFinancialPath('Expenses', 'Motor', metadata));
+        //     }
+        //     if (metadata.tags.includes('Travel')) {
+        //         paths.push(this.formatFinancialPath('Expenses', 'Travel', metadata));
+        //     }
+        //     if (metadata.tags.includes('Medical')) {
+        //         paths.push(this.formatFinancialPath('Expenses', 'Medical', metadata));
+        //     }
+        //     if (metadata.tags.includes('Dental')) {
+        //         paths.push(this.formatFinancialPath('Expenses', 'Dental', metadata));
+        //     }
+        //     if (metadata.tags.includes('Optical')) {
+        //         paths.push(this.formatFinancialPath('Expenses', 'Optical', metadata));
+        //     }
+        // }
+
+        // if (paths.length === 0) {
+        //     paths.push('Unclassified/' + metadata.title);
+        // }
+
+    //     return paths;
+    // }
+
+    // private formatFinancialPath(type: string, subType: string, metadata: EnhancedResult): string {
+    //     const correspondent = metadata.correspondent ?? 'Unknown Correspondent';
+    //     const documentType = metadata.documentType ?? 'Unknown Type';
+    //     const createdDate = metadata.created?.split('T')?.[0] || '0000-00-00';
+    //     const createdYear = createdDate.split('-')[0];
+    //     const accountNumber = metadata.customFields['Account Number'];
+    //     const externalId = metadata.customFields['External ID'];
+
+    //     // let path = `Financial/${type}/${subType}/`;
+    //     // path += accountNumber ? `${correspondent} - ${accountNumber}` : correspondent;
+
+    //     // option 1: format title here
+    //     // path += `/[${createdDate}] `;
+    //     // path += documentType ? `${correspondent} - ${documentType}` : correspondent;
+    //     // path += externalId ? ` (${externalId})` : '';
+    //     // 'Financial/Biils/Electricity/FloGas - 400111251/[2026-01-26] FloGas - Invoice (INV1000237477).pdf'
+    //     // 'Financial/Biils/Gas/FloGas - 1277513/[2026-01-09] FloGas - Invoice (3948346).pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2026-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Biils/Gas/FloGas - 1277513/[2025-12-03] FloGas - Invoice (3918809).pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2025-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2025-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2025-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2024-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2024-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2023-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2023-01-01] Vhi - Policy Document.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2022-01-01] Vhi - Policy Document.pdf'
+
+    //     // option 2: format title inside paperless (manual?)
+    //     // path += `/${metadata.title}`;
+    //     // 'Financial/Biils/Electricity/FloGas - 400111251/2026-01-12 Electricity Bill.pdf'
+    //     // 'Financial/Biils/Gas/FloGas - 1277513/2026-01-09 Gas Bill.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2026-01-01] Vhi MultiTrip - Notification of Renewal.pdf'
+    //     // 'Financial/Biils/Gas/FloGas - 1277513/2025-12-03 Gas Bill.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2025-01-01] Vhi MultiTrip - Policy Certificate.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2026-01-01] Vhi MultiTrip - Policy Certificate.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2025-01-01] Vhi MultiTrip - Notification of Renewal.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2024-01-01] Vhi MultiTrip - Notification of Renewal.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2023-01-01] Vhi MultiTrip - Policy Certificate.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2023-01-01] Vhi MultiTrip - Notification of Renewal.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2022-01-01] Vhi MultiTrip - Policy Certificate.pdf'
+    //     // 'Financial/Insurance/Travel/Vhi - 8437077/[2021-01-01] Vhi MultiTrip - Policy Certificate.pdf'
+
+    //     // option 3: document type and correspondent
+    //     let path = `${createdYear}/${documentType}/${correspondent}/`
+    //     path += accountNumber ? `${accountNumber}/` : ''
+
+    //     let filename = `[${createdDate}] `;
+    //     filename += documentType ? `${correspondent} - ${documentType}` : correspondent;
+    //     filename += externalId ? ` (${externalId})` : '';
+    //     filename += '.pdf'; // TODO: handle others
+    //     path += filename;
+
+    //     // '2026/Appointment/Mayo University Hospital/0896279/[2026-05-26] Mayo University Hospital - Appointment.pdf'
+
+    //     return path;
+    // }
 
 }
