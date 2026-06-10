@@ -212,7 +212,6 @@ uiRouter.get('/paperless', async (req, res) => {
                 <div class="action-buttons">
                     <button id="previewBtn" class="btn btn-primary">Preview</button>
                     <button id="exportBtn" class="btn btn-secondary">Export</button>
-                    <button id="backupBtn" class="btn btn-secondary">Backup</button>
                 </div>
 
                 <div id="statusMessage" class="status-message"></div>
@@ -242,7 +241,6 @@ uiRouter.get('/paperless', async (req, res) => {
                     const statusMessage = document.getElementById('statusMessage');
                     const previewBtn = document.getElementById('previewBtn');
                     const exportBtn = document.getElementById('exportBtn');
-                    const backupBtn = document.getElementById('backupBtn');
                     const tableContainer = document.getElementById('tableContainer');
                     const tableBody = document.getElementById('tableBody');
 
@@ -250,7 +248,7 @@ uiRouter.get('/paperless', async (req, res) => {
                         statusMessage.textContent = message;
                         statusMessage.className = 'status-message ' + type;
                         statusMessage.style.display = 'block';
-                        
+
                         if (type !== 'loading') {
                             setTimeout(() => {
                                 statusMessage.style.display = 'none';
@@ -261,19 +259,17 @@ uiRouter.get('/paperless', async (req, res) => {
                     function disableButtons() {
                         previewBtn.disabled = true;
                         exportBtn.disabled = true;
-                        backupBtn.disabled = true;
                     }
 
                     function enableButtons() {
                         previewBtn.disabled = false;
                         exportBtn.disabled = false;
-                        backupBtn.disabled = false;
                     }
 
                     previewBtn.addEventListener('click', async () => {
                         disableButtons();
                         showMessage('Loading documents...', 'loading');
-                        
+
                         try {
                             const response = await fetch('/ui/paperless/preview', {
                                 method: 'GET',
@@ -281,19 +277,19 @@ uiRouter.get('/paperless', async (req, res) => {
                                     'Content-Type': 'application/json'
                                 }
                             });
-                            
+
                             const data = await response.json();
-                            
+
                             if (response.ok && data.documents) {
                                 // Clear existing rows
                                 tableBody.innerHTML = '';
-                                
+
                                 // Generate and insert new rows
                                 data.documents.forEach(doc => {
                                     const tagsDisplay = doc.tags && doc.tags.length > 0
                                         ? doc.tags.join(', ')
                                         : '<em>None</em>';
-                                    
+
                                     const row = document.createElement('tr');
                                     row.innerHTML = \`
                                         <td>\${doc.paperlessId || '<em>N/A</em>'}</td>
@@ -308,7 +304,7 @@ uiRouter.get('/paperless', async (req, res) => {
                                     \`;
                                     tableBody.appendChild(row);
                                 });
-                                
+
                                 // Show the table
                                 tableContainer.style.display = 'block';
                                 showMessage(\`Loaded \${data.documents.length} documents\`, 'success');
@@ -326,7 +322,7 @@ uiRouter.get('/paperless', async (req, res) => {
                     exportBtn.addEventListener('click', async () => {
                         disableButtons();
                         showMessage('Exporting...', 'loading');
-                        
+
                         try {
                             const response = await fetch('/ui/paperless/export', {
                                 method: 'POST',
@@ -334,9 +330,9 @@ uiRouter.get('/paperless', async (req, res) => {
                                     'Content-Type': 'application/json'
                                 }
                             });
-                            
+
                             const data = await response.json();
-                            
+
                             if (response.ok) {
                                 showMessage(data.message || 'Export completed successfully!', 'success');
                             } else {
@@ -349,35 +345,6 @@ uiRouter.get('/paperless', async (req, res) => {
                         }
                     });
 
-                    backupBtn.addEventListener('click', async () => {
-                        disableButtons();
-                        showMessage('Starting backup...', 'loading');
-                        
-                        try {
-                            const response = await fetch('/ui/paperless/backup', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-                            
-                            const data = await response.json();
-                            
-                            if (response.ok) {
-                                const summary = data.result ? 
-                                    \`Backup completed! Files: \${data.result.filesProcessed}, Skipped: \${data.result.filesSkipped}, Failed: \${data.result.filesFailed}, Bytes: \${data.result.bytesCopied}\` :
-                                    'Backup completed successfully!';
-                                showMessage(summary, 'success');
-                                console.log('Backup result:', data.result);
-                            } else {
-                                showMessage('Backup failed: ' + (data.error || 'Unknown error'), 'error');
-                            }
-                        } catch (error) {
-                            showMessage('Backup failed: ' + error.message, 'error');
-                        } finally {
-                            enableButtons();
-                        }
-                    });
                 </script>
             </body>
             </html>
@@ -481,8 +448,8 @@ uiRouter.get('/paperless/preview', async (req, res) => {
         res.json({ success: true, documents });
     } catch (error) {
         console.error('Error fetching paperless documents:', error);
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : String(error) 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : String(error)
         });
     }
 });
@@ -498,49 +465,8 @@ uiRouter.post('/paperless/export', async (req, res) => {
         res.json({ success: true, message: 'Export placeholder executed (check backend logs)' });
     } catch (error) {
         console.error('Error in export endpoint:', error);
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : String(error) 
-        });
-    }
-});
-
-// Backup endpoint - triggers NasBackupService
-uiRouter.post('/paperless/backup', async (req, res) => {
-    if (!(req.session as any).accessToken) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    try {
-        console.log('Starting backup from', DIR_PAPERLESS_EXPORT, 'to', DIR_SYNOLOGY_DOCS);
-        
-        const backupService = new NasBackupService(
-            DIR_PAPERLESS_EXPORT,
-            DIR_SYNOLOGY_DOCS,
-            {
-                concurrency: 4,
-                retries: 3,
-                retryDelayMs: 2000,
-                logger: {
-                    info: (msg: string) => console.log('[Backup]', msg),
-                    error: (msg: string, err?: any) => console.error('[Backup]', msg, err),
-                }
-            }
-        );
-
-        const result = await backupService.backupDirectory();
-        
-        console.log('Backup completed:', {
-            filesProcessed: result.filesProcessed,
-            filesSkipped: result.filesSkipped,
-            filesFailed: result.filesFailed,
-            bytesCopied: result.bytesCopied
-        });
-
-        res.json({ success: true, result });
-    } catch (error) {
-        console.error('Error in backup endpoint:', error);
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : String(error) 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : String(error)
         });
     }
 });
@@ -560,9 +486,22 @@ const DIR_PAPERLESS_EXPORT = Extractor.extractString('DIR_PAPERLESS_EXPORT');   
 const DIR_SYNOLOGY_DOCS = Extractor.extractString('DIR_SYNOLOGY_DOCS');       // doument storage on the NAS
 
 const fileMonitor = new FileMonitoringService();
+const backupService = new NasBackupService(
+    DIR_PAPERLESS_EXPORT,
+    DIR_SYNOLOGY_DOCS,
+    {
+        concurrency: 4,
+        retries: 3,
+        retryDelayMs: 2000,
+        logger: {
+            info: (msg: string) => console.log('[Backup]', msg),
+            error: (msg: string, err?: any) => console.error('[Backup]', msg, err),
+        }
+    }
+);
 const fileSystem = new FileSystemService();
 
-// Step 1: monitor DIR_PRINTER_PAPERLESS and move files to DIR_PAPERLESS_CONSUME
+// Step 1 DONE: monitor DIR_PRINTER_PAPERLESS and move files to DIR_PAPERLESS_CONSUME
 fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
     add: async (filePath) => {
         console.log(`New file detected: ${filePath}`);
@@ -577,27 +516,24 @@ fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
     },
 });
 
-// Step 2: paperless ingests the files
-// Step 3: export from paperless to DIR_PAPERLESS_EXPORT
-// Step 4: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
+// Step 2 DONE: paperless ingests the files
+// Step 3 TODO: export from paperless to DIR_PAPERLESS_EXPORT
+// Step 4 DONE: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
+fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
+    add: async (filePath) => {
+        console.log(`New file detected: ${filePath}`);
+        backupService.backupFile(filePath)
+            .then((newPath) => console.log(`File backed up to NAS directory`, newPath))
+            .catch((error) => console.error(`Error backing up file to NAS directory: ${error}`));
+    }
+}, {
+    awaitWriteFinish: {
+        stabilityThreshold: 180000,
+        pollInterval: 500,
+    },
+    ignoreInitial: false,
+});
 
-// For testing - TODO: move to a separate service and call from cron job
-// new PaperlessConnector().download();
-// const task = new CronService().test(async () => {
-// const response = paperless.download();
-// });
-
-
-// const backup = new NasBackupService(
-//   "/data/paperless-outbox",
-//   "/mnt/nas-document-store",
-//   8, // concurrent copies
-// );
-
-// const result =
-//   await backup.backupDirectory();
-
-// console.log(result);
 
 server.start();
 
