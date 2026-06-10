@@ -13,6 +13,7 @@ import { Extractor } from './framework/environment/extractor';
 import { FileMonitoringService } from './file-system/file-monitoring.service.ts';
 import { FileSystemService } from './file-system/file-system.service.ts';
 import { PaperlessConnector } from './paperless/paperless.connector.ts';
+import { NasBackupService } from './backup/nas-backup.service';
 
 // TODO: consider moving to separate controller / service
 const oidcConfig: Configuration = await discovery(
@@ -77,32 +78,6 @@ uiRouter.get('/paperless', async (req, res) => {
     }
 
     try {
-        console.log('Fetching paperless documents...');
-
-        // Wrap single document in array for consistent table handling
-        const documents = await paperless.download();
-
-        // Generate table rows for each document
-        const documentRows = documents.map(doc => {
-            const tagsDisplay = doc.tags && doc.tags.length > 0
-                ? doc.tags.join(', ')
-                : '<em>None</em>';
-
-            return `
-                <tr>
-                    <td>${doc.paperlessId || '<em>N/A</em>'}</td>
-                    <td>${doc.title || '<em>N/A</em>'}</td>
-                    <td>${doc.correspondent || '<em>N/A</em>'}</td>
-                    <td>${doc.documentType || '<em>N/A</em>'}</td>
-                    <td>${tagsDisplay}</td>
-                    <td>${doc.created || '<em>N/A</em>'}</td>
-                    <td>${doc.pageCount || 0}</td>
-                    <td>${doc.mimeType || '<em>N/A</em>'}</td>
-                    <td>${doc.path || '<em>N/A</em>'}</td>
-                </tr>
-            `;
-        }).join('');
-
         res.send(`
             <!DOCTYPE html>
             <html>
@@ -165,6 +140,64 @@ uiRouter.get('/paperless', async (req, res) => {
                         border-radius: 4px;
                         border-left: 4px solid #64b5f6;
                     }
+                    .action-buttons {
+                        margin: 20px 0;
+                        display: flex;
+                        gap: 10px;
+                        align-items: center;
+                    }
+                    .btn {
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: bold;
+                        transition: background-color 0.3s;
+                    }
+                    .btn-primary {
+                        background-color: #64b5f6;
+                        color: #121212;
+                    }
+                    .btn-primary:hover {
+                        background-color: #42a5f5;
+                    }
+                    .btn-primary:disabled {
+                        background-color: #424242;
+                        cursor: not-allowed;
+                    }
+                    .btn-secondary {
+                        background-color: #9575cd;
+                        color: #121212;
+                    }
+                    .btn-secondary:hover {
+                        background-color: #7e57c2;
+                    }
+                    .btn-secondary:disabled {
+                        background-color: #424242;
+                        cursor: not-allowed;
+                    }
+                    .status-message {
+                        padding: 10px 15px;
+                        border-radius: 4px;
+                        margin: 10px 0;
+                        display: none;
+                    }
+                    .status-message.success {
+                        background-color: #1e1e1e;
+                        border-left: 4px solid #4caf50;
+                        color: #4caf50;
+                    }
+                    .status-message.error {
+                        background-color: #1e1e1e;
+                        border-left: 4px solid #f44336;
+                        color: #f44336;
+                    }
+                    .status-message.loading {
+                        background-color: #1e1e1e;
+                        border-left: 4px solid #64b5f6;
+                        color: #64b5f6;
+                    }
                 </style>
             </head>
             <body>
@@ -176,7 +209,15 @@ uiRouter.get('/paperless', async (req, res) => {
                     <strong>Note:</strong> Raw data is logged to the browser console. Press F12 to open developer tools.
                 </div>
 
-                <div class="table-container">
+                <div class="action-buttons">
+                    <button id="previewBtn" class="btn btn-primary">Preview</button>
+                    <button id="exportBtn" class="btn btn-secondary">Export</button>
+                    <button id="backupBtn" class="btn btn-secondary">Backup</button>
+                </div>
+
+                <div id="statusMessage" class="status-message"></div>
+
+                <div id="tableContainer" class="table-container" style="display: none;">
                     <table>
                         <thead>
                             <tr>
@@ -191,15 +232,152 @@ uiRouter.get('/paperless', async (req, res) => {
                                 <th>Path</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${documentRows}
+                        <tbody id="tableBody">
+                            <!-- Documents will be loaded here -->
                         </tbody>
                     </table>
                 </div>
 
                 <script>
-                    // Log raw data to browser console for debugging
-                    console.log('Paperless Documents Data:', ${JSON.stringify(documents)});
+                    const statusMessage = document.getElementById('statusMessage');
+                    const previewBtn = document.getElementById('previewBtn');
+                    const exportBtn = document.getElementById('exportBtn');
+                    const backupBtn = document.getElementById('backupBtn');
+                    const tableContainer = document.getElementById('tableContainer');
+                    const tableBody = document.getElementById('tableBody');
+
+                    function showMessage(message, type) {
+                        statusMessage.textContent = message;
+                        statusMessage.className = 'status-message ' + type;
+                        statusMessage.style.display = 'block';
+                        
+                        if (type !== 'loading') {
+                            setTimeout(() => {
+                                statusMessage.style.display = 'none';
+                            }, 5000);
+                        }
+                    }
+
+                    function disableButtons() {
+                        previewBtn.disabled = true;
+                        exportBtn.disabled = true;
+                        backupBtn.disabled = true;
+                    }
+
+                    function enableButtons() {
+                        previewBtn.disabled = false;
+                        exportBtn.disabled = false;
+                        backupBtn.disabled = false;
+                    }
+
+                    previewBtn.addEventListener('click', async () => {
+                        disableButtons();
+                        showMessage('Loading documents...', 'loading');
+                        
+                        try {
+                            const response = await fetch('/ui/paperless/preview', {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (response.ok && data.documents) {
+                                // Clear existing rows
+                                tableBody.innerHTML = '';
+                                
+                                // Generate and insert new rows
+                                data.documents.forEach(doc => {
+                                    const tagsDisplay = doc.tags && doc.tags.length > 0
+                                        ? doc.tags.join(', ')
+                                        : '<em>None</em>';
+                                    
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = \`
+                                        <td>\${doc.paperlessId || '<em>N/A</em>'}</td>
+                                        <td>\${doc.title || '<em>N/A</em>'}</td>
+                                        <td>\${doc.correspondent || '<em>N/A</em>'}</td>
+                                        <td>\${doc.documentType || '<em>N/A</em>'}</td>
+                                        <td>\${tagsDisplay}</td>
+                                        <td>\${doc.created || '<em>N/A</em>'}</td>
+                                        <td>\${doc.pageCount || 0}</td>
+                                        <td>\${doc.mimeType || '<em>N/A</em>'}</td>
+                                        <td>\${doc.path || '<em>N/A</em>'}</td>
+                                    \`;
+                                    tableBody.appendChild(row);
+                                });
+                                
+                                // Show the table
+                                tableContainer.style.display = 'block';
+                                showMessage(\`Loaded \${data.documents.length} documents\`, 'success');
+                                console.log('Paperless Documents Data:', data.documents);
+                            } else {
+                                showMessage('Preview failed: ' + (data.error || 'Unknown error'), 'error');
+                            }
+                        } catch (error) {
+                            showMessage('Preview failed: ' + error.message, 'error');
+                        } finally {
+                            enableButtons();
+                        }
+                    });
+
+                    exportBtn.addEventListener('click', async () => {
+                        disableButtons();
+                        showMessage('Exporting...', 'loading');
+                        
+                        try {
+                            const response = await fetch('/ui/paperless/export', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (response.ok) {
+                                showMessage(data.message || 'Export completed successfully!', 'success');
+                            } else {
+                                showMessage('Export failed: ' + (data.error || 'Unknown error'), 'error');
+                            }
+                        } catch (error) {
+                            showMessage('Export failed: ' + error.message, 'error');
+                        } finally {
+                            enableButtons();
+                        }
+                    });
+
+                    backupBtn.addEventListener('click', async () => {
+                        disableButtons();
+                        showMessage('Starting backup...', 'loading');
+                        
+                        try {
+                            const response = await fetch('/ui/paperless/backup', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (response.ok) {
+                                const summary = data.result ? 
+                                    \`Backup completed! Files: \${data.result.filesProcessed}, Skipped: \${data.result.filesSkipped}, Failed: \${data.result.filesFailed}, Bytes: \${data.result.bytesCopied}\` :
+                                    'Backup completed successfully!';
+                                showMessage(summary, 'success');
+                                console.log('Backup result:', data.result);
+                            } else {
+                                showMessage('Backup failed: ' + (data.error || 'Unknown error'), 'error');
+                            }
+                        } catch (error) {
+                            showMessage('Backup failed: ' + error.message, 'error');
+                        } finally {
+                            enableButtons();
+                        }
+                    });
                 </script>
             </body>
             </html>
@@ -290,6 +468,82 @@ uiRouter.get('/login', async (req, res) => {
         res.status(500).send('Login error: ' + error);
     }
 }),
+
+// Preview endpoint - fetches documents on demand
+uiRouter.get('/paperless/preview', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        console.log('Fetching paperless documents...');
+        const documents = await paperless.download();
+        res.json({ success: true, documents });
+    } catch (error) {
+        console.error('Error fetching paperless documents:', error);
+        res.status(500).json({ 
+            error: error instanceof Error ? error.message : String(error) 
+        });
+    }
+});
+
+// Export endpoint - placeholder that logs TODO
+uiRouter.post('/paperless/export', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        console.log('TODO: Implement export functionality');
+        res.json({ success: true, message: 'Export placeholder executed (check backend logs)' });
+    } catch (error) {
+        console.error('Error in export endpoint:', error);
+        res.status(500).json({ 
+            error: error instanceof Error ? error.message : String(error) 
+        });
+    }
+});
+
+// Backup endpoint - triggers NasBackupService
+uiRouter.post('/paperless/backup', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        console.log('Starting backup from', DIR_PAPERLESS_EXPORT, 'to', DIR_SYNOLOGY_DOCS);
+        
+        const backupService = new NasBackupService(
+            DIR_PAPERLESS_EXPORT,
+            DIR_SYNOLOGY_DOCS,
+            {
+                concurrency: 4,
+                retries: 3,
+                retryDelayMs: 2000,
+                logger: {
+                    info: (msg: string) => console.log('[Backup]', msg),
+                    error: (msg: string, err?: any) => console.error('[Backup]', msg, err),
+                }
+            }
+        );
+
+        const result = await backupService.backupDirectory();
+        
+        console.log('Backup completed:', {
+            filesProcessed: result.filesProcessed,
+            filesSkipped: result.filesSkipped,
+            filesFailed: result.filesFailed,
+            bytesCopied: result.bytesCopied
+        });
+
+        res.json({ success: true, result });
+    } catch (error) {
+        console.error('Error in backup endpoint:', error);
+        res.status(500).json({ 
+            error: error instanceof Error ? error.message : String(error) 
+        });
+    }
+});
 
 // TODO: move to a separate controller
 server.register('/ui', {
