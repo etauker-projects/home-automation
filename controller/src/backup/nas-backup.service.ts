@@ -62,9 +62,27 @@ export class NasBackupService {
       const destination = path.join(this.nasRoot, relativePath);
       const lockPath = destination + ".lock";
 
+      // Ensure parent directory exists before creating lock file
+      await mkdir(path.dirname(destination), { recursive: true });
+
       await this.acquireFileLock(lockPath);
       try {
-        return await this.copyAndVerify(sourceFile);
+        const result = await this.copyAndVerify(sourceFile);
+
+        // Clean up empty directories in source after successful backup
+        // Note: sourceFile has already been deleted in copyAndVerify
+        try {
+          const sourceDir = path.dirname(sourceFile);
+          await this.cleanupEmptyDirectories(sourceDir);
+        } catch (cleanupError) {
+          // Log but don't fail the backup if cleanup fails
+          this.options.logger?.error?.(
+            `Warning: Failed to cleanup empty directories after backing up ${sourceFile}`,
+            cleanupError
+          );
+        }
+
+        return result;
       } finally {
         await this.releaseFileLock(lockPath);
       }
@@ -194,7 +212,93 @@ export class NasBackupService {
   // -------------------------
   // CLEANUP
   // -------------------------
+  /**
+   * Recursively clean up empty directories starting from the given directory.
+   * This is useful after backing up files to remove leftover empty folder structures.
+   * 
+   * Cleans in two phases:
+   * 1. Downward: Removes empty subdirectories recursively
+   * 2. Upward: Walks up to sourceRoot, removing newly-empty parent directories
+   *
+   * @param startDir - The directory to start cleaning from (works up towards sourceRoot)
+   * @returns Promise that resolves when cleanup is complete
+   */
+  async cleanupEmptyDirectories(startDir?: string): Promise<void> {
+    const dir = startDir || this.sourceRoot;
+
+    // Validate that the directory is within sourceRoot
+    const relativePath = path.relative(this.sourceRoot, dir);
+    if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+      throw new Error(`Directory outside source root: ${dir}`);
+    }
+
+    this.options.logger?.info?.(`Cleaning up empty directories starting from: ${dir}`);
+    
+    // Phase 1: Clean downward (remove empty subdirectories)
+    await this.removeEmptyDirectories(dir);
+    
+    // Phase 2: Clean upward (remove newly-empty parent directories)
+    await this.cleanupParentDirectories(dir);
+    
+    this.options.logger?.info?.(`Empty directory cleanup complete`);
+  }
+
+  /**
+   * Walk upward from a directory to sourceRoot, removing empty parent directories.
+   * Stops when it reaches sourceRoot or encounters a non-empty directory.
+   */
+  private async cleanupParentDirectories(startDir: string): Promise<void> {
+    const resolvedSourceRoot = path.resolve(this.sourceRoot);
+    let currentDir = path.resolve(startDir);
+
+    // Walk upward until we reach sourceRoot
+    while (currentDir !== resolvedSourceRoot) {
+      // Check if current directory exists
+      try {
+        await access(currentDir);
+      } catch {
+        // Directory doesn't exist anymore (already removed), move to parent
+        currentDir = path.dirname(currentDir);
+        continue;
+      }
+
+      // Check if directory is empty
+      const entries = await readdir(currentDir, { withFileTypes: true });
+      
+      // Filter out lock and temp files
+      const relevantEntries = entries.filter(entry => 
+        !entry.name.endsWith('.lock') && !entry.name.endsWith('.part')
+      );
+
+      if (relevantEntries.length === 0) {
+        // Directory is empty, remove it
+        this.options.logger?.info?.(`Removing empty parent directory: ${currentDir}`);
+        try {
+          await rmdir(currentDir);
+        } catch (err: any) {
+          // If removal fails, log and stop walking upward
+          this.options.logger?.error?.(`Failed to remove directory ${currentDir}`, err);
+          break;
+        }
+      } else {
+        // Directory is not empty, stop walking upward
+        break;
+      }
+
+      // Move to parent directory
+      currentDir = path.dirname(currentDir);
+    }
+  }
+
   private async removeEmptyDirectories(dir: string): Promise<boolean> {
+    // Check if directory exists
+    try {
+      await access(dir);
+    } catch {
+      // Directory doesn't exist, nothing to clean
+      return true;
+    }
+
     const entries = await readdir(dir, { withFileTypes: true });
 
     let empty = true;
@@ -206,11 +310,15 @@ export class NasBackupService {
         const childEmpty = await this.removeEmptyDirectories(full);
         if (!childEmpty) empty = false;
       } else {
-        empty = false;
+        // Ignore lock files when determining if directory is empty
+        if (!entry.name.endsWith('.lock') && !entry.name.endsWith('.part')) {
+          empty = false;
+        }
       }
     }
 
     if (empty && dir !== this.sourceRoot) {
+      this.options.logger?.info?.(`Removing empty directory: ${dir}`);
       await rmdir(dir);
     }
 
@@ -236,13 +344,59 @@ export class NasBackupService {
   private async acquireFileLock(lockPath: string): Promise<void> {
     try {
       await writeFile(lockPath, String(process.pid), { flag: "wx" });
-    } catch {
-      throw new Error(`File already being backed up (lock exists): ${lockPath}`);
+    } catch (err: any) {
+      // Check if lock file already exists
+      if (err?.code === "EEXIST") {
+        // Check if the lock is stale (process no longer running)
+        const isStale = await this.isLockStale(lockPath);
+        if (isStale) {
+          // Remove stale lock and try again
+          await this.safeDelete(lockPath);
+          await writeFile(lockPath, String(process.pid), { flag: "wx" });
+          console.log(`Removed stale lock and acquired: ${lockPath}`);
+          return;
+        }
+        throw new Error(`File already being backed up (lock exists): ${lockPath}`);
+      }
+      // Any other error (e.g., permission issues) - rethrow with context
+      throw new Error(`Failed to acquire lock at ${lockPath}: ${err.message}`);
     }
   }
 
   private async releaseFileLock(lockPath: string): Promise<void> {
     await this.safeDelete(lockPath);
+  }
+
+  /**
+   * Check if a lock file is stale (the process that created it is no longer running).
+   * This prevents orphaned locks from blocking backups after crashes.
+   */
+  private async isLockStale(lockPath: string): Promise<boolean> {
+    try {
+      const pidStr = await import("node:fs/promises").then((fs) =>
+        fs.readFile(lockPath, "utf-8")
+      );
+      const pid = parseInt(pidStr.trim(), 10);
+
+      if (isNaN(pid)) {
+        // Invalid PID in lock file - consider it stale
+        return true;
+      }
+
+      // Check if process is still running
+      // On Unix, kill(pid, 0) checks if process exists without actually killing it
+      try {
+        process.kill(pid, 0);
+        return false; // Process exists, lock is valid
+      } catch (err: any) {
+        // ESRCH = no such process, lock is stale
+        // EPERM = process exists but we don't have permission to signal it
+        return err.code === "ESRCH";
+      }
+    } catch {
+      // Can't read lock file - consider it stale
+      return true;
+    }
   }
 
   // -------------------------

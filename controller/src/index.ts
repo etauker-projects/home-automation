@@ -37,7 +37,14 @@ server.register('/', {
 });
 
 const uiRouter = express.Router();
-const paperless = new PaperlessConnector();
+
+// Key directories:
+const DIR_PRINTER_PAPERLESS = Extractor.extractString('DIR_PRINTER_PAPERLESS');   // printer scans to paperless consume directory (monitored by this service)
+const DIR_PAPERLESS_CONSUME = Extractor.extractString('DIR_PAPERLESS_CONSUME');   // paperless consume directory (paperless detects and processes files here)
+const DIR_PAPERLESS_EXPORT = Extractor.extractString('DIR_PAPERLESS_EXPORT');    // paperless export directory (files processed by paperless are exported here)
+const DIR_SYNOLOGY_DOCS = Extractor.extractString('DIR_SYNOLOGY_DOCS');       // doument storage on the NAS
+
+const paperless = new PaperlessConnector(DIR_PAPERLESS_EXPORT);
 
 uiRouter.get('/home', async (req, res) => {
 
@@ -211,6 +218,7 @@ uiRouter.get('/paperless', async (req, res) => {
 
                 <div class="action-buttons">
                     <button id="previewBtn" class="btn btn-primary">Preview</button>
+                    <button id="downloadBtn" class="btn btn-primary">Download</button>
                     <button id="exportBtn" class="btn btn-secondary">Export</button>
                 </div>
 
@@ -240,6 +248,7 @@ uiRouter.get('/paperless', async (req, res) => {
                 <script>
                     const statusMessage = document.getElementById('statusMessage');
                     const previewBtn = document.getElementById('previewBtn');
+                    const downloadBtn = document.getElementById('downloadBtn');
                     const exportBtn = document.getElementById('exportBtn');
                     const tableContainer = document.getElementById('tableContainer');
                     const tableBody = document.getElementById('tableBody');
@@ -258,11 +267,13 @@ uiRouter.get('/paperless', async (req, res) => {
 
                     function disableButtons() {
                         previewBtn.disabled = true;
+                        downloadBtn.disabled = true;
                         exportBtn.disabled = true;
                     }
 
                     function enableButtons() {
                         previewBtn.disabled = false;
+                        downloadBtn.disabled = false;
                         exportBtn.disabled = false;
                     }
 
@@ -314,6 +325,34 @@ uiRouter.get('/paperless', async (req, res) => {
                             }
                         } catch (error) {
                             showMessage('Preview failed: ' + error.message, 'error');
+                        } finally {
+                            enableButtons();
+                        }
+                    });
+
+                    downloadBtn.addEventListener('click', async () => {
+                        disableButtons();
+                        showMessage('Downloading documents...', 'loading');
+
+                        try {
+                            const response = await fetch('/ui/paperless/download', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                const summary = \`Downloaded \${data.successful}/\${data.total} documents successfully. \${data.failed > 0 ? data.failed + ' failed.' : ''}\`;
+                                showMessage(summary, data.failed > 0 ? 'error' : 'success');
+                                console.log('Download Summary:', data);
+                            } else {
+                                showMessage('Download failed: ' + (data.error || 'Unknown error'), 'error');
+                            }
+                        } catch (error) {
+                            showMessage('Download failed: ' + error.message, 'error');
                         } finally {
                             enableButtons();
                         }
@@ -444,10 +483,35 @@ uiRouter.get('/paperless/preview', async (req, res) => {
 
     try {
         console.log('Fetching paperless documents...');
-        const documents = await paperless.download();
+        const documents = await paperless.list();
         res.json({ success: true, documents });
     } catch (error) {
         console.error('Error fetching paperless documents:', error);
+        res.status(500).json({
+            error: error instanceof Error ? error.message : String(error)
+        });
+    }
+});
+
+// Download endpoint - calls the download method to fetch all documents
+uiRouter.post('/paperless/download', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        console.log('Starting download of paperless documents...');
+        const summary = await paperless.download();
+        console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
+        res.json({
+            success: true,
+            total: summary.total,
+            successful: summary.successful,
+            failed: summary.failed,
+            results: summary.results
+        });
+    } catch (error) {
+        console.error('Error in download endpoint:', error);
         res.status(500).json({
             error: error instanceof Error ? error.message : String(error)
         });
@@ -479,12 +543,6 @@ server.register('/ui', {
 
 /* Document Processing */
 
-// Key directories:
-const DIR_PRINTER_PAPERLESS = Extractor.extractString('DIR_PRINTER_PAPERLESS');   // printer scans to paperless consume directory (monitored by this service)
-const DIR_PAPERLESS_CONSUME = Extractor.extractString('DIR_PAPERLESS_CONSUME');   // paperless consume directory (paperless detects and processes files here)
-const DIR_PAPERLESS_EXPORT = Extractor.extractString('DIR_PAPERLESS_EXPORT');    // paperless export directory (files processed by paperless are exported here)
-const DIR_SYNOLOGY_DOCS = Extractor.extractString('DIR_SYNOLOGY_DOCS');       // doument storage on the NAS
-
 const fileMonitor = new FileMonitoringService();
 const backupService = new NasBackupService(
     DIR_PAPERLESS_EXPORT,
@@ -505,6 +563,8 @@ const fileSystem = new FileSystemService();
 fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
     add: async (filePath) => {
         console.log(`New file detected: ${filePath}`);
+
+        // TODO: consolidate with backup service
         fileSystem.moveFile(filePath, DIR_PAPERLESS_CONSUME)
             .then((newPath) => console.log(`File moved to paperless consume directory: ${newPath}`))
             .catch((error) => console.error(`Error moving file to paperless consume directory: ${error}`));
@@ -518,6 +578,8 @@ fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
 
 // Step 2 DONE: paperless ingests the files
 // Step 3 TODO: export from paperless to DIR_PAPERLESS_EXPORT
+
+
 // Step 4 DONE: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
 fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
     add: async (filePath) => {
