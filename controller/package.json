@@ -8,7 +8,8 @@
   "main": "auth-test.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx --env-file=.env ./src/index.ts"
+    "start": "tsx --env-file=.env ./src/index.ts",
+    "build": "tsc"
   },
   "dependencies": {
     "@angular/cli": "^21.2.2",

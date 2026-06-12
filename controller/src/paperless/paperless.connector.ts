@@ -1,5 +1,5 @@
-import { RestConnector } from '../framework/rest/rest.connector';
-import { Semaphore } from '../backup/semaphore';
+import { RestConnector } from '../framework/rest/rest.connector.js';
+import { Semaphore } from '../backup/semaphore.js';
 import { mkdir } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import path from 'node:path';
@@ -136,7 +136,7 @@ export class PaperlessConnector {
     private connector: RestConnector;
     private semaphore: Semaphore;
 
-    constructor(private downloadDirectory: string) {
+    constructor(private downloadDirectory: string, private token: string) {
         this.connector = new RestConnector(this.host);
         this.semaphore = new Semaphore(4);
     }
@@ -147,7 +147,7 @@ export class PaperlessConnector {
     // private storagePaths: { [key: number]: string } = {};
     private customFields: { [key: string]: string } = {};
     private tags: { [key: number]: string } = {};
-    private users: { [key: number]: string } = {};
+    // private users: { [key: number]: string } = {};
 
     public async list(page: number = 1): Promise<EnhancedResult[]> {
         console.log(`Fetching documents (page ${page})`);
@@ -178,7 +178,7 @@ export class PaperlessConnector {
                 page: page,
                 page_size: 10
             },
-            headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
+            headers: { 'Authorization': `Token ${this.token}` }
         });
 
         return response.data;
@@ -237,7 +237,7 @@ export class PaperlessConnector {
         return this.connector.call<{ results: PaperlessCorrespondent[] }>({
             method: 'GET',
             url: `/api/correspondents/`,
-            headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
+            headers: { 'Authorization': `Token ${this.token}` }
         }).then(response => {
             const results = response.data.results;
             // console.log('Fetched correspondents:', results);
@@ -261,7 +261,7 @@ export class PaperlessConnector {
         return this.connector.call<{ results: PaperlessDocumentType[] }>({
             method: 'GET',
             url: `/api/document_types/`,
-            headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
+            headers: { 'Authorization': `Token ${this.token}` }
         }).then(response => {
             const results = response.data.results;
             // console.log('Fetched document types:', results);
@@ -284,7 +284,7 @@ export class PaperlessConnector {
         return this.connector.call<{ results: PaperlessTag[] }>({
             method: 'GET',
             url: `/api/tags/`,
-            headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
+            headers: { 'Authorization': `Token ${this.token}` }
         }).then(response => {
             const results = response.data.results;
             // console.log('Fetched tags:', results);
@@ -312,7 +312,7 @@ export class PaperlessConnector {
         return this.connector.call<{ results: PaperlessCustomField[] }>({
             method: 'GET',
             url: `/api/custom_fields/`,
-            headers: { 'Authorization': `Token ${process.env.PAPERLESS_TOKEN}` }
+            headers: { 'Authorization': `Token ${this.token}` }
         }).then(response => {
             const results = response.data.results;
             // console.log('Fetched custom fields:', results);
@@ -332,7 +332,7 @@ export class PaperlessConnector {
         });
     }
 
-    private formatPath(title: string, correspondent: string, documentType: string, created: string, mimeType: string, customFields: Record<string, string>): string {
+    private formatPath(title: string, correspondent: string, documentType: string, created: string, _mimeType: string, customFields: Record<string, string>): string {
         created = created?.split('T')?.[0];
         const createdYear = created.split('-')[0];
         const accountNumber = customFields['Account Number'];
@@ -443,7 +443,7 @@ export class PaperlessConnector {
                 path: url.pathname + url.search,
                 method: 'GET',
                 headers: {
-                    'Authorization': `Token ${process.env.PAPERLESS_TOKEN}`,
+                    'Authorization': `Token ${this.token}`,
                     'User-Agent': 'PaperlessConnector/1.0'
                 }
             };

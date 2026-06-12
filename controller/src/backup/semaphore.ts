@@ -6,7 +6,7 @@ export class Semaphore {
   private available: number;
   private queue: Array<() => void> = [];
 
-  constructor(private readonly max: number) {
+  constructor(max: number) {
     this.available = max;
   }
 

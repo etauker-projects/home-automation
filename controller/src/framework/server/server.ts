@@ -53,7 +53,7 @@ export class Server {
     }
 
     public start(): Server {
-        this.app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+        this.app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
             res.status(500).send('Something went wrong.')
             this.logger.error(`Error handling request for endpoint ${req.url}`,  undefined, err);
         });

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import chokidar from 'chokidar';
 import type { ChokidarOptions, FSWatcher } from 'chokidar';
-import type { DirectoryMonitorCallbacks, MonitorHandle, MonitorInfo, MonitorState } from './file-monitoring.interfaces';
+import type { DirectoryMonitorCallbacks, MonitorHandle, MonitorInfo, MonitorState } from './file-monitoring.interfaces.js';
 
 export class FileMonitoringService {
     private readonly monitors = new Map<string, MonitorState>();
@@ -95,9 +95,13 @@ export class FileMonitoringService {
         );
 
         watcher.on("error", async (error) => {
-            recordError(error);
+            const err = error instanceof Error
+                ? error
+                : new Error(String(error));
 
-            await callbacks.error?.(error);
+            recordError(err);
+
+            await callbacks.error?.(err);
         });
 
         let stopped = false;

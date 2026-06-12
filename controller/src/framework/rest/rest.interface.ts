@@ -48,10 +48,10 @@ export interface BaseRestRequestOptions {
 
 /**
  * Request options for HTTP methods that require a body (POST, PUT, PATCH)
- * @template Res - The expected response data type
+ * @template _Res - The expected response data type
  * @template Req - The request body type
  */
-export interface RestRequestOptionsWithBody<Res = any, Req = any> extends BaseRestRequestOptions {
+export interface RestRequestOptionsWithBody<_Res = any, Req = any> extends BaseRestRequestOptions {
   method: MethodsWithBody;
   
   /**
@@ -63,9 +63,9 @@ export interface RestRequestOptionsWithBody<Res = any, Req = any> extends BaseRe
 
 /**
  * Request options for HTTP methods that do not support a body (GET, DELETE, HEAD, OPTIONS)
- * @template Res - The expected response data type
+ * @template _Res - The expected response data type
  */
-export interface RestRequestOptionsWithoutBody<Res = any> extends BaseRestRequestOptions {
+export interface RestRequestOptionsWithoutBody<_Res = any> extends BaseRestRequestOptions {
   method: MethodsWithoutBody;
   
   /**

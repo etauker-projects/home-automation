@@ -12,12 +12,12 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
-import { Semaphore } from "./semaphore";
+import { Semaphore } from "./semaphore.js";
 import type {
   BackupResult,
   BackupDirectoryResult,
   BackupOptions,
-} from "./backup.interfaces";
+} from "./backup.interfaces.js";
 
 export type { BackupResult, BackupDirectoryResult, BackupOptions };
 
@@ -36,7 +36,6 @@ export type { BackupResult, BackupDirectoryResult, BackupOptions };
  * Concurrency-safe directory scan + processing
  */
 export class NasBackupService {
-  private lockPath: string;
   private semaphore: Semaphore;
 
   constructor(
@@ -44,7 +43,6 @@ export class NasBackupService {
     private readonly nasRoot: string,
     private readonly options: BackupOptions = {}
   ) {
-    this.lockPath = path.join(this.nasRoot, options.lockFileName ?? ".backup-lock");
     this.semaphore = new Semaphore(options.maxConcurrentBackups ?? 4);
   }
 
@@ -190,26 +188,6 @@ export class NasBackupService {
   }
 
   // -------------------------
-  // FILE DISCOVERY
-  // -------------------------
-  private async findFiles(dir: string): Promise<string[]> {
-    const entries = await readdir(dir, { withFileTypes: true });
-    const files: string[] = [];
-
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-
-      if (entry.isDirectory()) {
-        files.push(...(await this.findFiles(full)));
-      } else if (entry.isFile() && !entry.name.endsWith(".part")) {
-        files.push(full);
-      }
-    }
-
-    return files;
-  }
-
-  // -------------------------
   // CLEANUP
   // -------------------------
   /**
@@ -328,19 +306,6 @@ export class NasBackupService {
   // -------------------------
   // LOCKING (IMPORTANT)
   // -------------------------
-  private async acquireLock(): Promise<void> {
-    try {
-      await writeFile(this.lockPath, String(process.pid), { flag: "wx" });
-    } catch {
-      throw new Error("Backup already running (lock exists)");
-    }
-  }
-
-  private async releaseLock(): Promise<void> {
-    await this.safeDelete(this.lockPath);
-    console.log("Lock released");
-  }
-
   private async acquireFileLock(lockPath: string): Promise<void> {
     try {
       await writeFile(lockPath, String(process.pid), { flag: "wx" });
@@ -418,36 +383,6 @@ export class NasBackupService {
     }
 
     throw lastErr;
-  }
-
-  // -------------------------
-  // BATCH PROCESSING
-  // -------------------------
-  private async processInBatches<T>(
-    items: T[],
-    concurrency: number,
-    worker: (item: T) => Promise<void>
-  ): Promise<void> {
-    let index = 0;
-
-    console.log(`[processInBatches] Starting with ${items.length} items, concurrency=${concurrency}`);
-
-    const runners = Array.from({ length: concurrency }, (_, i) => {
-      console.log(`[processInBatches] Creating runner ${i}`);
-      return (async () => {
-        console.log(`[processInBatches] Runner ${i} started, items.length=${items.length}, index=${index}`);
-        while (index < items.length) {
-          const current = index++;
-          console.log(`[processInBatches] Runner ${i} processing item ${current}`);
-          await worker(items[current]);
-        }
-        console.log(`[processInBatches] Runner ${i} finished`);
-      })();
-    });
-
-    console.log('[processInBatches] Waiting for all runners...');
-    await Promise.all(runners);
-    console.log('[processInBatches] All runners completed');
   }
 
   // -------------------------

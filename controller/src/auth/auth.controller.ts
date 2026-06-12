@@ -64,7 +64,7 @@ export class AuthController extends ApiController implements IController {
     }
 
     public async logout(
-        endpoint: string,
+        _endpoint: string,
         req: express.Request,
         res: express.Response,
     ): Promise<void | IResponse<any>> {
@@ -82,7 +82,7 @@ export class AuthController extends ApiController implements IController {
     }
 
     public async onAuthenticated(
-        endpoint: string,
+        _endpoint: string,
         req: express.Request,
         res: express.Response,
     ): Promise<void | IResponse<any>> {

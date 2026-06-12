@@ -22,7 +22,7 @@ export class Extractor {
         // eslint-disable-next-line no-process-env
         const value = process.env[name];
         const isNumber = !isNaN(value as any);
-        if (isNumber) {
+        if (isNumber && value) {
             return parseInt(value);
         } else if (fallback !== undefined) {
             return fallback;

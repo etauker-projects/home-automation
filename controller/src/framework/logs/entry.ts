@@ -5,7 +5,7 @@ export class Entry {
 
     private _category: Category;
     private _message: string;
-    private _tracker: string;
+    private _tracker: string | undefined;
     private _object: string;
     private _datetime: moment.Moment;
 
@@ -31,7 +31,7 @@ export class Entry {
     public message(): string {
         return this._message;
     }
-    public tracker(): string {
+    public tracker(): string | undefined {
         return this._tracker;
     }
     public details(): string {

@@ -30,9 +30,9 @@ export class StatusController extends ApiController implements IController {
     }
 
     public async getStatus(
-        endpoint: string,
-        req: express.Request,
-        res: express.Response,
+        _endpoint: string,
+        _req: express.Request,
+        _res: express.Response,
     ): Promise<IResponse<any>> {
         return { status: 200, body: {
             status: this.isStopped() ? 'stopped' : 'running',

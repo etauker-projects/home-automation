@@ -6,14 +6,14 @@ import {
     discovery,
     type Configuration,
 } from "openid-client";
-import { Server } from './framework/server/server';
-import { StatusController } from './status/status.controller';
-import { AuthController } from './auth/auth.controller';
-import { Extractor } from './framework/environment/extractor';
-import { FileMonitoringService } from './file-system/file-monitoring.service.ts';
-import { FileSystemService } from './file-system/file-system.service.ts';
-import { PaperlessConnector } from './paperless/paperless.connector.ts';
-import { NasBackupService } from './backup/nas-backup.service';
+import { Server } from './framework/server/server.js';
+import { StatusController } from './status/status.controller.js';
+import { AuthController } from './auth/auth.controller.js';
+import { Extractor } from './framework/environment/extractor.js';
+import { FileMonitoringService } from './file-system/file-monitoring.service.js';
+import { FileSystemService } from './file-system/file-system.service.js';
+import { PaperlessConnector } from './paperless/paperless.connector.js';
+import { NasBackupService } from './backup/nas-backup.service.js';
 
 // TODO: consider moving to separate controller / service
 const oidcConfig: Configuration = await discovery(
@@ -30,7 +30,7 @@ server.register('/status', StatusController.getInstance());
 server.register('/auth', AuthController.getInstance(oidcConfig));
 
 server.register('/', {
-    getRouter: () => express.Router().get('', async (req, res) => {
+    getRouter: () => express.Router().get('', async (_req, res) => {
         res.redirect('/ui/home');
     }),
     stop: () => Promise.resolve(true)
@@ -39,12 +39,13 @@ server.register('/', {
 const uiRouter = express.Router();
 
 // Key directories:
-const DIR_PRINTER_PAPERLESS = Extractor.extractString('DIR_PRINTER_PAPERLESS');   // printer scans to paperless consume directory (monitored by this service)
-const DIR_PAPERLESS_CONSUME = Extractor.extractString('DIR_PAPERLESS_CONSUME');   // paperless consume directory (paperless detects and processes files here)
-const DIR_PAPERLESS_EXPORT = Extractor.extractString('DIR_PAPERLESS_EXPORT');    // paperless export directory (files processed by paperless are exported here)
-const DIR_SYNOLOGY_DOCS = Extractor.extractString('DIR_SYNOLOGY_DOCS');       // doument storage on the NAS
+const DIR_PRINTER_PAPERLESS = '/app/data/scans';   // printer scans to paperless consume directory (monitored by this service)
+const DIR_PAPERLESS_CONSUME = '/app/data/paperless-consume';   // paperless consume directory (paperless detects and processes files here)
+const DIR_PAPERLESS_EXPORT = '/app/data/paperless-exports';    // paperless export directory (files processed by paperless are exported here)
+const DIR_SYNOLOGY_DOCS = '/app/data/nas';       // doument storage on the NAS
+const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
 
-const paperless = new PaperlessConnector(DIR_PAPERLESS_EXPORT);
+const paperless = new PaperlessConnector(DIR_PAPERLESS_EXPORT, PAPERLESS_TOKEN);
 
 uiRouter.get('/home', async (req, res) => {
 
@@ -464,7 +465,8 @@ uiRouter.get('/login', async (req, res) => {
         req.session.save((err) => {
             if (err) {
                 console.error('Session save error:', err);
-                return res.status(500).send('Session error: ' + err);
+                res.status(500).send('Session error: ' + err);
+                return;
             }
             // Redirect user to the authorization URL
             res.redirect(authUrl.href);
@@ -478,7 +480,8 @@ uiRouter.get('/login', async (req, res) => {
 // Preview endpoint - fetches documents on demand
 uiRouter.get('/paperless/preview', async (req, res) => {
     if (!(req.session as any).accessToken) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
     }
 
     try {
@@ -496,7 +499,8 @@ uiRouter.get('/paperless/preview', async (req, res) => {
 // Download endpoint - calls the download method to fetch all documents
 uiRouter.post('/paperless/download', async (req, res) => {
     if (!(req.session as any).accessToken) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
     }
 
     try {
@@ -521,7 +525,8 @@ uiRouter.post('/paperless/download', async (req, res) => {
 // Export endpoint - placeholder that logs TODO
 uiRouter.post('/paperless/export', async (req, res) => {
     if (!(req.session as any).accessToken) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
     }
 
     try {
@@ -599,8 +604,8 @@ fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
 
 server.start();
 
-await new Promise(resolve => {
+await new Promise(_resolve => {
     console.log(`Server running on https://localhost:${port}`);
     console.log(`Login at: https://controller.automation.etauker.com/ui/home`);
-    // setTimeout(() => resolve(null), 60000); // Stop server after 180 seconds for testing
+    // setTimeout(() => _resolve(null), 60000); // Stop server after 180 seconds for testing
 });
