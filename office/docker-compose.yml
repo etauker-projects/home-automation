@@ -10,6 +10,81 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  office-postgres:
+    image: docker.io/library/postgres:18
+    container_name: office-postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres-admin -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - ./data/office-postgres:/var/lib/postgresql
+    networks:
+      - postgres
+    env_file: postgres-admin.env
+
+  vikunja-postgres-init:
+    image: postgres:18
+    container_name: vikunja-postgres-init
+    restart: "no"
+    env_file:
+      - postgres-admin.env
+      - vikunja-postgres.env
+    depends_on:
+      office-postgres:
+        condition: service_healthy
+    volumes:
+      - ./scripts/postgres-init.sh:/postgres-init.sh:ro
+    networks:
+      - postgres
+    command: ["bash", "/postgres-init.sh"]
+
+  vikunja-filesystem-init:
+    image: alpine:3.20
+    container_name: vikunja-filesystem-init
+    restart: "no"
+    environment:
+      TARGET_DIR: "/data"
+      TARGET_UID: 1000
+      TARGET_GID: 1000
+    volumes:
+      - ./data/vikunja:/data
+      - ./scripts/filesystem-init.sh:/filesystem-init.sh:ro
+    command: ["sh", "/filesystem-init.sh"]
+
+  vikunja:
+    image: vikunja/vikunja:latest
+    container_name: vikunja
+    restart: unless-stopped
+    depends_on:
+      vikunja-postgres-init:
+        condition: service_completed_successfully
+      vikunja-filesystem-init:
+        condition: service_completed_successfully
+    env_file:
+      - vikunja-postgres.env
+      - vikunja.env
+    environment:
+      VIKUNJA_SERVICE_PUBLICURL: https://vikunja.office.etauker.com
+      VIKUNJA_AUTH_OPENID_ENABLED: true
+      VIKUNJA_AUTH_OPENID_REDIRECT_URL: https://vikunja.office.etauker.com/auth/openid/
+      VIKUNJA_AUTH_OPENID_PROVIDERS_0_NAME: Authentik
+      VIKUNJA_AUTH_OPENID_PROVIDERS_0_AUTHURL: https://auth.security.etauker.com/application/o/vikunja/
+      VIKUNJA_AUTH_OPENID_PROVIDERS_0_SCOPE: openid profile email
+    volumes:
+      - ./data/vikunja/files:/app/vikunja/files
+      # - ./data/vikunja/config.yml:/app/vikunja/config.yml:ro
+    networks:
+      - postgres
+      - proxy
+    ports:
+      - "9003:3456"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     container_name: paperless
@@ -84,7 +159,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+
 networks:
+  postgres:
+    name: postgres
+    external: false
   paperless:
     name: paperless
     external: false
