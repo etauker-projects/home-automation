@@ -24,6 +24,10 @@ const oidcConfig: Configuration = await discovery(
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const apiRoot = process.env.API_ROOT || '';
+const logger = {
+    info: (msg: string) => console.log('[Backup]', msg),
+    error: (msg: string, err?: any) => console.error('[Backup]', msg, err),
+}
 
 const server = new Server({ port, apiRoot });
 server.register('/status', StatusController.getInstance());
@@ -39,13 +43,14 @@ server.register('/', {
 const uiRouter = express.Router();
 
 // Key directories:
-const DIR_PRINTER_PAPERLESS = '/app/data/scans';   // printer scans to paperless consume directory (monitored by this service)
-const DIR_PAPERLESS_CONSUME = '/app/data/paperless-consume';   // paperless consume directory (paperless detects and processes files here)
-const DIR_PAPERLESS_EXPORT = '/app/data/paperless-exports';    // paperless export directory (files processed by paperless are exported here)
-const DIR_SYNOLOGY_DOCS = '/app/data/nas';       // doument storage on the NAS
+const DIR_PRINTER_PAPERLESS = '/app/data/scans'   // printer scans to paperless consume directory (monitored by this service)
+const DIR_PAPERLESS_CONSUME = '/app/data/paperless-consume'   // paperless consume directory (paperless detects and processes files here)
+const DIR_PAPERLESS_EXPORT = '/app/data/paperless-exports'    // paperless export directory (files processed by paperless are exported here)
+const DIR_SYNOLOGY_DOCS = '/app/data/nas'       // doument storage on the NAS
+const DIR_CONFIG = '/app/data/config'   // configuration directory (stores manifests and other config files)
 const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
 
-const paperless = new PaperlessConnector(DIR_PAPERLESS_EXPORT, PAPERLESS_TOKEN);
+const paperless = new PaperlessConnector(DIR_PAPERLESS_EXPORT, DIR_CONFIG, PAPERLESS_TOKEN);
 
 uiRouter.get('/home', async (req, res) => {
 
@@ -346,7 +351,9 @@ uiRouter.get('/paperless', async (req, res) => {
                             const data = await response.json();
 
                             if (response.ok) {
-                                const summary = \`Downloaded \${data.successful}/\${data.total} documents successfully. \${data.failed > 0 ? data.failed + ' failed.' : ''}\`;
+                                const skippedMsg = data.skipped > 0 ? \` \${data.skipped} skipped.\` : '';
+                                const failedMsg = data.failed > 0 ? \` \${data.failed} failed.\` : '';
+                                const summary = \`Downloaded \${data.successful}/\${data.total} documents successfully.\${skippedMsg}\${failedMsg}\`;
                                 showMessage(summary, data.failed > 0 ? 'error' : 'success');
                                 console.log('Download Summary:', data);
                             } else {
@@ -505,13 +512,15 @@ uiRouter.post('/paperless/download', async (req, res) => {
 
     try {
         console.log('Starting download of paperless documents...');
-        const summary = await paperless.download();
+        const changedSince = '2026-06-14';
+        const summary = await paperless.download(changedSince);
         console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
         res.json({
             success: true,
             total: summary.total,
             successful: summary.successful,
             failed: summary.failed,
+            skipped: summary.skipped,
             results: summary.results
         });
     } catch (error) {
@@ -556,10 +565,7 @@ const backupService = new NasBackupService(
         concurrency: 4,
         retries: 3,
         retryDelayMs: 2000,
-        logger: {
-            info: (msg: string) => console.log('[Backup]', msg),
-            error: (msg: string, err?: any) => console.error('[Backup]', msg, err),
-        }
+        logger,
     }
 );
 const fileSystem = new FileSystemService();

@@ -1,6 +1,6 @@
 import { RestConnector } from '../framework/rest/rest.connector.js';
 import { Semaphore } from '../backup/semaphore.js';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import path from 'node:path';
 import * as https from 'https';
@@ -106,6 +106,7 @@ interface EnhancedResult {
     tags: string[];
     archiveSerialNumber?: string | null;
     created: string;
+    modified: string;
     // original_file_name: string;
     // archived_file_name: string;
     // owner: string;
@@ -127,7 +128,17 @@ interface DownloadSummary {
     total: number;
     successful: number;
     failed: number;
+    skipped: number;
     results: DownloadResult[];
+}
+
+interface ManifestEntry {
+    modified: string;
+    path: string;
+}
+
+interface DownloadManifest {
+    [paperlessId: number]: ManifestEntry;
 }
 
 export class PaperlessConnector {
@@ -135,10 +146,13 @@ export class PaperlessConnector {
     private host: string = 'https://paperless.office.etauker.com';
     private connector: RestConnector;
     private semaphore: Semaphore;
+    private manifestPath: string;
+    private manifest: DownloadManifest = {};
 
-    constructor(private downloadDirectory: string, private token: string) {
+    constructor(private downloadDirectory: string, private configDirectory: string, private token: string) {
         this.connector = new RestConnector(this.host);
         this.semaphore = new Semaphore(4);
+        this.manifestPath = path.join(this.configDirectory, 'download-manifest.json');
     }
 
     // TODO: these should be fetched from the API and cached, with a TTL
@@ -149,9 +163,8 @@ export class PaperlessConnector {
     private tags: { [key: number]: string } = {};
     // private users: { [key: number]: string } = {};
 
-    public async list(page: number = 1): Promise<EnhancedResult[]> {
+    public async list(changedSince: string, page: number = 1): Promise<EnhancedResult[]> {
         console.log(`Fetching documents (page ${page})`);
-        const changedSince = '2024-01-01'; // TODO: make configurable
         const original = await this.searchDocuments(changedSince, page);
 
         if (original.results.length === 0) {
@@ -161,7 +174,7 @@ export class PaperlessConnector {
 
         console.log(`Processing (page ${page})`);
         const results = await Promise.all(original.results.map(res => this.enhanceResult(res)));
-        const upstream = original.next ? await this.list(page + 1) : [];
+        const upstream = original.next ? await this.list(changedSince, page + 1) : [];
 
         console.log(`Done (page ${page})`);
         return [...results, ...upstream];
@@ -211,6 +224,7 @@ export class PaperlessConnector {
             // storagePath,
             tags: tags,
             created: result.created,
+            modified: result.modified,
             archiveSerialNumber: result.archive_serial_number,
             // owner: this.resolveUserName(result.owner),
             notes: result.notes,
@@ -354,18 +368,92 @@ export class PaperlessConnector {
         return path;
     }
 
-    public async download(): Promise<DownloadSummary> {
+    /**
+     * Load the download manifest from disk.
+     * Creates an empty manifest if the file doesn't exist.
+     */
+    private async loadManifest(): Promise<void> {
+        try {
+            await access(this.manifestPath);
+            const content = await readFile(this.manifestPath, 'utf-8');
+            this.manifest = JSON.parse(content);
+            console.log(`Loaded manifest with ${Object.keys(this.manifest).length} entries`);
+        } catch (error: any) {
+            if (error.code === 'ENOENT') {
+                console.log('No existing manifest found, starting fresh');
+                this.manifest = {};
+            } else {
+                console.error('Error loading manifest:', error);
+                this.manifest = {};
+            }
+        }
+    }
+
+    /**
+     * Save the download manifest to disk.
+     */
+    private async saveManifest(): Promise<void> {
+        try {
+            // Ensure config directory exists
+            await mkdir(this.configDirectory, { recursive: true });
+            const content = JSON.stringify(this.manifest, null, 2);
+            await writeFile(this.manifestPath, content, 'utf-8');
+            console.log(`Saved manifest with ${Object.keys(this.manifest).length} entries`);
+        } catch (error) {
+            console.error('Error saving manifest:', error);
+        }
+    }
+
+    /**
+     * Check if a document should be skipped based on the manifest.
+     * Returns true if the document already exists with the same modified timestamp.
+     */
+    private shouldSkipDocument(doc: EnhancedResult, modified: string): boolean {
+        const entry = this.manifest[doc.paperlessId];
+        if (!entry) {
+            return false; // Not in manifest, don't skip
+        }
+
+        // Skip if modified timestamp matches (document hasn't changed)
+        return entry.modified === modified;
+    }
+
+    /**
+     * Update the manifest entry for a document after successful download.
+     */
+    private updateManifestEntry(doc: EnhancedResult, modified: string): void {
+        this.manifest[doc.paperlessId] = {
+            modified: modified,
+            path: doc.path
+        };
+    }
+
+    public async download(changedSince: string): Promise<DownloadSummary> {
         console.log('Starting document download process...');
 
+        // Load the manifest to check what's already been downloaded
+        await this.loadManifest();
+
         // Get all documents
-        const documents = await this.list();
-        console.log(`Found ${documents.length} documents to download`);
+        const documents = await this.list(changedSince);
+        console.log(`Found ${documents.length} documents`);
+
+        // Filter out documents that should be skipped
+        const documentsToDownload = documents.filter(doc => {
+            const shouldSkip = this.shouldSkipDocument(doc, doc.modified);
+            if (shouldSkip) {
+                console.log(`Skipping document ${doc.paperlessId} (${doc.title}) - already up to date`);
+            }
+            return !shouldSkip;
+        });
+
+        console.log(`${documentsToDownload.length} documents to download, ${documents.length - documentsToDownload.length} skipped`);
 
         const results: DownloadResult[] = [];
 
         // Download each document with concurrency control
         await Promise.all(
-            documents.map(doc =>
+            documentsToDownload.map(doc =>
                 this.semaphore.acquire(async () => {
                     const result = await this.downloadDocument(doc);
                     results.push(result);
@@ -373,18 +461,23 @@ export class PaperlessConnector {
             )
         );
 
+        // Save the updated manifest
+        await this.saveManifest();
+
         // Calculate summary
         const successful = results.filter(r => r.success).length;
         const failed = results.filter(r => !r.success).length;
+        const skipped = documents.length - documentsToDownload.length;
 
         const summary: DownloadSummary = {
             total: documents.length,
             successful,
             failed,
+            skipped,
             results
         };
 
-        console.log(`Download complete: ${successful} successful, ${failed} failed`);
+        console.log(`Download complete: ${successful} successful, ${failed} failed, ${skipped} skipped`);
         return summary;
     }
 
@@ -407,6 +500,9 @@ export class PaperlessConnector {
             );
 
             console.log(`Successfully downloaded: ${fullPath}`);
+
+            // Update the manifest entry after successful download
+            this.updateManifestEntry(doc, doc.modified);
 
             // Add 1 second delay after downloading each file
             await new Promise(resolve => setTimeout(resolve, 1000));
