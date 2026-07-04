@@ -218,7 +218,7 @@ uiRouter.get('/paperless', async (req, res) => {
                 <nav>
                     <a href="/ui/home">← Back to Home</a>
                 </nav>
-                <h1>Paperless Documents</h1>
+                <h1>Paperless Documents Injested Since ${await paperless.getLastDownloaded()}</h1>
                 <div class="info-box">
                     <strong>Note:</strong> Raw data is logged to the browser console. Press F12 to open developer tools.
                 </div>
@@ -463,8 +463,8 @@ uiRouter.get('/paperless/preview', async (req, res) => {
     }
 
     try {
-        console.log('Fetching paperless documents...');
-        const changedSince = '2026-06-14';
+        const changedSince = await paperless.getLastDownloaded();
+        console.log(`Fetching paperless documents from ${changedSince}...`);
         const documents = await paperless.list(changedSince);
         res.json({ success: true, documents });
     } catch (error) {
