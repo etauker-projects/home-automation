@@ -29,4 +29,4 @@ EXPOSE 9229
 
 # Development command with hot-reload using tsx
 # The --watch flag enables hot-reload
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "dev"]

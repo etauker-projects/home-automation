@@ -483,10 +483,12 @@ uiRouter.post('/paperless/download', async (req, res) => {
     }
 
     try {
-        console.log('Starting download of paperless documents...');
-        const changedSince = '2026-06-14';
+        const changedSince = await paperless.getLastDownloaded();
+        console.log(`Starting download of paperless documents from ${changedSince}...`);
+
         const summary = await paperless.download(changedSince);
         console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
+
         res.json({
             success: true,
             total: summary.total,
