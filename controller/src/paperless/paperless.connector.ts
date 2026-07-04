@@ -421,16 +421,22 @@ export class PaperlessConnector {
 
     /**
      * Check if a document should be skipped based on the manifest.
-     * Returns true if the document already exists with the same modified timestamp.
+     * Returns true if the document already exists with the same modified timestamp
+     * or if it has the "inbox" tag, false otherwise.
+
      */
-    private shouldSkipDocument(doc: EnhancedResult, modified: string): boolean {
-        const entry = this.manifest[doc.paperlessId];
-        if (!entry) {
-            return false; // Not in manifest, don't skip
+    private shouldSkipDocument(doc: EnhancedResult, modified: string): { skip: boolean, reason: string } {
+        const manifestEntry = this.manifest[doc.paperlessId];
+
+        if (doc.tags.map(tag => tag.toLowerCase()).includes('inbox')) {
+            return { skip: true, reason: 'Not ready for exporting, manual processing needed' };
+        } else if (!manifestEntry) {
+            return { skip: false, reason: 'Not in manifest, not previously exported' };
+        } else if (manifestEntry.modified !== modified) {
+            return { skip: false, reason: 'In manifest, modified since last export' };
         }
 
-        // Skip if modified timestamp matches (document hasn't changed)
-        return entry.modified === modified;
+        return { skip: true, reason: 'Already downloaded' };
     }
 
     /**
@@ -456,10 +462,11 @@ export class PaperlessConnector {
         // Filter out documents that should be skipped
         const documentsToDownload = documents.filter(doc => {
             const shouldSkip = this.shouldSkipDocument(doc, doc.modified);
-            if (shouldSkip) {
-                console.log(`Skipping document ${doc.paperlessId} (${doc.title}) - already up to date`);
+            if (shouldSkip.skip) {
+                console.log(`Skipping document ${doc.paperlessId} (${doc.title}) - ${shouldSkip.reason}`);
+                return false;
             }
-            return !shouldSkip;
+            return true;
         });
 
         console.log(`${documentsToDownload.length} documents to download, ${documents.length - documentsToDownload.length} skipped`);
