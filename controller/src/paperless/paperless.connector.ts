@@ -139,6 +139,9 @@ interface ManifestEntry {
 
 interface DownloadManifest {
     [paperlessId: number]: ManifestEntry;
+    metadata?: {
+        lastDownloaded: string;
+    }
 }
 
 export class PaperlessConnector {
@@ -396,11 +399,23 @@ export class PaperlessConnector {
         try {
             // Ensure config directory exists
             await mkdir(this.configDirectory, { recursive: true });
+            this.manifest = this.manifest || {};
+            this.manifest.metadata = { lastDownloaded: new Date().toISOString() };
             const content = JSON.stringify(this.manifest, null, 2);
             await writeFile(this.manifestPath, content, 'utf-8');
             console.log(`Saved manifest with ${Object.keys(this.manifest).length} entries`);
         } catch (error) {
             console.error('Error saving manifest:', error);
+        }
+    }
+
+    public async getLastDownloaded(fallback: string = '1970-01-01'): Promise<string> {
+        try {
+            if (!this.manifest) await this.loadManifest();
+            return this.manifest.metadata?.lastDownloaded || fallback;
+        } catch (error) {
+            console.error('Error fetching last downloaded timestamp:', error);
+            return fallback;
         }
     }
 

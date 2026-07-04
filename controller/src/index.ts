@@ -14,6 +14,7 @@ import { FileMonitoringService } from './file-system/file-monitoring.service.js'
 import { FileSystemService } from './file-system/file-system.service.js';
 import { PaperlessConnector } from './paperless/paperless.connector.js';
 import { NasBackupService } from './backup/nas-backup.service.js';
+import { CronService } from './cron/cron.service.js';
 
 // TODO: consider moving to separate controller / service
 const oidcConfig: Configuration = await discovery(
@@ -511,6 +512,7 @@ server.register('/ui', {
 /* Document Processing */
 
 const fileMonitor = new FileMonitoringService();
+const cronService = new CronService();
 const backupService = new NasBackupService(
     DIR_PAPERLESS_EXPORT,
     DIR_SYNOLOGY_DOCS,
@@ -523,7 +525,7 @@ const backupService = new NasBackupService(
 );
 const fileSystem = new FileSystemService();
 
-// Step 1 DONE: monitor DIR_PRINTER_PAPERLESS and move files to DIR_PAPERLESS_CONSUME
+// Step 1: monitor DIR_PRINTER_PAPERLESS and move files to DIR_PAPERLESS_CONSUME
 fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
     add: async (filePath) => {
         console.log(`New file detected: ${filePath}`);
@@ -540,11 +542,34 @@ fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
     },
 });
 
-// Step 2 DONE: paperless ingests the files
-// Step 3 TODO: export from paperless to DIR_PAPERLESS_EXPORT
+// Step 2: paperless ingests the files
 
+// Step 3: export from paperless to DIR_PAPERLESS_EXPORT
+// const cronPattern = '0 3 * * *'; // Every day at 3 AM (after testing)
+const cronPattern = '15 * * * *'; // Hourly at the start of the hour (for now)
+const timezone = 'Europe/Dublin';
+cronService.schedule(cronPattern, timezone, async () => {
+    try {
+        const changedSince = (await paperless.getLastDownloaded()).split('T')[0];
+        console.log(`Starting download of paperless documents since ${changedSince}...`);
 
-// Step 4 DONE: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
+        const summary = await paperless.download(changedSince);
+        console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
+
+        console.log({
+            success: true,
+            total: summary.total,
+            successful: summary.successful,
+            failed: summary.failed,
+            skipped: summary.skipped,
+            results: summary.results
+        });
+    } catch (error) {
+        console.error('Error in download endpoint:', error);
+    }
+});
+
+// Step 4: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
 fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
     add: async (filePath) => {
         console.log(`New file detected: ${filePath}`);
