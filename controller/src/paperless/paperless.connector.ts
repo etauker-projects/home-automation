@@ -411,7 +411,7 @@ export class PaperlessConnector {
 
     public async getLastDownloaded(fallback: string = '1970-01-01'): Promise<string> {
         try {
-            if (!this.manifest) await this.loadManifest();
+            if (!this.manifest.metadata) await this.loadManifest();
             return this.manifest.metadata?.lastDownloaded || fallback;
         } catch (error) {
             console.error('Error fetching last downloaded timestamp:', error);
@@ -450,7 +450,7 @@ export class PaperlessConnector {
         await this.loadManifest();
 
         // Get all documents
-        const documents = await this.list(changedSince);
+        const documents = await this.list(changedSince.split('T')[0]);
         console.log(`Found ${documents.length} documents`);
 
         // Filter out documents that should be skipped

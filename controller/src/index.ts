@@ -552,7 +552,7 @@ const cronPattern = '15 * * * *'; // Hourly at the start of the hour (for now)
 const timezone = 'Europe/Dublin';
 cronService.schedule(cronPattern, timezone, async () => {
     try {
-        const changedSince = (await paperless.getLastDownloaded()).split('T')[0];
+        const changedSince = await paperless.getLastDownloaded();
         console.log(`Starting download of paperless documents since ${changedSince}...`);
 
         const summary = await paperless.download(changedSince);
