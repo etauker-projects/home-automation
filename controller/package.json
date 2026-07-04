@@ -8,7 +8,9 @@
   "main": "auth-test.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx --env-file=.env ./src/index.ts",
+    "dev": "tsx --env-file=.env ./src/index.ts",
+    "start": "docker compose -d up controller-prod --build && docker logs home-automation-controller-prod --follow",
+    "restart": "docker compose down controller-prod && docker compose up controller-prod -d --build && docker logs home-automation-controller-prod --follow",
     "build": "tsc"
   },
   "dependencies": {

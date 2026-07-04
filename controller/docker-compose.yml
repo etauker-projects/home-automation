@@ -62,6 +62,7 @@ services:
       - ${DIR_PAPERLESS_CONSUME:-./data/paperless-consume}:/app/data/paperless-consume
       - ${DIR_PAPERLESS_EXPORT:-./data/paperless-exports}:/app/data/paperless-exports
       - ${DIR_SYNOLOGY_DOCS:-./data/nas}:/app/data/nas
+      - ${DIR_CONFIG:-./data/config}:/app/data/config
       - ./.env:/app/.env:ro
     networks:
       - controller-network
