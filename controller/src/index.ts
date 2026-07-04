@@ -463,7 +463,8 @@ uiRouter.get('/paperless/preview', async (req, res) => {
 
     try {
         console.log('Fetching paperless documents...');
-        const documents = await paperless.list();
+        const changedSince = '2026-06-14';
+        const documents = await paperless.list(changedSince);
         res.json({ success: true, documents });
     } catch (error) {
         console.error('Error fetching paperless documents:', error);
