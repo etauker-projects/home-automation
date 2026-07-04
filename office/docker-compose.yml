@@ -26,6 +26,8 @@ services:
       - postgres
     env_file: postgres-admin.env
 
+  # Vikunja
+
   vikunja-postgres-init:
     image: postgres:18
     container_name: vikunja-postgres-init
@@ -84,6 +86,80 @@ services:
       - "9003:3456"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  # Firefly III
+
+  # firefly-postgres-init:
+  #   image: postgres:18
+  #   container_name: firefly-postgres-init
+  #   restart: "no"
+  #   env_file:
+  #     - postgres-admin.env
+  #     - firefly.postgres.env
+  #   depends_on:
+  #     office-postgres:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./scripts/postgres-init.sh:/postgres-init.sh:ro
+  #   networks:
+  #     - postgres
+  #   command: ["bash", "/postgres-init.sh"]
+
+  # firefly-filesystem-init:
+  #   image: alpine:3.20
+  #   container_name: firefly-filesystem-init
+  #   restart: "no"
+  #   environment:
+  #     TARGET_DIR: "/data"
+  #     TARGET_UID: 1000
+  #     TARGET_GID: 1000
+  #   volumes:
+  #     - ./data/firefly:/data
+  #     - ./scripts/filesystem-init.sh:/filesystem-init.sh:ro
+  #   command: ["sh", "/filesystem-init.sh"]
+
+  # firefly:
+  #   image: fireflyiii/core:latest
+  #   container_name: firefly
+  #   restart: unless-stopped
+  #   depends_on:
+  #     firefly-postgres-init:
+  #       condition: service_completed_successfully
+  #     firefly-filesystem-init:
+  #       condition: service_completed_successfully
+  #   env_file:
+  #     - firefly.env
+  #     - firefly.postgres.env
+
+  #   environment:
+  #     TZ: Europe/Dublin
+  #     TRUSTED_PROXIES: "**"
+  #     MAIL_MAILER: log  # Mail (optional)
+
+  #     APP_ENV: production
+  #     APP_DEBUG: "false"
+  #     APP_URL: https://firefly.office.etauker.com
+
+  #   volumes:
+  #     - ./data/firefly/upload:/var/www/html/storage/upload
+  #     - ./data/firefly/export:/var/www/html/storage/export
+
+  #   ports:
+  #     - "9004:8080"
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+
+  #   healthcheck:
+  #     test: ["CMD", "php", "artisan", "firefly-iii:health-check"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+  #   networks:
+  #     - postgres
+  #     - proxy
+
+  # Paperless
 
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
