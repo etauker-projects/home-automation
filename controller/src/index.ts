@@ -225,7 +225,6 @@ uiRouter.get('/paperless', async (req, res) => {
                 <div class="action-buttons">
                     <button id="previewBtn" class="btn btn-primary">Preview</button>
                     <button id="downloadBtn" class="btn btn-primary">Download</button>
-                    <button id="exportBtn" class="btn btn-secondary">Export</button>
                 </div>
 
                 <div id="statusMessage" class="status-message"></div>
@@ -255,7 +254,6 @@ uiRouter.get('/paperless', async (req, res) => {
                     const statusMessage = document.getElementById('statusMessage');
                     const previewBtn = document.getElementById('previewBtn');
                     const downloadBtn = document.getElementById('downloadBtn');
-                    const exportBtn = document.getElementById('exportBtn');
                     const tableContainer = document.getElementById('tableContainer');
                     const tableBody = document.getElementById('tableBody');
 
@@ -274,13 +272,11 @@ uiRouter.get('/paperless', async (req, res) => {
                     function disableButtons() {
                         previewBtn.disabled = true;
                         downloadBtn.disabled = true;
-                        exportBtn.disabled = true;
                     }
 
                     function enableButtons() {
                         previewBtn.disabled = false;
                         downloadBtn.disabled = false;
-                        exportBtn.disabled = false;
                     }
 
                     previewBtn.addEventListener('click', async () => {
@@ -361,32 +357,6 @@ uiRouter.get('/paperless', async (req, res) => {
                             }
                         } catch (error) {
                             showMessage('Download failed: ' + error.message, 'error');
-                        } finally {
-                            enableButtons();
-                        }
-                    });
-
-                    exportBtn.addEventListener('click', async () => {
-                        disableButtons();
-                        showMessage('Exporting...', 'loading');
-
-                        try {
-                            const response = await fetch('/ui/paperless/export', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-
-                            const data = await response.json();
-
-                            if (response.ok) {
-                                showMessage(data.message || 'Export completed successfully!', 'success');
-                            } else {
-                                showMessage('Export failed: ' + (data.error || 'Unknown error'), 'error');
-                            }
-                        } catch (error) {
-                            showMessage('Export failed: ' + error.message, 'error');
                         } finally {
                             enableButtons();
                         }
@@ -525,24 +495,6 @@ uiRouter.post('/paperless/download', async (req, res) => {
         });
     } catch (error) {
         console.error('Error in download endpoint:', error);
-        res.status(500).json({
-            error: error instanceof Error ? error.message : String(error)
-        });
-    }
-});
-
-// Export endpoint - placeholder that logs TODO
-uiRouter.post('/paperless/export', async (req, res) => {
-    if (!(req.session as any).accessToken) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
-
-    try {
-        console.log('TODO: Implement export functionality');
-        res.json({ success: true, message: 'Export placeholder executed (check backend logs)' });
-    } catch (error) {
-        console.error('Error in export endpoint:', error);
         res.status(500).json({
             error: error instanceof Error ? error.message : String(error)
         });
