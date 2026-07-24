@@ -16,6 +16,7 @@ import { PaperlessConnector } from './paperless/paperless.connector.js';
 import { NasBackupService } from './backup/nas-backup.service.js';
 import { CronService } from './cron/cron.service.js';
 import { PaperlessPage } from './ui/paperless.page.js';
+import { HomePage } from './ui/home.page.js';
 
 // TODO: consider moving to separate controller / service
 const oidcConfig: Configuration = await discovery(
@@ -55,36 +56,11 @@ const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
 const paperless = new PaperlessConnector(DIR_PAPERLESS_EXPORT, DIR_CONFIG, PAPERLESS_TOKEN);
 
 uiRouter.get('/home', async (req, res) => {
-
     if (!(req.session as any).accessToken) {
         return res.redirect('/ui/login');
     }
 
-    res.send(`
-        <h1>Home Page</h1>
-        <p>You are logged in!</p>
-        <nav>
-            <a href="/ui/paperless">View Paperless Documents</a> |
-            <a href="/auth/logout">Logout</a>
-        </nav>
-        <style>
-            body {
-                background-color: #121212;
-                color: #e0e0e0;
-                font-family: Arial, sans-serif;
-            }
-            nav {
-                margin: 20px 0;
-            }
-            a {
-                color: #64b5f6;
-                text-decoration: none;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-        </style>
-    `);
+    res.send(HomePage.render());
 });
 
 uiRouter.get('/paperless', async (req, res) => {
