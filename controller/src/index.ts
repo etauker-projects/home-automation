@@ -17,6 +17,7 @@ import { NasBackupService } from './backup/nas-backup.service.js';
 import { CronService } from './cron/cron.service.js';
 import { PaperlessPage } from './ui/paperless.page.js';
 import { HomePage } from './ui/home.page.js';
+import { PowerMonitoringPage } from './ui/power-monitoring.page.js';
 
 // TODO: consider moving to separate controller / service
 const oidcConfig: Configuration = await discovery(
@@ -74,6 +75,19 @@ uiRouter.get('/paperless', async (req, res) => {
     } catch (error) {
         console.error('Error fetching paperless documents:', error);
         res.status(500).send(PaperlessPage.renderError(error instanceof Error ? error : String(error)));
+    }
+});
+
+uiRouter.get('/power-monitoring', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        return res.redirect('/ui/login');
+    }
+
+    try {
+        res.send(PowerMonitoringPage.render());
+    } catch (error) {
+        console.error('Error loading power monitoring page:', error);
+        res.status(500).send(PowerMonitoringPage.renderError(error instanceof Error ? error : String(error)));
     }
 });
 
