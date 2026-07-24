@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx --env-file=.env ./src/index.ts",
-    "start": "docker compose -d up controller-prod --build && docker logs home-automation-controller-prod --follow",
+    "start": "docker compose up -d controller-prod --build && docker logs home-automation-controller-prod --follow",
     "restart": "docker compose down controller-prod && docker compose up controller-prod -d --build && docker logs home-automation-controller-prod --follow",
     "build": "tsc"
   },
