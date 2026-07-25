@@ -127,6 +127,7 @@ export class PowerMonitoringHassConnector {
         // Fetch statistics via the WebSocket API
         // (HA does not expose a REST endpoint for long-term statistics)
         const data = await this.queryStatisticsViaWebSocket(startDate, endDate, statIds);
+        console.log(`[HassConnector] Retrieved statistics for ${Object.keys(data).length} entities.`, data);
 
         const entries: PowerDataEntry[] = [];
 
