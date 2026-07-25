@@ -104,12 +104,15 @@ export class PowerMonitoringPage {
                         font-size: 14px;
                         transition: all 0.2s;
                     }
-                    .aggregation-toggle button:hover {
+                    .aggregation-toggle button:not(:disabled):hover {
                         background-color: #333;
                     }
                     .aggregation-toggle button.active {
                         background-color: #64b5f6;
                         color: #121212;
+                    }
+                    .aggregation-toggle button:disabled {
+                        cursor: default;
                     }
                     
                     /* Load Button */
@@ -268,9 +271,9 @@ export class PowerMonitoringPage {
                     <div class="control-group">
                         <label>View</label>
                         <div class="aggregation-toggle">
-                            <button data-period="monthly" class="active">Monthly</button>
-                            <button data-period="daily">Daily</button>
-                            <button data-period="hourly">Hourly</button>
+                            <button data-period="monthly" class="active" disabled>Monthly</button>
+                            <button data-period="daily" disabled>Daily</button>
+                            <button data-period="hourly" disabled>Hourly</button>
                         </div>
                     </div>
                     
@@ -342,44 +345,43 @@ export class PowerMonitoringPage {
                         }
                     }
                     
-                    // Update aggregation period
-                    periodButtons.forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            periodButtons.forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-                            currentPeriod = btn.dataset.period;
-                            updateControlState();
-                        });
-                    });
-                    
-                    // Update control state based on selected period
+                    // Derive the aggregation period from the current month/day selection
+                    // and update the toggle indicator + enable/disable day select accordingly.
                     function updateControlState() {
-                        if (currentPeriod === 'monthly') {
-                            monthSelect.disabled = true;
-                            monthSelect.value = '';
+                        const month = monthSelect.value;
+                        const day   = daySelect.value;
+
+                        if (!month) {
+                            currentPeriod = 'monthly';
                             daySelect.disabled = true;
                             daySelect.value = '';
-                        } else if (currentPeriod === 'daily') {
-                            monthSelect.disabled = false;
-                            daySelect.disabled = true;
-                            daySelect.value = '';
-                        } else if (currentPeriod === 'hourly') {
-                            monthSelect.disabled = false;
+                        } else if (!day) {
+                            currentPeriod = 'daily';
+                            daySelect.disabled = false;
+                        } else {
+                            currentPeriod = 'hourly';
                             daySelect.disabled = false;
                         }
+
+                        // Reflect the derived period on the read-only toggle indicator
+                        periodButtons.forEach(btn => {
+                            btn.classList.toggle('active', btn.dataset.period === currentPeriod);
+                        });
                     }
                     
-                    // Month change - populate days
+                    // Month change - populate days and re-derive period
                     monthSelect.addEventListener('change', async () => {
-                        const year = yearSelect.value;
+                        const year  = yearSelect.value;
                         const month = monthSelect.value;
-                        
+
+                        // Reset day whenever month changes
+                        daySelect.innerHTML = '<option value="">All Days</option>';
+                        daySelect.value = '';
+
                         if (month) {
                             try {
                                 const response = await fetch(\`/ui/power-monitoring/days/\${year}/\${month}\`);
                                 const data = await response.json();
-                                
-                                daySelect.innerHTML = '<option value="">All Days</option>';
                                 data.days.forEach(day => {
                                     const option = document.createElement('option');
                                     option.value = day;
@@ -389,9 +391,14 @@ export class PowerMonitoringPage {
                             } catch (error) {
                                 console.error('Error loading days:', error);
                             }
-                        } else {
-                            daySelect.innerHTML = '<option value="">All Days</option>';
                         }
+
+                        updateControlState();
+                    });
+
+                    // Day change - re-derive period
+                    daySelect.addEventListener('change', () => {
+                        updateControlState();
                     });
                     
                     // Load data
