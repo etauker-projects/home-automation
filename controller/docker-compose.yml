@@ -29,6 +29,10 @@ services:
       - ${DIR_PAPERLESS_CONSUME:-./data/paperless-consume}:/app/data/paperless-consume
       - ${DIR_PAPERLESS_EXPORT:-./data/paperless-exports}:/app/data/paperless-exports
       - ${DIR_SYNOLOGY_DOCS:-./data/nas}:/app/data/nas
+      # Power monitoring directories
+      - ${DIR_POWER_MONITORING_INBOX:-./data/power-monitoring/inbox}:/app/data/power-monitoring/inbox
+      - ${DIR_POWER_MONITORING_PROCESSED:-./data/power-monitoring/processed}:/app/data/power-monitoring/processed
+      - ${DIR_POWER_MONITORING_METADATA:-./data/power-monitoring/metadata}:/app/data/power-monitoring/metadata
     networks:
       - controller-network
     user: "${UID}:${GID}"
@@ -63,6 +67,10 @@ services:
       - ${DIR_PAPERLESS_EXPORT:-./data/paperless-exports}:/app/data/paperless-exports
       - ${DIR_SYNOLOGY_DOCS:-./data/nas}:/app/data/nas
       - ${DIR_CONFIG:-./data/config}:/app/data/config
+      # Power monitoring directories
+      - ${DIR_POWER_MONITORING_INBOX:-./data/power-monitoring/inbox}:/app/data/power-monitoring/inbox
+      - ${DIR_POWER_MONITORING_PROCESSED:-./data/power-monitoring/processed}:/app/data/power-monitoring/processed
+      - ${DIR_POWER_MONITORING_METADATA:-./data/power-monitoring/metadata}:/app/data/power-monitoring/metadata
       - ./.env:/app/.env:ro
     networks:
       - controller-network
