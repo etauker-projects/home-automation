@@ -23,6 +23,7 @@ export class Server {
         this.port = config.port ?? 9999;
 
         this.app.set('trust proxy', 1);
+        this.app.use(express.json());
 
         // TODO: review security options
         this.app.use(

@@ -235,7 +235,7 @@ export class PowerMonitoringPage {
                     <div class="control-group">
                         <label>Year</label>
                         <select id="yearSelect">
-                            <option value="2025">2025</option>
+                            <option value="">Loading…</option>
                         </select>
                     </div>
                     
@@ -617,9 +617,39 @@ export class PowerMonitoringPage {
                         document.getElementById('dataPoints').textContent = data.length;
                     }
                     
+                    // Populate year dropdown from API
+                    async function loadYears() {
+                        try {
+                            const response = await fetch('/ui/power-monitoring/years');
+                            const data = await response.json();
+                            const years = data.years || [];
+
+                            yearSelect.innerHTML = '';
+                            if (years.length === 0) {
+                                const opt = document.createElement('option');
+                                opt.value = '';
+                                opt.textContent = 'No data';
+                                yearSelect.appendChild(opt);
+                            } else {
+                                years.forEach(year => {
+                                    const opt = document.createElement('option');
+                                    opt.value = year;
+                                    opt.textContent = year;
+                                    yearSelect.appendChild(opt);
+                                });
+                                // Default to the most recent year
+                                yearSelect.value = years[years.length - 1];
+                            }
+                        } catch (error) {
+                            console.error('Error loading years:', error);
+                            yearSelect.innerHTML = '<option value="">Error</option>';
+                        }
+                    }
+
                     // Initialize
                     initChart();
                     updateControlState();
+                    loadYears();
                     
                     // Auto-load on page load (optional)
                     // loadData();

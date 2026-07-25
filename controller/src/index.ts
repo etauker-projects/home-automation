@@ -297,6 +297,7 @@ uiRouter.post('/power-monitoring/sync', async (req, res) => {
 
     try {
         const now = new Date();
+        console.log(`[power-monitoring/sync] Request body:`, req.body);
         const year  = (req.body?.year  as string) ?? String(now.getFullYear());
         const month = (req.body?.month as string) ?? String(now.getMonth() + 1).padStart(2, '0');
         const day   = (req.body?.day   as string) ?? undefined;
