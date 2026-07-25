@@ -83,6 +83,10 @@ export class HomePage {
                         <div class="panel-icon">⚡</div>
                         <div class="panel-title">Power Monitoring</div>
                     </a>
+                    <a href="/ui/power-monitoring/ingestion" class="panel">
+                        <div class="panel-icon">📥</div>
+                        <div class="panel-title">Power Data Ingestion</div>
+                    </a>
                 </div>
                 
                 <div class="logout-link">

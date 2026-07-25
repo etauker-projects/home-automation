@@ -1,7 +1,7 @@
 export class PowerMonitoringPage {
 
     /**
-     * Renders the main Power Monitoring page.
+     * Renders the main Power Monitoring page with ECharts visualization.
      * @returns HTML string for the power monitoring page
      */
     public static render(): string {
@@ -10,26 +10,34 @@ export class PowerMonitoringPage {
             <html>
             <head>
                 <title>Power Monitoring</title>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                
+                <!-- External Dependencies -->
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+                
                 <style>
+                    * {
+                        box-sizing: border-box;
+                    }
                     body {
                         background-color: #121212;
                         color: #e0e0e0;
                         font-family: Arial, sans-serif;
                         padding: 20px;
-                        margin: 0 auto;
-                        max-width: 1200px;
+                        margin: 0;
                     }
                     h1 {
                         color: #64b5f6;
-                    }
-                    h2 {
-                        color: #64b5f6;
-                        margin-top: 30px;
+                        margin-bottom: 10px;
                     }
                     nav {
                         margin: 20px 0;
                         padding-bottom: 20px;
                         border-bottom: 1px solid #333;
+                        display: flex;
+                        gap: 20px;
                     }
                     a {
                         color: #64b5f6;
@@ -38,77 +46,584 @@ export class PowerMonitoringPage {
                     a:hover {
                         text-decoration: underline;
                     }
-                    .info-box {
+                    
+                    /* Controls Section */
+                    .controls {
                         background-color: #1e1e1e;
                         padding: 20px;
                         margin: 20px 0;
-                        border-radius: 4px;
-                        border-left: 4px solid #64b5f6;
-                    }
-                    .placeholder-content {
-                        background-color: #1e1e1e;
-                        padding: 30px;
-                        margin: 30px 0;
                         border-radius: 8px;
-                        text-align: center;
-                        border: 2px dashed #2a2a2a;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 20px;
+                        align-items: flex-end;
                     }
-                    .placeholder-icon {
+                    .control-group {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                    }
+                    .control-group label {
+                        font-size: 12px;
+                        color: #999;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    }
+                    select {
+                        background-color: #2a2a2a;
+                        color: #e0e0e0;
+                        border: 1px solid #444;
+                        padding: 10px 15px;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        min-width: 150px;
+                        cursor: pointer;
+                    }
+                    select:hover {
+                        border-color: #64b5f6;
+                    }
+                    select:focus {
+                        outline: none;
+                        border-color: #64b5f6;
+                        box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.2);
+                    }
+                    
+                    /* Aggregation Toggle */
+                    .aggregation-toggle {
+                        display: flex;
+                        background-color: #2a2a2a;
+                        border-radius: 4px;
+                        overflow: hidden;
+                    }
+                    .aggregation-toggle button {
+                        background-color: transparent;
+                        color: #e0e0e0;
+                        border: none;
+                        padding: 10px 20px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        transition: all 0.2s;
+                    }
+                    .aggregation-toggle button:hover {
+                        background-color: #333;
+                    }
+                    .aggregation-toggle button.active {
+                        background-color: #64b5f6;
+                        color: #121212;
+                    }
+                    
+                    /* Load Button */
+                    .btn {
+                        padding: 10px 25px;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: bold;
+                        transition: all 0.2s;
+                    }
+                    .btn-primary {
+                        background-color: #64b5f6;
+                        color: #121212;
+                    }
+                    .btn-primary:hover {
+                        background-color: #42a5f5;
+                    }
+                    .btn-primary:disabled {
+                        background-color: #424242;
+                        color: #666;
+                        cursor: not-allowed;
+                    }
+                    
+                    /* Chart Container */
+                    .chart-container {
+                        background-color: #1e1e1e;
+                        border-radius: 8px;
+                        padding: 20px;
+                        margin: 20px 0;
+                        min-height: 500px;
+                    }
+                    #chart {
+                        width: 100%;
+                        height: 500px;
+                    }
+                    
+                    /* Status Messages */
+                    .status-message {
+                        padding: 15px 20px;
+                        border-radius: 4px;
+                        margin: 20px 0;
+                        display: none;
+                    }
+                    .status-message.success {
+                        background-color: #1e1e1e;
+                        border-left: 4px solid #4caf50;
+                        color: #4caf50;
+                    }
+                    .status-message.error {
+                        background-color: #1e1e1e;
+                        border-left: 4px solid #f44336;
+                        color: #f44336;
+                    }
+                    .status-message.loading {
+                        background-color: #1e1e1e;
+                        border-left: 4px solid #64b5f6;
+                        color: #64b5f6;
+                    }
+                    .status-message.info {
+                        background-color: #1e1e1e;
+                        border-left: 4px solid #ff9800;
+                        color: #ff9800;
+                    }
+                    
+                    /* Summary Stats */
+                    .summary-stats {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 15px;
+                        margin: 20px 0;
+                    }
+                    .stat-card {
+                        background-color: #1e1e1e;
+                        padding: 15px 25px;
+                        border-radius: 8px;
+                        min-width: 150px;
+                    }
+                    .stat-value {
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: #64b5f6;
+                    }
+                    .stat-label {
+                        font-size: 12px;
+                        color: #999;
+                        text-transform: uppercase;
+                        margin-top: 5px;
+                    }
+                    
+                    /* No Data State */
+                    .no-data {
+                        text-align: center;
+                        padding: 60px 20px;
+                        color: #666;
+                    }
+                    .no-data-icon {
                         font-size: 64px;
                         margin-bottom: 20px;
-                    }
-                    .feature-list {
-                        background-color: #1e1e1e;
-                        padding: 20px 30px;
-                        margin: 20px 0;
-                        border-radius: 4px;
-                    }
-                    .feature-list ul {
-                        list-style-type: none;
-                        padding: 0;
-                    }
-                    .feature-list li {
-                        padding: 10px 0;
-                        border-bottom: 1px solid #2a2a2a;
-                    }
-                    .feature-list li:last-child {
-                        border-bottom: none;
-                    }
-                    .feature-list li::before {
-                        content: "⚡ ";
-                        color: #64b5f6;
-                        font-size: 1.2em;
-                        margin-right: 10px;
                     }
                 </style>
             </head>
             <body>
                 <nav>
                     <a href="/ui/home">← Back to Home</a>
+                    <a href="/ui/power-monitoring/ingestion">📥 Data Ingestion</a>
                 </nav>
+                
                 <h1>Power Monitoring</h1>
                 
-                <div class="info-box">
-                    <strong>Status:</strong> This page is currently under development. Power monitoring features will be added in future updates.
+                <!-- Controls -->
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Metric</label>
+                        <select id="metricSelect">
+                            <option value="running_cost">Running Cost (€)</option>
+                            <option value="energy_usage">Energy Usage (kWh)</option>
+                            <option value="time_in_use">Time in Use</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Year</label>
+                        <select id="yearSelect">
+                            <option value="2025">2025</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Month</label>
+                        <select id="monthSelect">
+                            <option value="">All Months</option>
+                            <option value="01">January</option>
+                            <option value="02">February</option>
+                            <option value="03">March</option>
+                            <option value="04">April</option>
+                            <option value="05">May</option>
+                            <option value="06">June</option>
+                            <option value="07">July</option>
+                            <option value="08">August</option>
+                            <option value="09">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Day</label>
+                        <select id="daySelect" disabled>
+                            <option value="">All Days</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>View</label>
+                        <div class="aggregation-toggle">
+                            <button data-period="monthly" class="active">Monthly</button>
+                            <button data-period="daily">Daily</button>
+                            <button data-period="hourly">Hourly</button>
+                        </div>
+                    </div>
+                    
+                    <button id="loadBtn" class="btn btn-primary">Load Data</button>
+                </div>
+                
+                <div id="statusMessage" class="status-message"></div>
+                
+                <!-- Summary Stats -->
+                <div id="summaryStats" class="summary-stats" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalValue">€0.00</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="deviceCount">0</div>
+                        <div class="stat-label">Devices</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="dataPoints">0</div>
+                        <div class="stat-label">Data Points</div>
+                    </div>
+                </div>
+                
+                <!-- Chart -->
+                <div class="chart-container">
+                    <div id="chart"></div>
+                    <div id="noData" class="no-data" style="display: none;">
+                        <div class="no-data-icon">📊</div>
+                        <p>No data available for the selected period.</p>
+                        <p>Try selecting a different date range or uploading CSV data.</p>
+                    </div>
                 </div>
 
-                <div class="placeholder-content">
-                    <div class="placeholder-icon">⚡</div>
-                    <h2>Coming Soon</h2>
-                    <p>Power monitoring and energy management features are being developed.</p>
-                </div>
-
-                <h2>Planned Features</h2>
-                <div class="feature-list">
-                    <ul>
-                        <li>Real-time power consumption monitoring</li>
-                        <li>Historical energy usage statistics and trends</li>
-                        <li>Device-level power tracking</li>
-                        <li>Energy cost calculations and billing estimates</li>
-                        <li>Smart device control and automation</li>
-                        <li>Energy usage alerts and notifications</li>
-                    </ul>
-                </div>
+                <script>
+                    // State
+                    let chart = null;
+                    let currentPeriod = 'monthly';
+                    let currentData = [];
+                    
+                    // DOM Elements
+                    const metricSelect = document.getElementById('metricSelect');
+                    const yearSelect = document.getElementById('yearSelect');
+                    const monthSelect = document.getElementById('monthSelect');
+                    const daySelect = document.getElementById('daySelect');
+                    const loadBtn = document.getElementById('loadBtn');
+                    const statusMessage = document.getElementById('statusMessage');
+                    const summaryStats = document.getElementById('summaryStats');
+                    const noDataDiv = document.getElementById('noData');
+                    const chartDiv = document.getElementById('chart');
+                    const periodButtons = document.querySelectorAll('.aggregation-toggle button');
+                    
+                    // Initialize chart
+                    function initChart() {
+                        chart = echarts.init(chartDiv);
+                        window.addEventListener('resize', () => chart.resize());
+                    }
+                    
+                    // Show status message
+                    function showMessage(message, type) {
+                        statusMessage.textContent = message;
+                        statusMessage.className = 'status-message ' + type;
+                        statusMessage.style.display = 'block';
+                        
+                        if (type !== 'loading') {
+                            setTimeout(() => {
+                                statusMessage.style.display = 'none';
+                            }, 5000);
+                        }
+                    }
+                    
+                    // Update aggregation period
+                    periodButtons.forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            periodButtons.forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            currentPeriod = btn.dataset.period;
+                            updateControlState();
+                        });
+                    });
+                    
+                    // Update control state based on selected period
+                    function updateControlState() {
+                        if (currentPeriod === 'monthly') {
+                            monthSelect.disabled = true;
+                            monthSelect.value = '';
+                            daySelect.disabled = true;
+                            daySelect.value = '';
+                        } else if (currentPeriod === 'daily') {
+                            monthSelect.disabled = false;
+                            daySelect.disabled = true;
+                            daySelect.value = '';
+                        } else if (currentPeriod === 'hourly') {
+                            monthSelect.disabled = false;
+                            daySelect.disabled = false;
+                        }
+                    }
+                    
+                    // Month change - populate days
+                    monthSelect.addEventListener('change', async () => {
+                        const year = yearSelect.value;
+                        const month = monthSelect.value;
+                        
+                        if (month) {
+                            try {
+                                const response = await fetch(\`/ui/power-monitoring/days/\${year}/\${month}\`);
+                                const data = await response.json();
+                                
+                                daySelect.innerHTML = '<option value="">All Days</option>';
+                                data.days.forEach(day => {
+                                    const option = document.createElement('option');
+                                    option.value = day;
+                                    option.textContent = parseInt(day, 10);
+                                    daySelect.appendChild(option);
+                                });
+                            } catch (error) {
+                                console.error('Error loading days:', error);
+                            }
+                        } else {
+                            daySelect.innerHTML = '<option value="">All Days</option>';
+                        }
+                    });
+                    
+                    // Load data
+                    loadBtn.addEventListener('click', loadData);
+                    
+                    async function loadData() {
+                        const metric = metricSelect.value;
+                        const year = yearSelect.value;
+                        const month = monthSelect.value;
+                        const day = daySelect.value;
+                        
+                        loadBtn.disabled = true;
+                        showMessage('Loading data...', 'loading');
+                        
+                        try {
+                            let url = \`/ui/power-monitoring/data/\${metric}/\${year}\`;
+                            const params = new URLSearchParams();
+                            
+                            if (currentPeriod === 'daily' && month) {
+                                params.append('month', month);
+                            } else if (currentPeriod === 'hourly' && month) {
+                                params.append('month', month);
+                                if (day) {
+                                    params.append('day', day);
+                                }
+                            }
+                            
+                            if (params.toString()) {
+                                url += '?' + params.toString();
+                            }
+                            
+                            const response = await fetch(url);
+                            const data = await response.json();
+                            
+                            if (response.ok && data.results) {
+                                currentData = data.results;
+                                console.log('Loaded data:', currentData);
+                                
+                                if (currentData.length === 0) {
+                                    showNoData();
+                                    showMessage('No data found for the selected period.', 'info');
+                                } else {
+                                    hideNoData();
+                                    renderChart(currentData, metric, currentPeriod);
+                                    updateSummary(currentData, metric);
+                                    showMessage(\`Loaded \${currentData.length} data points\`, 'success');
+                                }
+                            } else {
+                                showNoData();
+                                showMessage('Error loading data: ' + (data.error || 'Unknown error'), 'error');
+                            }
+                        } catch (error) {
+                            showNoData();
+                            showMessage('Error loading data: ' + error.message, 'error');
+                        } finally {
+                            loadBtn.disabled = false;
+                        }
+                    }
+                    
+                    function showNoData() {
+                        noDataDiv.style.display = 'block';
+                        chartDiv.style.display = 'none';
+                        summaryStats.style.display = 'none';
+                    }
+                    
+                    function hideNoData() {
+                        noDataDiv.style.display = 'none';
+                        chartDiv.style.display = 'block';
+                        summaryStats.style.display = 'flex';
+                    }
+                    
+                    // Render ECharts stacked bar chart
+                    function renderChart(data, metric, period) {
+                        // Get unique x-axis values based on period
+                        let xProperty;
+                        if (period === 'hourly') {
+                            xProperty = 'hour';
+                        } else if (period === 'daily') {
+                            xProperty = 'day';
+                        } else {
+                            xProperty = 'month';
+                        }
+                        
+                        const xValues = [...new Set(data.map(d => d[xProperty]))].sort();
+                        const devices = [...new Set(data.map(d => d.object))];
+                        
+                        // Calculate totals per device
+                        const totals = {};
+                        devices.forEach(device => {
+                            totals[device] = data
+                                .filter(d => d.object === device)
+                                .reduce((sum, d) => {
+                                    // Normalize to consistent unit
+                                    let value = d.value || 0;
+                                    if (d.unit === '€' || d.unit?.toUpperCase() === 'EUR') {
+                                        value = value * 100; // Convert to cents
+                                    }
+                                    return sum + value;
+                                }, 0);
+                        });
+                        
+                        // Sort devices by total (highest first)
+                        const sortedDevices = devices
+                            .filter(d => totals[d] > 0)
+                            .sort((a, b) => totals[b] - totals[a]);
+                        
+                        // Build series data
+                        const series = sortedDevices.map(device => {
+                            const deviceData = xValues.map(x => {
+                                const entries = data.filter(d => d[xProperty] === x && d.object === device);
+                                const sum = entries.reduce((total, d) => {
+                                    let value = d.value || 0;
+                                    if (d.unit === 'cents') {
+                                        value = value / 100;
+                                    }
+                                    return total + value;
+                                }, 0);
+                                return sum;
+                            });
+                            
+                            const displayTotal = (totals[device] / 100).toFixed(2);
+                            const unit = metric === 'running_cost' ? '€' : (metric === 'energy_usage' ? 'kWh' : 'hrs');
+                            
+                            return {
+                                name: humanizeName(device) + \` (\${unit}\${displayTotal})\`,
+                                type: 'bar',
+                                stack: 'total',
+                                emphasis: { focus: 'series' },
+                                data: deviceData
+                            };
+                        });
+                        
+                        // Format x-axis labels
+                        const xLabels = xValues.map(x => {
+                            if (period === 'hourly') {
+                                return x + ':00';
+                            } else if (period === 'daily') {
+                                return 'Day ' + parseInt(x, 10);
+                            } else {
+                                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                return months[parseInt(x, 10) - 1] || x;
+                            }
+                        });
+                        
+                        const option = {
+                            backgroundColor: '#1e1e1e',
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: { type: 'shadow' },
+                                backgroundColor: '#2a2a2a',
+                                borderColor: '#444',
+                                textStyle: { color: '#e0e0e0' }
+                            },
+                            legend: {
+                                type: 'scroll',
+                                orient: 'horizontal',
+                                bottom: 0,
+                                textStyle: { color: '#e0e0e0' },
+                                pageTextStyle: { color: '#e0e0e0' },
+                                pageIconColor: '#64b5f6',
+                                pageIconInactiveColor: '#666'
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '15%',
+                                top: '10%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: xLabels,
+                                axisLine: { lineStyle: { color: '#444' } },
+                                axisLabel: { color: '#999' }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                axisLine: { lineStyle: { color: '#444' } },
+                                axisLabel: { color: '#999' },
+                                splitLine: { lineStyle: { color: '#333' } }
+                            },
+                            series: series
+                        };
+                        
+                        chart.setOption(option, true);
+                    }
+                    
+                    // Humanize device name
+                    function humanizeName(name) {
+                        return name
+                            .replace(/_/g, ' ')
+                            .split(' ')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ');
+                    }
+                    
+                    // Update summary stats
+                    function updateSummary(data, metric) {
+                        const devices = [...new Set(data.map(d => d.object))];
+                        
+                        // Calculate total
+                        let total = data.reduce((sum, d) => {
+                            let value = d.value || 0;
+                            if (d.unit === '€' || d.unit?.toUpperCase() === 'EUR') {
+                                value = value * 100;
+                            }
+                            return sum + value;
+                        }, 0);
+                        
+                        // Format total based on metric
+                        let totalDisplay;
+                        if (metric === 'running_cost') {
+                            totalDisplay = '€' + (total / 100).toFixed(2);
+                        } else if (metric === 'energy_usage') {
+                            totalDisplay = (total / 100).toFixed(2) + ' kWh';
+                        } else {
+                            totalDisplay = (total / 100).toFixed(2) + ' hrs';
+                        }
+                        
+                        document.getElementById('totalValue').textContent = totalDisplay;
+                        document.getElementById('deviceCount').textContent = devices.length;
+                        document.getElementById('dataPoints').textContent = data.length;
+                    }
+                    
+                    // Initialize
+                    initChart();
+                    updateControlState();
+                    
+                    // Auto-load on page load (optional)
+                    // loadData();
+                </script>
             </body>
             </html>
         `;
