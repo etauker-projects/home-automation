@@ -1,96 +1,103 @@
-import Database from 'better-sqlite3';
 import {
     PowerDataEntry,
     PowerMetric,
-    HassStatisticsRow,
     HassEntityMeta,
     ValueUnit,
 } from './power-monitoring.interfaces.js';
 import { PowerMonitoringProcessor } from './power-monitoring.processor.js';
 
 /**
- * Configuration for the HASS SQLite connector
+ * Configuration for the HASS REST API connector.
+ * Requires a Long-Lived Access Token generated in Home Assistant
+ * (Profile → Security → Long-Lived Access Tokens).
  */
-export interface HassDbConfig {
-    dbPath: string;
-    timezone?: string;          // IANA timezone name, e.g. 'Europe/Dublin'
-    metrics?: PowerMetric[];    // Metrics to extract (default: all)
+export interface HassApiConfig {
+    baseUrl: string;         // e.g. 'http://homeassistant.local:8123'
+    token: string;           // Long-Lived Access Token
+    timezone?: string;       // IANA timezone name, e.g. 'Europe/Dublin'
+    metrics?: PowerMetric[]; // Metrics to extract (default: all)
 }
 
 /**
- * Reads power statistics directly from a Home Assistant SQLite database
- * and converts them to PowerDataEntry records compatible with the existing
- * PowerMonitoringProcessor pipeline.
+ * Raw statistics record returned by the HASS WebSocket API per statistic_id per period.
+ */
+interface HassStatisticRecord {
+    start: string;           // ISO 8601 (UTC)
+    end: string;             // ISO 8601 (UTC)
+    change: number | null;   // Delta for the period (what we want)
+    sum: number | null;      // Cumulative sum
+    mean: number | null;
+    min: number | null;
+    max: number | null;
+    state: number | null;
+    last_reset: string | null;
+}
+
+/**
+ * Reads power statistics from Home Assistant and converts them into
+ * PowerDataEntry records compatible with the existing PowerMonitoringProcessor pipeline.
  *
- * HASS stores cumulative sums in the statistics table.
- * This connector uses a LAG window function to compute hourly deltas.
+ * Entity discovery  → REST  GET /api/states
+ * Statistics query  → WebSocket  recorder/statistics_during_period
+ *   (HA does not expose long-term statistics via REST)
+ *
+ * Requires a Long-Lived Access Token generated in Home Assistant
+ * (Profile → Security → Long-Lived Access Tokens).
  */
 export class PowerMonitoringHassConnector {
 
-    private db: Database.Database;
+    private baseUrl: string;
+    private token: string;
     private timezone: string;
     private metrics: PowerMetric[];
 
-    // SQL: query hourly statistics with per-entity delta computation.
-    // We extend the start range by 1 hour so that the first row in the
-    // desired window always has a LAG value, then filter that prefix out.
-    private static readonly DELTA_QUERY = `
-        WITH extended AS (
-            SELECT
-                s.id,
-                sm.statistic_id,
-                s.start_ts,
-                s.sum,
-                sm.unit_of_measurement AS unit
-            FROM statistics s
-            JOIN statistics_meta sm ON s.metadata_id = sm.id
-            WHERE s.start_ts >= @extended_start_ts
-              AND s.start_ts < @end_ts
-              AND s.sum IS NOT NULL
-        ),
-        with_delta AS (
-            SELECT
-                id,
-                statistic_id,
-                start_ts,
-                COALESCE(
-                    sum - LAG(sum) OVER (PARTITION BY statistic_id ORDER BY start_ts),
-                    0
-                ) AS delta,
-                unit
-            FROM extended
-        )
-        SELECT * FROM with_delta
-        WHERE start_ts >= @start_ts
-          AND delta >= 0
-        ORDER BY start_ts, statistic_id
-    `;
-
-    private static readonly ENTITIES_QUERY = `
-        SELECT id, statistic_id, unit_of_measurement AS unit, source
-        FROM statistics_meta
-        ORDER BY statistic_id
-    `;
-
-    constructor(config: HassDbConfig) {
-        this.db = new Database(config.dbPath, { readonly: true });
+    constructor(config: HassApiConfig) {
+        // Normalise base URL (strip trailing slash)
+        this.baseUrl = config.baseUrl.replace(/\/+$/, '');
+        this.token = config.token;
         this.timezone = config.timezone ?? 'Europe/Dublin';
         this.metrics = config.metrics ?? ['running_cost', 'energy_usage', 'time_in_use'];
     }
 
+    // ─── Public API ───────────────────────────────────────────────────────────
+
     /**
-     * List all entities available in the HASS statistics_meta table,
-     * annotated with parsed metric/object/period where applicable.
+     * List sensor entities available in Home Assistant that match known
+     * power metrics, annotated with parsed metric/object/period.
+     *
+     * Uses GET /api/states and filters for sensors matching metric patterns.
      */
-    listEntities(): HassEntityMeta[] {
-        const rows = this.db.prepare(PowerMonitoringHassConnector.ENTITIES_QUERY).all() as any[];
-        return rows.map(row => {
-            const parsed = PowerMonitoringProcessor.parseStatisticId(row.statistic_id, this.metrics);
+    async listEntities(): Promise<HassEntityMeta[]> {
+        const url = `${this.baseUrl}/api/states`;
+        const response = await fetch(url, { headers: this.headers() });
+
+        if (!response.ok) {
+            throw new Error(
+                `HASS API error listing entities: ${response.status} ${response.statusText}`
+            );
+        }
+
+        const states = (await response.json()) as Array<{
+            entity_id: string;
+            attributes?: { unit_of_measurement?: string };
+        }>;
+
+        // Keep only sensor entities whose ID contains one of our tracked metrics
+        const matching = states.filter(s =>
+            s.entity_id.startsWith('sensor.') &&
+            this.metrics.some(m => s.entity_id.includes(m))
+        );
+
+        return matching.map((state, idx) => {
+            const parsed = PowerMonitoringProcessor.parseStatisticId(
+                state.entity_id,
+                this.metrics
+            );
             return {
-                id: row.id,
-                statistic_id: row.statistic_id,
-                unit: row.unit ?? '',
-                source: row.source ?? '',
+                id:           idx,
+                statistic_id: state.entity_id,
+                unit:         state.attributes?.unit_of_measurement ?? '',
+                source:       'api',
                 parsedMetric: parsed.metric,
                 parsedObject: parsed.object || undefined,
                 parsedPeriod: parsed.period,
@@ -101,53 +108,164 @@ export class PowerMonitoringHassConnector {
     /**
      * Extract PowerDataEntry records for a given date range.
      *
-     * @param startDate - Inclusive start date/time in local timezone (ISO string or Date)
-     * @param endDate   - Exclusive end date/time in local timezone (ISO string or Date)
+     * Uses the Home Assistant WebSocket API (`recorder/statistics_during_period`)
+     * because there is no equivalent REST endpoint for long-term statistics.
+     *
+     * @param startDate - Inclusive start date/time
+     * @param endDate   - Exclusive end date/time
      */
-    extractEntries(startDate: Date, endDate: Date): PowerDataEntry[] {
-        const startTs   = Math.floor(startDate.getTime() / 1000);
-        const endTs     = Math.floor(endDate.getTime() / 1000);
-        const extendedStartTs = startTs - 3600; // 1 hour before to feed LAG
+    async extractEntries(startDate: Date, endDate: Date): Promise<PowerDataEntry[]> {
+        // Resolve the entity IDs we care about
+        const entities = await this.listEntities();
+        if (entities.length === 0) {
+            console.warn('[HassConnector] No matching entities found — check metric patterns and HASS token permissions.');
+            return [];
+        }
 
-        const rows = this.db.prepare(PowerMonitoringHassConnector.DELTA_QUERY).all({
-            start_ts:          startTs,
-            end_ts:            endTs,
-            extended_start_ts: extendedStartTs,
-        }) as HassStatisticsRow[];
+        const statIds = entities.map(e => e.statistic_id);
+
+        // Fetch statistics via the WebSocket API
+        // (HA does not expose a REST endpoint for long-term statistics)
+        const data = await this.queryStatisticsViaWebSocket(startDate, endDate, statIds);
 
         const entries: PowerDataEntry[] = [];
 
-        for (const row of rows) {
-            // Only process entities matching known power metrics
-            const parsed = PowerMonitoringProcessor.parseStatisticId(row.statistic_id, this.metrics);
-            if (!parsed.metric || !parsed.object || !parsed.period) {
-                continue;
+        for (const [statId, records] of Object.entries(data)) {
+            const parsed = PowerMonitoringProcessor.parseStatisticId(statId, this.metrics);
+            if (!parsed.metric || !parsed.object || !parsed.period) continue;
+
+            const entity = entities.find(e => e.statistic_id === statId);
+            const unit   = this.normalizeUnit(entity?.unit ?? '');
+
+            for (const record of records) {
+                const change = record.change ?? 0;
+                if (change < 0) continue; // discard negative deltas (resets / anomalies)
+
+                const timeParts = this.formatTimestamp(new Date(record.start));
+
+                entries.push({
+                    id:                 `${statId}-${record.start}`,
+                    value:              this.roundToTwoDecimals(change),
+                    unit,
+                    year:               timeParts.year,
+                    month:              timeParts.month,
+                    day:                timeParts.day,
+                    hour:               timeParts.hour,
+                    metric:             parsed.metric,
+                    object:             parsed.object,
+                    aggregation_period: parsed.period,
+                });
             }
-
-            // Convert UTC unix timestamp to local time parts
-            const timeParts = this.formatTimestamp(row.start_ts);
-
-            entries.push({
-                id:                 String(row.id),
-                value:              this.roundToTwoDecimals(row.delta),
-                unit:               this.normalizeUnit(row.unit),
-                year:               timeParts.year,
-                month:              timeParts.month,
-                day:                timeParts.day,
-                hour:               timeParts.hour,
-                metric:             parsed.metric,
-                object:             parsed.object,
-                aggregation_period: parsed.period,
-            });
         }
 
         return entries;
     }
 
     /**
+     * Query Home Assistant long-term statistics using the WebSocket API.
+     *
+     * HA WebSocket protocol:
+     *  1. Connect to ws(s)://{host}/api/websocket
+     *  2. Server sends {"type":"auth_required"}
+     *  3. Client sends {"type":"auth","access_token":"..."}
+     *  4. Server sends {"type":"auth_ok"} or {"type":"auth_invalid"}
+     *  5. Client sends {"id":N,"type":"recorder/statistics_during_period",...}
+     *  6. Server sends {"id":N,"type":"result","success":true,"result":{...}}
+     */
+    private queryStatisticsViaWebSocket(
+        startDate: Date,
+        endDate: Date,
+        statIds: string[]
+    ): Promise<Record<string, HassStatisticRecord[]>> {
+
+        const wsUrl = this.baseUrl
+            .replace(/^https:\/\//, 'wss://')
+            .replace(/^http:\/\//, 'ws://') + '/api/websocket';
+
+        return new Promise((resolve, reject) => {
+            const ws = new WebSocket(wsUrl);
+            const queryId = 1;
+            let settled = false;
+
+            /** Close the socket and resolve/reject exactly once. */
+            const finish = (result: Record<string, HassStatisticRecord[]> | Error): void => {
+                if (settled) return;
+                settled = true;
+                if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                    ws.close();
+                }
+                if (result instanceof Error) {
+                    reject(result);
+                } else {
+                    resolve(result);
+                }
+            };
+
+            // Hard timeout — prevents the promise from hanging forever
+            const timer = setTimeout(
+                () => finish(new Error('[HassConnector] WebSocket statistics query timed out after 30 s')),
+                30_000
+            );
+
+            ws.addEventListener('error', () => {
+                clearTimeout(timer);
+                finish(new Error(`[HassConnector] WebSocket connection error (url: ${wsUrl})`));
+            });
+
+            ws.addEventListener('message', (event: MessageEvent) => {
+                let msg: Record<string, unknown>;
+                try {
+                    msg = JSON.parse(event.data as string) as Record<string, unknown>;
+                } catch {
+                    return; // ignore non-JSON frames
+                }
+
+                switch (msg['type']) {
+
+                    case 'auth_required':
+                        ws.send(JSON.stringify({ type: 'auth', access_token: this.token }));
+                        break;
+
+                    case 'auth_ok':
+                        // Authenticated — issue the statistics query
+                        ws.send(JSON.stringify({
+                            id:            queryId,
+                            type:          'recorder/statistics_during_period',
+                            start_time:    startDate.toISOString(),
+                            end_time:      endDate.toISOString(),
+                            statistic_ids: statIds,
+                            period:        'hour',
+                            types:         ['change'],
+                        }));
+                        break;
+
+                    case 'auth_invalid':
+                        clearTimeout(timer);
+                        finish(new Error(
+                            `[HassConnector] WebSocket auth rejected: ${msg['message'] ?? 'unknown reason'}`
+                        ));
+                        break;
+
+                    case 'result':
+                        if (msg['id'] !== queryId) break; // belongs to a different command
+                        clearTimeout(timer);
+                        if (msg['success'] === true) {
+                            finish(msg['result'] as Record<string, HassStatisticRecord[]>);
+                        } else {
+                            finish(new Error(
+                                `[HassConnector] WebSocket query failed: ${JSON.stringify(msg['error'])}`
+                            ));
+                        }
+                        break;
+                }
+            });
+        });
+    }
+
+    /**
      * Convenience method: extract all entries for a full year.
      */
-    extractYear(year: string): PowerDataEntry[] {
+    async extractYear(year: string): Promise<PowerDataEntry[]> {
         const start = new Date(`${year}-01-01T00:00:00`);
         const end   = new Date(`${parseInt(year) + 1}-01-01T00:00:00`);
         return this.extractEntries(start, end);
@@ -156,10 +274,9 @@ export class PowerMonitoringHassConnector {
     /**
      * Convenience method: extract all entries for a calendar month.
      */
-    extractMonth(year: string, month: string): PowerDataEntry[] {
+    async extractMonth(year: string, month: string): Promise<PowerDataEntry[]> {
         const paddedMonth = month.padStart(2, '0');
         const start = new Date(`${year}-${paddedMonth}-01T00:00:00`);
-        // First day of next month
         const nextMonth = (parseInt(month) % 12) + 1;
         const nextYear  = nextMonth === 1 ? parseInt(year) + 1 : parseInt(year);
         const end = new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00`);
@@ -169,7 +286,7 @@ export class PowerMonitoringHassConnector {
     /**
      * Convenience method: extract all entries for a single day.
      */
-    extractDay(year: string, month: string, day: string): PowerDataEntry[] {
+    async extractDay(year: string, month: string, day: string): Promise<PowerDataEntry[]> {
         const paddedMonth = month.padStart(2, '0');
         const paddedDay   = day.padStart(2, '0');
         const start = new Date(`${year}-${paddedMonth}-${paddedDay}T00:00:00`);
@@ -179,24 +296,30 @@ export class PowerMonitoringHassConnector {
     }
 
     /**
-     * Close the database connection.
+     * No-op: kept for interface compatibility (no database connection to close).
      */
     close(): void {
-        this.db.close();
+        // Nothing to close — HTTP connections are stateless
     }
 
     // ─── Private Helpers ─────────────────────────────────────────────────────
 
     /**
-     * Convert a Unix timestamp (seconds, UTC) to local date/time parts
-     * using the configured IANA timezone.
+     * Build the Authorization header for all HASS API requests.
      */
-    private formatTimestamp(ts: number): {
+    private headers(): Record<string, string> {
+        return {
+            Authorization:  `Bearer ${this.token}`,
+            'Content-Type': 'application/json',
+        };
+    }
+
+    /**
+     * Convert a Date to local date/time parts using the configured IANA timezone.
+     */
+    private formatTimestamp(date: Date): {
         year: string; month: string; day: string; hour: string;
     } {
-        const date = new Date(ts * 1000);
-
-        // Use Intl.DateTimeFormat to get parts in the target timezone
         const formatter = new Intl.DateTimeFormat('en', {
             timeZone: this.timezone,
             year:     'numeric',
@@ -226,13 +349,12 @@ export class PowerMonitoringHassConnector {
 
     /**
      * Normalise HASS unit strings to our ValueUnit type.
-     * HASS may return 'EUR', '€', 'kWh', 'h', 'min', etc.
      */
     private normalizeUnit(unit: string): ValueUnit {
         switch (unit?.toLowerCase()) {
             case 'eur':
             case '€':
-                return 'cents'; // HASS stores cost in the configured currency; we expose as cents
+                return 'cents';
             case 'kwh':
                 return 'kWh';
             case 'h':
@@ -243,7 +365,7 @@ export class PowerMonitoringHassConnector {
             case 'minutes':
                 return 'minutes';
             default:
-                return 'cents'; // safe fallback
+                return 'cents';
         }
     }
 

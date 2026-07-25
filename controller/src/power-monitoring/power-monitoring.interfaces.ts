@@ -109,3 +109,26 @@ export interface PowerDataQuery {
     month?: string;
     day?: string;
 }
+
+/**
+ * Entity metadata from HASS (from /api/states or statistics_meta)
+ */
+export interface HassEntityMeta {
+    id: number;
+    statistic_id: string;
+    unit: string;
+    source: string;
+    parsedMetric?: PowerMetric | null;
+    parsedObject?: string;
+    parsedPeriod?: AggregationPeriod | null;
+}
+
+/**
+ * Summary of a sync operation from HASS DB
+ */
+export interface SyncResult {
+    entriesExtracted: number;
+    filesWritten: number;
+    dateRange: { from: string; to: string };
+    errors: string[];
+}

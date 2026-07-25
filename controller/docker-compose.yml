@@ -39,9 +39,8 @@ services:
     labels:
       - "app=home-automation-controller"
       - "environment=development"
-    # Uncomment if you need to access host services
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Production Service
   controller-prod:
@@ -78,6 +77,8 @@ services:
     labels:
       - "app=home-automation-controller"
       - "environment=production"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Uncomment for production health monitoring
     # healthcheck:
     #   test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/status', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]

@@ -67,48 +67,74 @@ export class PowerMonitoringProcessor {
         const csv = readFileSync(filepath, 'utf-8');
         const entries = this.parseCsv(csv);
 
-        // Extract unique time periods
-        const days = [...new Set(entries.map(e => e.day))].sort();
-        const hours = [...new Set(entries.map(e => e.hour))].sort();
-        
-        // Get year and month from first entry (assuming single-month files)
-        const firstEntry = entries[0];
-        if (!firstEntry) {
+        if (entries.length === 0) {
             console.warn(`No valid entries in file: ${filepath}`);
             return [];
         }
 
-        const year = firstEntry.year;
-        const month = firstEntry.month;
+        const inputFilename = basename(filepath).replace('.csv', '');
+        return this.processEntries(entries, inputFilename);
+    }
 
-        // Process all aggregation levels
-        const outputs: ProcessingOutput[] = [
-            this.processMonthlyEntries(year, month, entries),
-            ...days.flatMap(day => [
-                this.processDailyEntries(year, month, day, entries),
-                ...hours.flatMap(hour => 
-                    this.processHourlyEntries(year, month, day, hour, entries)
-                ),
-            ]),
-        ];
+    /**
+     * Process a set of already-parsed PowerDataEntry records.
+     * Called by processFile() (after CSV parsing) and by the HASS connector.
+     * Groups entries by year-month, produces hourly/daily/monthly JSON files,
+     * and writes a metadata file labelled by sourceLabel.
+     */
+    async processEntries(entries: PowerDataEntry[], sourceLabel: string): Promise<ProcessingOutput[]> {
+        if (entries.length === 0) {
+            console.warn(`No entries to process for source: ${sourceLabel}`);
+            return [];
+        }
 
-        // Write processed files
-        const metadata: Array<{ filename: string; metadata: ProcessingStats['general'] }> = [];
-        
-        for (const output of outputs) {
+        // Group by year-month to handle data spanning multiple months
+        const monthMap = new Map<string, PowerDataEntry[]>();
+        for (const entry of entries) {
+            const key = `${entry.year}-${entry.month}`;
+            if (!monthMap.has(key)) monthMap.set(key, []);
+            monthMap.get(key)!.push(entry);
+        }
+
+        const allOutputs: ProcessingOutput[] = [];
+
+        for (const [, monthEntries] of monthMap) {
+            const first = monthEntries[0];
+            const year = first.year;
+            const month = first.month;
+
+            const days  = [...new Set(monthEntries.map(e => e.day))].sort();
+            const hours = [...new Set(monthEntries.map(e => e.hour))].sort();
+
+            const outputs: ProcessingOutput[] = [
+                this.processMonthlyEntries(year, month, monthEntries),
+                ...days.flatMap(day => [
+                    this.processDailyEntries(year, month, day, monthEntries),
+                    ...hours.flatMap(hour =>
+                        this.processHourlyEntries(year, month, day, hour, monthEntries)
+                    ),
+                ]),
+            ];
+
+            allOutputs.push(...outputs);
+        }
+
+        // Write processed JSON files
+        const metadataSummary: Array<{ filename: string; metadata: ProcessingStats['general'] }> = [];
+
+        for (const output of allOutputs) {
             if (output.data.length > 0) {
                 const outputPath = resolve(this.processedDir, `${output.filename}.json`);
                 writeFileSync(outputPath, JSON.stringify(output.data), 'utf-8');
             }
-            metadata.push({ filename: output.filename, metadata: output.metadata.general });
+            metadataSummary.push({ filename: output.filename, metadata: output.metadata.general });
         }
 
         // Write metadata file
-        const inputFilename = basename(filepath).replace('.csv', '');
-        const metadataPath = resolve(this.metadataDir, `${inputFilename}.json`);
-        writeFileSync(metadataPath, JSON.stringify(metadata), 'utf-8');
+        const metadataPath = resolve(this.metadataDir, `${sourceLabel}.json`);
+        writeFileSync(metadataPath, JSON.stringify(metadataSummary), 'utf-8');
 
-        return outputs;
+        return allOutputs;
     }
 
     /**
@@ -179,37 +205,56 @@ export class PowerMonitoringProcessor {
     }
 
     /**
+     * Parse a statistic_id string into its component parts.
+     * Shared by both the CSV processor and the HASS DB connector.
+     *
+     * Example: "sensor.kitchen_kettle_plug_running_cost_hourly"
+     *   → { metric: 'running_cost', object: 'kitchen_kettle_plug', period: 'hourly' }
+     */
+    public static parseStatisticId(
+        entityId: string,
+        metrics: PowerMetric[] = ['running_cost', 'energy_usage', 'time_in_use']
+    ): { metric: PowerMetric | null; object: string; period: AggregationPeriod | null } {
+        let metric: PowerMetric | null = null;
+        for (const m of metrics) {
+            if (entityId.includes(m)) {
+                metric = m;
+                break;
+            }
+        }
+
+        if (!metric) return { metric: null, object: '', period: null };
+
+        const prefix = entityId.split('.')[0];
+        const metricIndex = entityId.indexOf(metric);
+        const object = entityId.substring(prefix.length + 1, metricIndex - 1);
+
+        const suffix = entityId.substring(metricIndex + metric.length + 1);
+        const period: AggregationPeriod | null =
+            suffix === 'hourly' || suffix === 'daily' || suffix === 'monthly' ? suffix : null;
+
+        return { metric, object, period };
+    }
+
+    /**
      * Extract metric from entity ID
      */
     private extractMetric(entityId: string): PowerMetric | null {
-        for (const metric of this.config.metrics) {
-            if (entityId.includes(metric)) {
-                return metric;
-            }
-        }
-        return null;
+        return PowerMonitoringProcessor.parseStatisticId(entityId, this.config.metrics).metric;
     }
 
     /**
      * Extract object (device) name from entity ID
      */
-    private extractObject(entityId: string, metric: string | null): string {
-        if (!metric) return '';
-        const prefix = entityId.split('.')[0];
-        const metricIndex = entityId.indexOf(metric);
-        return entityId.substring(prefix.length + 1, metricIndex - 1);
+    private extractObject(entityId: string, _metric: string | null): string {
+        return PowerMonitoringProcessor.parseStatisticId(entityId, this.config.metrics).object;
     }
 
     /**
      * Extract aggregation period from entity ID
      */
-    private extractAggregationPeriod(entityId: string, metric: string | null): AggregationPeriod | null {
-        if (!metric) return null;
-        const suffix = entityId.substring(entityId.indexOf(metric) + metric.length + 1);
-        if (suffix === 'hourly' || suffix === 'daily' || suffix === 'monthly') {
-            return suffix;
-        }
-        return null;
+    private extractAggregationPeriod(entityId: string, _metric: string | null): AggregationPeriod | null {
+        return PowerMonitoringProcessor.parseStatisticId(entityId, this.config.metrics).period;
     }
 
     /**
