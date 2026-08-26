@@ -264,26 +264,26 @@ services:
   #     - production
   #     - entertainment
 
-  homepage:
-    image: ghcr.io/gethomepage/homepage:latest
-    container_name: homepage
-    restart: unless-stopped
-    profiles: [ production ]
-    # network_mode: host
-    ports:
-      - 3000:3000
-    volumes:
-      - ./data/homepage/config:/app/config
-      - ./data/homepage/resources:/app/public/resources
-      # - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations
-    environment:
-      HOMEPAGE_ALLOWED_HOSTS: 192.168.5.2:3000
-      # PORT: 3000
-    networks:
-      - proxy
-    labels:
-      - production
-      - automation
+  # homepage:
+  #   image: ghcr.io/gethomepage/homepage:latest
+  #   container_name: homepage
+  #   restart: unless-stopped
+  #   profiles: [ production ]
+  #   # network_mode: host
+  #   ports:
+  #     - 3000:3000
+  #   volumes:
+  #     - ./data/homepage/config:/app/config
+  #     - ./data/homepage/resources:/app/public/resources
+  #     # - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations
+  #   environment:
+  #     HOMEPAGE_ALLOWED_HOSTS: 192.168.5.2:3000
+  #     # PORT: 3000
+  #   networks:
+  #     - proxy
+  #   labels:
+  #     - production
+  #     - automation
 
   nginxproxymanager:
     image: 'jc21/nginx-proxy-manager:latest'

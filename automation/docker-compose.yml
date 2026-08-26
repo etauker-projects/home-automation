@@ -27,9 +27,10 @@ services:
     ports:
       - "443:443"
       - "80:80"
+      # - "2019:2019" # Caddy Admin API
 
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:2
     container_name: uptime-kuma
     restart: unless-stopped
     network_mode: host
@@ -237,8 +238,10 @@ services:
       - ../data/homepage/resources:/app/public/resources
       # - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations
     environment:
-      HOMEPAGE_ALLOWED_HOSTS: 192.168.5.2,dash.home
+      HOMEPAGE_ALLOWED_HOSTS: 192.168.5.2,home.automation.etauker.com,homepage.automation.etauker.com
       # PORT: 80
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     labels:
       - production
       - automation

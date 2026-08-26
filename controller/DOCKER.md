@@ -93,6 +93,9 @@ docker compose down -v
 
 # Build specific service
 docker compose build controller-dev
+
+# Clean up docker objects
+docker system prune --volumes
 ```
 
 ## Security Notes

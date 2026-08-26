@@ -298,36 +298,33 @@ uiRouter.post('/power-monitoring/sync', async (req, res) => {
     try {
         const now = new Date();
         console.log(`[power-monitoring/sync] Request body:`, req.body);
+
         const year  = (req.body?.year  as string) ?? String(now.getFullYear());
         const month = (req.body?.month as string) ?? String(now.getMonth() + 1).padStart(2, '0');
         const day   = (req.body?.day   as string) ?? undefined;
-
         console.log(`[power-monitoring/sync] Syncing from HASS API: year=${year} month=${month} day=${day ?? 'all'}`);
 
-        // Extract entries from the HASS REST API
         const entries = day
             ? await hassConnector.extractDay(year, month, day)
             : await hassConnector.extractMonth(year, month);
+        console.log(`[power-monitoring/sync] Extracted ${entries.length} entries from HASS API`, entries);
 
-        console.log(`[power-monitoring/sync] Extracted ${entries.length} entries from HASS API`);
-
-        // Feed entries through the existing processor (writes JSON files to processedDir)
         const sourceLabel = day
             ? `hass-sync-${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
             : `hass-sync-${year}-${month.padStart(2, '0')}`;
 
-        const outputs = await powerProcessor.processEntries(entries, sourceLabel);
+        const outputs = await powerProcessor.saveEntries(entries, sourceLabel);
 
         const filesWritten = outputs.filter(o => o.data.length > 0).length;
         console.log(`[power-monitoring/sync] Wrote ${filesWritten} processed files`);
 
         res.json({
-            success:         true,
+            success: true,
             entriesExtracted: entries.length,
             filesWritten,
             dateRange: {
                 from: day ? `${year}-${month}-${day}` : `${year}-${month}-01`,
-                to:   day ? `${year}-${month}-${day}` : `${year}-${month} (end)`,
+                to: day ? `${year}-${month}-${day}` : `${year}-${month} (end)`,
             },
         });
     } catch (error) {
