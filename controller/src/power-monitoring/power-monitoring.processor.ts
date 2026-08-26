@@ -137,6 +137,134 @@ export class PowerMonitoringProcessor {
         return allOutputs;
     }
 
+    private formatFilename(entry: PowerDataEntry): string {
+        if (entry.aggregation_period === 'monthly') {
+            return `${entry.year}.${entry.metric}.${entry.aggregation_period}`;
+        } else if (entry.aggregation_period === 'daily') {
+            return `${entry.year}-${entry.month}.${entry.metric}.${entry.aggregation_period}`;
+        } else if (entry.aggregation_period === 'hourly') {
+            return `${entry.year}-${entry.month}-${entry.day}.${entry.metric}.${entry.aggregation_period}`;
+        } else {
+            console.error(`Unknown aggregation period: ${entry.aggregation_period}`);
+            return 'processing-errors.json';
+        }
+    }
+
+    // private formatFilename(entry: PowerDataEntry): string {
+    //     if (entry.aggregation_period === 'monthly') {
+    //         return `${entry.year}.${entry.metric}.${entry.aggregation_period}.json`;
+    //     } else if (entry.aggregation_period === 'daily') {
+    //         return `${entry.year}-${entry.month}.${entry.metric}.${entry.aggregation_period}.json`;
+    //     } else if (entry.aggregation_period === 'hourly') {
+    //         return `${entry.year}-${entry.month}-${entry.day}.${entry.metric}.${entry.aggregation_period}.json`;
+    //     } else {
+    //         console.error(`Unknown aggregation period: ${entry.aggregation_period}`);
+    //         return 'processing-errors.json';
+    //     }
+    // }
+
+    /**
+     * Save a set of already-parsed PowerDataEntry records.
+     */
+    async saveEntries(entries: PowerDataEntry[], sourceLabel: string): Promise<ProcessingOutput[]> {
+        if (entries.length === 0) {
+            console.warn(`No entries to process for source: ${sourceLabel}`);
+            return [];
+        }
+
+        const groups = entries.reduce((acc, entry) => {
+            const filename = this.formatFilename(entry);
+            acc[filename] = acc[filename] || [];
+            acc[filename].push(entry);
+            return acc;
+        }, {} as { [key: string]: PowerDataEntry[] });
+
+        // Write processed JSON files
+        const metadataSummary: Array<{ filename: string; metadata: ProcessingStats['general'] }> = [];
+        const allOutputs: ProcessingOutput[] = [];
+
+        for (const filename of Object.keys(groups)) {
+            const filepath = resolve(this.processedDir, `${filename}.json`);
+
+            let content: PowerDataEntry[] = [];
+            
+            try {
+                content = JSON.parse(readFileSync(filepath, 'utf-8'));
+            } catch (err) {
+                content = [];
+            }
+
+            const index = content.findIndex((e: PowerDataEntry) => e.id === groups[filename][0].id);
+            if (index !== -1) {
+                content.splice(index, groups[filename].length, ...groups[filename]);
+            } else {
+                content.push(...groups[filename]);
+            }
+
+            if (filename.includes('monthly')) {
+                content.sort((a, b) => a.month.localeCompare(b.month));
+            } else if (filename.includes('daily')) {
+                content.sort((a, b) => a.day.localeCompare(b.day));
+            } else if (filename.includes('hourly')) {
+                content.sort((a, b) => a.hour.localeCompare(b.hour));
+            }
+
+            writeFileSync(filepath, JSON.stringify(content), 'utf-8');
+
+            // const group = groups[filename];
+            // const output = this.createProcessingOutput(group);
+            // metadataSummary.push({ filename: output.filename, metadata: output.metadata.general });
+        }
+
+        // // Group by year-month to handle data spanning multiple months
+        // const monthMap = new Map<string, PowerDataEntry[]>();
+        // for (const entry of entries) {
+        //     const key = `${entry.year}-${entry.month}`;
+        //     if (!monthMap.has(key)) monthMap.set(key, []);
+        //     monthMap.get(key)!.push(entry);
+        // }
+
+        // const allOutputs: ProcessingOutput[] = [];
+
+        // for (const [, monthEntries] of monthMap) {
+        //     const first = monthEntries[0];
+        //     const year = first.year;
+        //     const month = first.month;
+
+        //     const days  = [...new Set(monthEntries.map(e => e.day))].sort();
+        //     const hours = [...new Set(monthEntries.map(e => e.hour))].sort();
+
+        //     const outputs: ProcessingOutput[] = [
+        //         this.processMonthlyEntries(year, month, monthEntries),
+        //         ...days.flatMap(day => [
+        //             this.processDailyEntries(year, month, day, monthEntries),
+        //             ...hours.flatMap(hour =>
+        //                 this.processHourlyEntries(year, month, day, hour, monthEntries)
+        //             ),
+        //         ]),
+        //     ];
+
+        //     allOutputs.push(...outputs);
+        // }
+
+        
+
+        // for (const output of allOutputs) {
+        //     if (output.data.length > 0) {
+        //         const outputPath = resolve(this.processedDir, `${output.filename}.json`);
+        //         writeFileSync(outputPath, JSON.stringify(output.data), 'utf-8');
+        //     }
+        //     metadataSummary.push({ filename: output.filename, metadata: output.metadata.general });
+        // }
+
+        // Write metadata file
+        const metadataPath = resolve(this.metadataDir, `${sourceLabel}.json`);
+        writeFileSync(metadataPath, JSON.stringify(metadataSummary), 'utf-8');
+
+        return allOutputs;
+        // return [];
+    }
+
     /**
      * Parse CSV content into PowerDataEntry array
      */
@@ -446,3 +574,4 @@ export class PowerMonitoringProcessor {
         };
     }
 }
+

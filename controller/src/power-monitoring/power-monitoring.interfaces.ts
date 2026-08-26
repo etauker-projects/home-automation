@@ -11,7 +11,7 @@ export type AggregationPeriod = 'hourly' | 'daily' | 'monthly';
 /**
  * Unit of measurement for values
  */
-export type ValueUnit = 'cents' | '€' | 'EUR' | 'kWh' | 'hours' | 'minutes';
+export type ValueUnit = 'cents' | '€' | 'EUR' | 'kWh' | 'hours' | 'minutes' | 'unknown';
 
 /**
  * Raw CSV entry from Home Assistant export

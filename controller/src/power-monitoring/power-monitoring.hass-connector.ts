@@ -127,7 +127,7 @@ export class PowerMonitoringHassConnector {
         // Fetch statistics via the WebSocket API
         // (HA does not expose a REST endpoint for long-term statistics)
         const data = await this.queryStatisticsViaWebSocket(startDate, endDate, statIds);
-        console.log(`[HassConnector] Retrieved statistics for ${Object.keys(data).length} entities.`, data);
+        console.log(`[HassConnector] Retrieved statistics for ${Object.keys(data).length} entities.`);
 
         const entries: PowerDataEntry[] = [];
 
@@ -136,17 +136,17 @@ export class PowerMonitoringHassConnector {
             if (!parsed.metric || !parsed.object || !parsed.period) continue;
 
             const entity = entities.find(e => e.statistic_id === statId);
-            const unit   = this.normalizeUnit(entity?.unit ?? '');
-
+            
             for (const record of records) {
                 const change = record.change ?? 0;
                 if (change < 0) continue; // discard negative deltas (resets / anomalies)
-
+                
+                const { unit, value }   = this.normalizeUnit(change, entity?.unit ?? '');
                 const timeParts = this.formatTimestamp(new Date(record.start));
 
                 entries.push({
                     id:                 `${statId}-${record.start}`,
-                    value:              this.roundToTwoDecimals(change),
+                    value:              this.roundToTwoDecimals(value),
                     unit,
                     year:               timeParts.year,
                     month:              timeParts.month,
@@ -236,7 +236,7 @@ export class PowerMonitoringHassConnector {
                             end_time:      endDate.toISOString(),
                             statistic_ids: statIds,
                             period:        'hour',
-                            types:         ['change'],
+                            types:         ['change'], // change, last_reset, max, mean, min, state, or sum
                         }));
                         break;
 
@@ -351,22 +351,22 @@ export class PowerMonitoringHassConnector {
     /**
      * Normalise HASS unit strings to our ValueUnit type.
      */
-    private normalizeUnit(unit: string): ValueUnit {
+    private normalizeUnit(value: number, unit: string): { unit: ValueUnit; value: number } {
         switch (unit?.toLowerCase()) {
             case 'eur':
             case '€':
-                return 'cents';
+                return { unit: 'cents', value: value * 100 };
             case 'kwh':
-                return 'kWh';
+                return { unit: 'kWh', value };
             case 'h':
             case 'hr':
             case 'hours':
-                return 'hours';
+                return { unit: 'hours', value };
             case 'min':
             case 'minutes':
-                return 'minutes';
+                return { unit: 'minutes', value };
             default:
-                return 'cents';
+                return { unit: 'unknown', value };
         }
     }
 
