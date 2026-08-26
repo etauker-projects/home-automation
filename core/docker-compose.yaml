@@ -1,0 +1,12 @@
+services:
+  hello-core:
+    image: crccheck/hello-world
+    container_name: hello-core
+    networks:
+      - proxy
+    environment:
+     - PORT=5000
+
+networks:
+  proxy:
+    name: proxy
