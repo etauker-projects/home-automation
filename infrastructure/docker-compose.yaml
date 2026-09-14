@@ -1,0 +1,93 @@
+services:
+
+  hello-infra:
+    image: crccheck/hello-world
+    container_name: hello-infra
+    networks:
+      - proxy
+    environment:
+     - PORT=4001
+
+  caddy:
+    build: .
+    container_name: caddy
+    restart: unless-stopped
+    # command: ["caddy", "run", "--watch"]
+    env_file:
+      - ./caddy.env
+    volumes:
+      - ../data/infra/caddy/conf:/etc/caddy
+      # - ../data/caddy/site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      proxy:
+      tailscale:
+        ipv4_address: 50.50.0.11
+    ports:
+      - "443:443"
+      - "80:80"
+      # - "2019:2019" # Caddy Admin API
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    hostname: home-tailscale
+    env_file:
+      - ./tailscale.env
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      # Make these Docker IPs reachable from the tailnet.
+      TS_ROUTES: 50.50.0.11/32,50.50.0.13/32
+    volumes:
+      - ../data/infra/tailscale/state:/var/lib/tailscale
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      tailscale:
+        ipv4_address: 50.50.0.12
+    restart: unless-stopped
+
+  coredns:
+    image: coredns/coredns:latest
+    container_name: coredns
+    command: -conf /etc/coredns/Corefile
+    volumes:
+      - ../data/infra/coredns/Corefile:/etc/coredns/Corefile:ro
+    networks:
+      tailscale:
+        ipv4_address: 50.50.0.13
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PORT=4002
+    volumes:
+      - ../data/infra/uptime-kuma:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+
+networks:
+
+  proxy:
+    name: proxy
+    external: true
+    # TODO: change this network to not be external
+
+  tailscale:
+    name: tailscale
+    ipam:
+      config:
+        - subnet: 50.50.0.0/24

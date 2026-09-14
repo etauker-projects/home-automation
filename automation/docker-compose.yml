@@ -8,39 +8,6 @@ services:
     environment:
      - PORT=8000
 
-  caddy:
-    build: .
-    container_name: caddy
-    restart: unless-stopped
-    # command: ["caddy", "run", "--watch"]
-    env_file:
-      - ./caddy.env
-    volumes:
-      - ../data/caddy/conf:/etc/caddy
-      # - ../data/caddy/site:/srv
-      - caddy_data:/data
-      - caddy_config:/config
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - proxy
-    ports:
-      - "443:443"
-      - "80:80"
-      # - "2019:2019" # Caddy Admin API
-
-  uptime-kuma:
-    image: louislam/uptime-kuma:2
-    container_name: uptime-kuma
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - PORT=8001
-    volumes:
-      - ../data/automation/uptime-kuma:/app/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
   mosquitto:
     container_name: mqtt-broker
     image: eclipse-mosquitto:latest
@@ -479,9 +446,6 @@ services:
 #       - experimental
 #       - automation
 
-volumes:
-  caddy_data:
-  caddy_config:
 
 networks:
   proxy:
