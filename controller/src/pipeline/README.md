@@ -15,15 +15,30 @@ scanned          consume                                  paperless             
 | `moved_to_consume` | `consume`  | The file was moved into `paperless-consume/`          |
 | `ingested`         | `paperless`| Paperless finished consuming the file (polled from its tasks API) |
 | `exported`         | `exported` | The paperless document was downloaded to the exports  |
+| `re_exported`      | `exported` | A document edited in Paperless after export was downloaded again ("Updated in paperless", or "Path changed: old → new") |
 | `backed_up`        | `archived` | The export was copied to the NAS and verified         |
 | `backup_skipped`   | `archived` | An identical file was already on the NAS              |
+| `superseded_removed` | `archived` | After a re-export under a new path was backed up, the old NAS copy was deleted |
 | `error`            | any        | Any step failed (file ID `system` for run-level errors) |
 
 Events are appended to `<config>/pipeline-events.jsonl`, one JSON object per line, and reloaded on startup.
 
+## Waiting periods
+
+All set by environment variables (see `.env.template`), validated at startup. An invalid value stops the controller with a clear error. The active values are logged as `[Pipeline] Timing: …`.
+
+| Variable | Default | Controls |
+|---|---|---|
+| `SCAN_STABILITY_SECONDS` | 180 | How long a file in `scans/` must stay unchanged before it is moved to consume |
+| `EXPORT_STABILITY_SECONDS` | 180 | How long a file in `paperless-exports/` must stay unchanged before NAS backup |
+| `PAPERLESS_EXPORT_CRON` / `PAPERLESS_EXPORT_TIMEZONE` | `15 * * * *` / `Europe/Dublin` | When the Paperless export runs |
+| `PAPERLESS_INGESTION_POLL_SECONDS` | 60 (min 5) | How often Paperless consume tasks are polled |
+| `PAPERLESS_INBOX_CACHE_SECONDS` | 60 (0 = no cache) | How long the inbox count is cached |
+| `PIPELINE_UI_REFRESH_SECONDS` | 5 | How often `/ui/pipeline` refreshes |
+
 ## Ingestion
 
-Every 60s the controller reads the newest `consume_file` tasks from Paperless (`GET /api/tasks/`; both the 3.x and 2.x response shapes are supported).
+Every `PAPERLESS_INGESTION_POLL_SECONDS` (default 60s) the controller reads the newest `consume_file` tasks from Paperless (`GET /api/tasks/`; both the 3.x and 2.x response shapes are supported).
 - **Successful task:** if it matches a tracked file waiting in `consume`, an `ingested` event is recorded with the new Paperless document ID. Documents added any other way (Paperless UI, email, or before tracking existed) are ignored here and appear once they're exported.
 - **Failed task** (e.g. a duplicate): recorded as an `error` with stage `consume` and Paperless's message. A failure for an untracked file is only recorded if it finished after the controller started.
 - **Duplicates:** each task ID is recorded once, including across restarts.
@@ -35,11 +50,24 @@ Every 60s the controller reads the newest `consume_file` tasks from Paperless (`
 - **Re-exports**: these are added to the existing history, matched by Paperless document ID.
 - **Export → NAS**: matched by the export file path.
 
+## Updated documents
+
+A document edited in Paperless after export is downloaded again on the next export run, because its `modified` timestamp changed. Its NAS path comes from year / type / correspondent / account number / title.
+- **Path unchanged:** the NAS copy is overwritten in place, after a verified copy.
+- **Path changed:** the download manifest records the old path as `supersedes`. Once the new file is backed up, the old NAS copy is deleted, along with any folders left empty. It is never deleted if another document now uses that path.
+- **Collisions:** if two different documents would map to the same path, the later one gets ` (#<paperless id>)` appended to its filename.
+
+Known limitations:
+- Stale copies left behind before this existed are not cleaned up.
+- Documents that collided before this existed have already overwritten each other on the NAS.
+- If a path changes twice within one backup window (`EXPORT_STABILITY_SECONDS`), the intermediate copy may be left behind.
+
 ## Stage counts
 
-`scanned`, `consume` and `exported` are live counts of the files in each directory. `.lock`, `.part` and dotfiles are skipped. `paperlessInbox` is the number of Paperless documents with any inbox-flagged tag (`is_in_inbox=true`, regardless of the tag's name). These are the same documents the export skips. It is read on demand, cached for 60s, and the cache is cleared after each export run. `archivedTracked` counts the files with a backup event in the history. A count that can't be read shows as `null`.
+`scanned`, `consume` and `exported` are live counts of the files in each directory. `.lock`, `.part` and dotfiles are skipped. `paperlessInbox` is the number of Paperless documents with any inbox-flagged tag (`is_in_inbox=true`, regardless of the tag's name). These are the same documents the export skips. It is read on demand, cached for `PAPERLESS_INBOX_CACHE_SECONDS` (default 60s), and the cache is cleared after each export run. `archivedTracked` counts the files with a backup event in the history. A count that can't be read shows as `null`.
 
 ## Backlog
 
 - **Publish errors to MQTT**: subscribe to `PIPELINE_ERROR_EVENT` on the tracker and publish each event, e.g. to `home-automation/controller/pipeline/errors`. Search for `TODO(mqtt)`.
+- **Skipped backups stay in exports**: when `NasBackupService` skips a file because an identical copy is already on the NAS, it doesn't delete the source. The file stays in `paperless-exports/`, inflates the `exported` count, and is re-checked on every restart.
 - **Rotate the JSONL file** if it grows large. At current document volumes this isn't needed yet.

@@ -139,7 +139,7 @@ export class PaperlessPage {
 
                 <div class="action-buttons">
                     <button id="previewBtn" class="btn btn-primary">Preview</button>
-                    <button id="downloadBtn" class="btn btn-primary">Download</button>
+                    <button id="downloadBtn" class="btn btn-primary">Export</button>
                 </div>
 
                 <div id="statusMessage" class="status-message"></div>
@@ -249,7 +249,7 @@ export class PaperlessPage {
 
                     downloadBtn.addEventListener('click', async () => {
                         disableButtons();
-                        showMessage('Downloading documents...', 'loading');
+                        showMessage('Exporting documents...', 'loading');
 
                         try {
                             const response = await fetch('/ui/paperless/download', {
@@ -264,14 +264,14 @@ export class PaperlessPage {
                             if (response.ok) {
                                 const skippedMsg = data.skipped > 0 ? \` \${data.skipped} skipped.\` : '';
                                 const failedMsg = data.failed > 0 ? \` \${data.failed} failed.\` : '';
-                                const summary = \`Downloaded \${data.successful}/\${data.total} documents successfully.\${skippedMsg}\${failedMsg}\`;
+                                const summary = \`Exported \${data.successful}/\${data.total} documents successfully.\${skippedMsg}\${failedMsg}\`;
                                 showMessage(summary, data.failed > 0 ? 'error' : 'success');
                                 console.log('Download Summary:', data);
                             } else {
-                                showMessage('Download failed: ' + (data.error || 'Unknown error'), 'error');
+                                showMessage('Export failed: ' + (data.error || 'Unknown error'), 'error');
                             }
                         } catch (error) {
-                            showMessage('Download failed: ' + error.message, 'error');
+                            showMessage('Export failed: ' + error.message, 'error');
                         } finally {
                             enableButtons();
                         }

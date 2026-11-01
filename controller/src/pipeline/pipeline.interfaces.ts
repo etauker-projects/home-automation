@@ -13,8 +13,10 @@ export type PipelineEventType =
     | 'moved_to_consume'
     | 'ingested'
     | 'exported'
+    | 're_exported'
     | 'backed_up'
     | 'backup_skipped'
+    | 'superseded_removed'
     | 'error';
 
 export interface PipelineEvent {

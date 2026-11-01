@@ -21,7 +21,14 @@ export interface PaperlessTaskSource {
     listConsumeTasks(): Promise<ConsumeTask[]>;
 }
 
-const PAPERLESS_COUNT_TTL_MS = 60_000;
+export interface PipelineTrackerOptions {
+    /** History file name inside the config directory */
+    fileName?: string;
+    /** How long the paperless inbox count is cached (default 60s) */
+    inboxCacheMs?: number;
+}
+
+const DEFAULT_INBOX_CACHE_MS = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -53,14 +60,16 @@ export class PipelineTracker extends EventEmitter {
     /** Paperless consume task IDs already recorded (rebuilt from history on init) */
     private readonly seenTaskIds = new Set<string>();
     private readonly startedAt = new Date().toISOString();
+    private readonly inboxCacheMs: number;
 
     constructor(
         private readonly dirs: PipelineDirectories,
         private readonly paperless?: PaperlessInboxCounter,
-        fileName: string = 'pipeline-events.jsonl',
+        options: PipelineTrackerOptions = {},
     ) {
         super();
-        this.logPath = path.join(dirs.config, fileName);
+        this.logPath = path.join(dirs.config, options.fileName ?? 'pipeline-events.jsonl');
+        this.inboxCacheMs = options.inboxCacheMs ?? DEFAULT_INBOX_CACHE_MS;
     }
 
     // -------------------------
@@ -108,16 +117,42 @@ export class PipelineTracker extends EventEmitter {
     }
 
     /** A paperless document was exported to the exports directory. */
-    public exported(doc: { paperlessId: number; title: string; originalFileName?: string; filePath: string }): void {
+    public exported(doc: {
+        paperlessId: number;
+        title: string;
+        originalFileName?: string;
+        filePath: string;
+        /** The document had been exported before (updated in paperless) */
+        reExport?: boolean;
+        /** Previous relative export path, if it changed */
+        previousPath?: string;
+        /** Current relative export path (for display) */
+        relativePath?: string;
+    }): void {
         const fileId = this.resolvePaperlessFileId(doc.paperlessId, doc.originalFileName);
+        const details = doc.reExport
+            ? (doc.previousPath ? `Path changed: ${doc.previousPath} → ${doc.relativePath ?? path.basename(doc.filePath)}` : 'Updated in paperless')
+            : (doc.originalFileName ? `"${doc.title}" (original: ${doc.originalFileName})` : `"${doc.title}"`);
         this.record({
             fileId,
             fileName: path.basename(doc.filePath),
             stage: 'exported',
-            type: 'exported',
+            type: doc.reExport ? 're_exported' : 'exported',
             path: doc.filePath,
             paperlessId: doc.paperlessId,
-            details: doc.originalFileName ? `"${doc.title}" (original: ${doc.originalFileName})` : `"${doc.title}"`,
+            details,
+        });
+    }
+
+    /** An older NAS copy superseded by the backed-up export at `exportPath` was deleted. */
+    public supersededRemoved(input: { exportPath: string; removedPath: string }): void {
+        this.record({
+            fileId: this.lookupByPath(input.exportPath),
+            fileName: path.basename(input.removedPath),
+            stage: 'archived',
+            type: 'superseded_removed',
+            path: input.removedPath,
+            details: 'Old NAS copy removed after the updated document was backed up',
         });
     }
 
@@ -401,7 +436,7 @@ export class PipelineTracker extends EventEmitter {
     private async getPaperlessInboxCount(): Promise<number> {
         if (!this.paperless) throw new Error('Paperless not configured');
         const now = Date.now();
-        if (this.paperlessCountCache && now - this.paperlessCountCache.at < PAPERLESS_COUNT_TTL_MS) {
+        if (this.paperlessCountCache && now - this.paperlessCountCache.at < this.inboxCacheMs) {
             return this.paperlessCountCache.value;
         }
         const value = await this.paperless.countInbox();

@@ -137,6 +137,10 @@ export interface ConsumeTask {
 export interface DownloadResult {
     document: EnhancedResult;
     filePath?: string;
+    /** True if this document had been exported before */
+    reExport?: boolean;
+    /** Previous export path (relative), only set if the path changed */
+    previousPath?: string;
     success: boolean;
     error?: string;
 }
@@ -152,6 +156,8 @@ export interface DownloadSummary {
 interface ManifestEntry {
     modified: string;
     path: string;
+    /** Relative path of an older NAS copy to delete once the file at `path` is backed up */
+    supersedes?: string;
 }
 
 interface DownloadManifest {
@@ -280,6 +286,7 @@ export class PaperlessConnector {
         let error: string | undefined;
         if (status === 'failure') {
             error = (typeof resultData === 'string' ? resultData : undefined)
+                ?? resultData?.error_message
                 ?? resultData?.error
                 ?? resultData?.message
                 ?? (typeof t.result === 'string' ? t.result : undefined)
@@ -499,12 +506,14 @@ export class PaperlessConnector {
     /**
      * Save the download manifest to disk.
      */
-    private async saveManifest(): Promise<void> {
+    private async saveManifest(touchLastDownloaded: boolean = true): Promise<void> {
         try {
             // Ensure config directory exists
             await mkdir(this.configDirectory, { recursive: true });
             this.manifest = this.manifest || {};
-            this.manifest.metadata = { lastDownloaded: new Date().toISOString() };
+            if (touchLastDownloaded) {
+                this.manifest.metadata = { lastDownloaded: new Date().toISOString() };
+            }
             const content = JSON.stringify(this.manifest, null, 2);
             await writeFile(this.manifestPath, content, 'utf-8');
             console.log(`Saved manifest with ${Object.keys(this.manifest).length} entries`);
@@ -547,10 +556,62 @@ export class PaperlessConnector {
      * Update the manifest entry for a document after successful download.
      */
     private updateManifestEntry(doc: EnhancedResult, modified: string): void {
+        const previous = this.manifest[doc.paperlessId];
+        let supersedes = previous?.supersedes;
+        if (previous && previous.path !== doc.path) {
+            // keep an older copy still pending deletion; otherwise the previous path becomes stale
+            supersedes = previous.supersedes ?? previous.path;
+        }
+        if (supersedes === doc.path) supersedes = undefined;
+
         this.manifest[doc.paperlessId] = {
             modified: modified,
-            path: doc.path
+            path: doc.path,
+            ...(supersedes ? { supersedes } : {}),
         };
+    }
+
+    /**
+     * Make a document's export path unique: if another document (in the manifest or earlier
+     * in the current batch) already uses the path, append " (#<paperlessId>)" to the file name.
+     * A document keeps its own previously exported path.
+     */
+    private resolveUniquePath(doc: EnhancedResult, claimed: Map<string, number>): string {
+        const isTaken = (candidate: string) => {
+            const claimant = claimed.get(candidate);
+            if (claimant !== undefined && claimant !== doc.paperlessId) return true;
+            return Object.entries(this.manifest).some(([id, entry]) =>
+                id !== 'metadata' && Number(id) !== doc.paperlessId && (entry as ManifestEntry)?.path === candidate);
+        };
+
+        if (!isTaken(doc.path)) return doc.path;
+
+        const ext = path.extname(doc.path);
+        const unique = `${doc.path.slice(0, doc.path.length - ext.length)} (#${doc.paperlessId})${ext}`;
+        console.log(`Export path collision for document ${doc.paperlessId}, using ${unique}`);
+        return unique;
+    }
+
+    /**
+     * After the file at `exportRelativePath` has been backed up, return the relative path of the
+     * older NAS copy it supersedes (if any) and clear it from the manifest.
+     * Returns undefined if another document now uses that path.
+     */
+    public async takeSupersededPath(exportRelativePath: string): Promise<string | undefined> {
+        if (!this.manifest.metadata) await this.loadManifest();
+
+        const entry = Object.entries(this.manifest)
+            .find(([id, e]) => id !== 'metadata' && (e as ManifestEntry)?.path === exportRelativePath)?.[1] as ManifestEntry | undefined;
+        if (!entry?.supersedes) return undefined;
+
+        const superseded = entry.supersedes;
+        delete entry.supersedes;
+        // don't move the export window forward: this is not a download
+        await this.saveManifest(false);
+
+        const stillInUse = Object.entries(this.manifest)
+            .some(([id, e]) => id !== 'metadata' && (e as ManifestEntry)?.path === superseded);
+        return stillInUse ? undefined : superseded;
     }
 
     public async download(changedSince: string): Promise<DownloadSummary> {
@@ -575,6 +636,15 @@ export class PaperlessConnector {
 
         console.log(`${documentsToDownload.length} documents to download, ${documents.length - documentsToDownload.length} skipped`);
 
+        // Resolve unique export paths up front (sequentially, so collisions within the batch are detected)
+        const previousEntries = new Map<number, ManifestEntry | undefined>();
+        const claimed = new Map<string, number>();
+        for (const doc of documentsToDownload) {
+            previousEntries.set(doc.paperlessId, this.manifest[doc.paperlessId] ? { ...this.manifest[doc.paperlessId] } : undefined);
+            doc.path = this.resolveUniquePath(doc, claimed);
+            claimed.set(doc.path, doc.paperlessId);
+        }
+
         const results: DownloadResult[] = [];
 
         // Download each document with concurrency control
@@ -582,6 +652,9 @@ export class PaperlessConnector {
             documentsToDownload.map(doc =>
                 this.semaphore.acquire(async () => {
                     const result = await this.downloadDocument(doc);
+                    const previous = previousEntries.get(doc.paperlessId);
+                    result.reExport = !!previous;
+                    if (previous && previous.path !== doc.path) result.previousPath = previous.path;
                     results.push(result);
                 })
             )

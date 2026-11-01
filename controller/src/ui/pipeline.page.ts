@@ -3,9 +3,11 @@ export class PipelinePage {
     /**
      * Renders the Document Pipeline page: live stage counts, recent files with history, recent errors.
      * Data is polled from /ui/pipeline/{stats,files,errors}.
+     * @param refreshMs - How often the page polls for updates
      * @returns HTML string for the pipeline page
      */
-    public static render(): string {
+    public static render(refreshMs: number = 5000): string {
+        const pollMs = Math.max(1000, Math.round(refreshMs));
         return `
             <!DOCTYPE html>
             <html>
@@ -196,7 +198,7 @@ export class PipelinePage {
                 </div>
 
                 <script>
-                    const POLL_MS = 5000;
+                    const POLL_MS = ${pollMs};
                     const expanded = new Set();
 
                     function esc(value) {

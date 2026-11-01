@@ -1,4 +1,5 @@
 import express from "express";
+import path from "node:path";
 import {
     randomPKCECodeVerifier,
     calculatePKCECodeChallenge,
@@ -26,6 +27,7 @@ import { PowerMonitoringProcessor } from './power-monitoring/power-monitoring.pr
 import { PowerMetric } from './power-monitoring/power-monitoring.interfaces.js';
 import { PipelineTracker } from './pipeline/pipeline-tracker.service.js';
 import { PipelinePage } from './ui/pipeline.page.js';
+import { loadPipelineTimingConfig, describePipelineTiming } from './config/pipeline-timing.config.js';
 
 // TODO: consider moving to separate controller / service
 const isProduction = process.env.NODE_ENV === 'production';
@@ -73,6 +75,10 @@ const PAPERLESS_URL = Extractor.extractString('PAPERLESS_URL', 'https://paperles
 const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
 const paperless = new PaperlessConnector(PAPERLESS_URL, DIR_PAPERLESS_EXPORT, DIR_CONFIG, PAPERLESS_TOKEN);
 
+// Pipeline waiting periods (env-configurable, see .env.template)
+const timing = loadPipelineTimingConfig();
+console.log(`[Pipeline] Timing: ${describePipelineTiming(timing)}`);
+
 // Pipeline tracking: per-file history + live stage counts (see src/pipeline/README.md)
 const pipeline = new PipelineTracker(
     {
@@ -82,11 +88,11 @@ const pipeline = new PipelineTracker(
         config: DIR_CONFIG,
     },
     paperless,
+    { inboxCacheMs: timing.inboxCacheMs },
 );
 await pipeline.init();
 
 // Detect paperless ingestion (success / failure) of files moved to the consume directory
-const INGESTION_POLL_MS = 60_000;
 let ingestionSyncRunning = false;
 const syncIngestion = async () => {
     if (ingestionSyncRunning) return;
@@ -98,7 +104,7 @@ const syncIngestion = async () => {
     }
 };
 void syncIngestion();
-setInterval(() => void syncIngestion(), INGESTION_POLL_MS);
+setInterval(() => void syncIngestion(), timing.ingestionPollMs);
 
 function recordDownloadSummary(summary: DownloadSummary): void {
     pipeline.invalidatePaperlessCount();
@@ -109,6 +115,9 @@ function recordDownloadSummary(summary: DownloadSummary): void {
                 title: result.document.title,
                 originalFileName: result.document.originalFileName,
                 filePath: result.filePath,
+                reExport: result.reExport,
+                previousPath: result.previousPath,
+                relativePath: result.document.path,
             });
         } else {
             pipeline.error({
@@ -461,7 +470,7 @@ uiRouter.get('/pipeline', async (req, res) => {
     }
 
     try {
-        res.send(PipelinePage.render());
+        res.send(PipelinePage.render(timing.uiRefreshMs));
     } catch (error) {
         console.error('Error loading pipeline page:', error);
         res.status(500).send(PipelinePage.renderError(error instanceof Error ? error : String(error)));
@@ -662,18 +671,15 @@ fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
     },
 }, {
     awaitWriteFinish: {
-        stabilityThreshold: 180000,
+        stabilityThreshold: timing.scanStabilityMs,
         pollInterval: 500,
     },
 });
 
 // Step 2: paperless ingests the files
 
-// Step 3: export from paperless to DIR_PAPERLESS_EXPORT
-// const cronPattern = '0 3 * * *'; // Every day at 3 AM (after testing)
-const cronPattern = '15 * * * *'; // Hourly at the start of the hour (for now)
-const timezone = 'Europe/Dublin';
-cronService.schedule(cronPattern, timezone, async () => {
+// Step 3: export from paperless to DIR_PAPERLESS_EXPORT (schedule: PAPERLESS_EXPORT_CRON)
+cronService.schedule(timing.exportCron, timing.exportTimezone, async () => {
     try {
         const changedSince = await paperless.getLastDownloaded();
         console.log(`Starting download of paperless documents since ${changedSince}...`);
@@ -696,14 +702,35 @@ cronService.schedule(cronPattern, timezone, async () => {
     }
 });
 
+// After a document updated in paperless is backed up under a new path, delete its old NAS copy
+async function removeSupersededCopy(exportFilePath: string): Promise<void> {
+    let oldAbsolute: string | undefined;
+    try {
+        const relative = fileSystem.getNestedRelativePath(DIR_PAPERLESS_EXPORT, exportFilePath);
+        const superseded = await paperless.takeSupersededPath(relative);
+        if (!superseded) return;
+
+        oldAbsolute = path.join(DIR_SYNOLOGY_DOCS, superseded);
+        fileSystem.getNestedRelativePath(DIR_SYNOLOGY_DOCS, oldAbsolute); // guard against escaping the NAS root
+        await fileSystem.safeDelete(oldAbsolute);
+        await fileSystem.cleanupEmptyDirectories(path.dirname(oldAbsolute), DIR_SYNOLOGY_DOCS);
+        console.log(`Removed superseded NAS copy: ${oldAbsolute}`);
+        pipeline.supersededRemoved({ exportPath: exportFilePath, removedPath: oldAbsolute });
+    } catch (error) {
+        console.error(`Error removing superseded NAS copy for ${exportFilePath}:`, error);
+        pipeline.error({ stage: 'archived', path: oldAbsolute ?? exportFilePath, error, details: 'Removing superseded NAS copy failed' });
+    }
+}
+
 // Step 4: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
 fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
     add: async (filePath) => {
         console.log(`New file detected: ${filePath}`);
         backupService.backupFile(filePath)
-            .then((result) => {
+            .then(async (result) => {
                 console.log(`File backed up to NAS directory`, result);
                 pipeline.backedUp(result);
+                await removeSupersededCopy(filePath);
             })
             .catch((error) => {
                 console.error(`Error backing up file to NAS directory: ${error}`);
@@ -716,7 +743,7 @@ fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
     },
 }, {
     awaitWriteFinish: {
-        stabilityThreshold: 180000,
+        stabilityThreshold: timing.exportStabilityMs,
         pollInterval: 500,
     },
     ignoreInitial: false,

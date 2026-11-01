@@ -27,7 +27,7 @@ All values live in [`.env.local`](.env.local) and are dev-only.
 
 - **`auth.localhost`**: the browser and the controller container must use the same issuer URL. Chrome and Firefox resolve `*.localhost` to 127.0.0.1; inside Docker it's a network alias of the Authentik container. If your browser doesn't resolve it (e.g. Safari), add `127.0.0.1 auth.localhost` to `/etc/hosts`.
 - All controller folders live under `local-dev/mnt/` (git-ignored), set by the `DIR_*` vars in `.env.local`:
-  - `scans/` → drop a PDF here; after ~3 min the controller moves it to `paperless-consume/`
+  - `scans/` → drop a PDF here; after `SCAN_STABILITY_SECONDS` (10s locally, 180s by default) the controller moves it to `paperless-consume/`
   - `paperless-consume/` → shared with Paperless, which ingests it (polls every 5s)
   - `paperless-exports/` → controller downloads from Paperless here, then copies to `nas/`
   - `config/` → download manifest
