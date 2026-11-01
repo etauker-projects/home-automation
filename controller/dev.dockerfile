@@ -28,5 +28,5 @@ EXPOSE 3000
 EXPOSE 9229
 
 # Development command with hot-reload using tsx
-# The --watch flag enables hot-reload
-CMD ["npm", "run", "dev"]
+# tsx watch restarts the process when files in src/ change
+CMD ["npm", "run", "dev:watch"]

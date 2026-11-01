@@ -31,3 +31,6 @@ scripts/health-data/output
 # data/hass/.storage/auth
 # data/hass/.storage/auth_provider.homeassistant
 # data/hass/.storage/secrets.yaml
+
+# Local dev stack data
+controller/local-dev/mnt/

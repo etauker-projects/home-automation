@@ -40,6 +40,10 @@ docker compose logs -f controller-prod
 docker compose --profile prod down
 ```
 
+## Local Stack (Authentik + Paperless)
+
+To test against local, pre-seeded Authentik and Paperless instances instead of production, use `npm run local:up`. See [local-dev/README.md](local-dev/README.md).
+
 ## Environment Variables
 
 Create a `.env` file in the `controller/` directory with the following variables:
@@ -52,6 +56,7 @@ AUTHENTIK_ISSUER_URL=https://your-authentik-instance.com/application/o/your-app/
 AUTHENTIK_REDIRECT_URI=http://localhost:3000/auth/callback
 SESSION_SECRET=your_session_secret
 PAPERLESS_TOKEN=your_paperless_token
+PAPERLESS_URL=https://paperless.office.etauker.com  # optional, this is the default
 
 DIR_PRINTER_PAPERLESS=/path/to/printer
 DIR_PAPERLESS_CONSUME=/path/to/consume
@@ -73,7 +78,7 @@ DIR_SYNOLOGY_DOCS=/path/to/docs
 - ✅ Only production dependencies
 - ✅ TypeScript compiled to JavaScript
 - ✅ Non-root user for security
-- ✅ Health check configured
+- ✅ Health check against `/status`
 - ✅ Optimized for performance
 
 ## Common Commands
@@ -182,5 +187,5 @@ deploy:
 
 1. Copy `.env.template` to `.env` and fill in values
 2. Run development container: `docker compose --profile dev up`
-3. Access application at `http://localhost:3000`
+3. Access application at `http://localhost:${PORT}` (8875 by default)
 4. For production deployment, update environment variables and run prod profile

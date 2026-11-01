@@ -3,6 +3,7 @@ import { Semaphore } from '../backup/semaphore.js';
 import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import path from 'node:path';
+import * as http from 'http';
 import * as https from 'https';
 
 interface PaperlessCorrespondent {
@@ -146,13 +147,12 @@ interface DownloadManifest {
 
 export class PaperlessConnector {
 
-    private host: string = 'https://paperless.office.etauker.com';
     private connector: RestConnector;
     private semaphore: Semaphore;
     private manifestPath: string;
     private manifest: DownloadManifest = {};
 
-    constructor(private downloadDirectory: string, private configDirectory: string, private token: string) {
+    constructor(private host: string, private downloadDirectory: string, private configDirectory: string, private token: string) {
         this.connector = new RestConnector(this.host);
         this.semaphore = new Semaphore(4);
         this.manifestPath = path.join(this.configDirectory, 'download-manifest.json');
@@ -555,9 +555,10 @@ export class PaperlessConnector {
         return new Promise<void>((resolve, reject) => {
             const url = new URL(apiPath, this.host);
 
+            const isHttps = url.protocol === 'https:';
             const options: https.RequestOptions = {
                 hostname: url.hostname,
-                port: url.port || 443,
+                port: url.port || (isHttps ? 443 : 80),
                 path: url.pathname + url.search,
                 method: 'GET',
                 headers: {
@@ -566,7 +567,7 @@ export class PaperlessConnector {
                 }
             };
 
-            const request = https.request(options, (response) => {
+            const request = (isHttps ? https : http).request(options, (response) => {
                 // Check for successful response
                 if (response.statusCode !== 200) {
                     reject(new Error(
@@ -596,7 +597,7 @@ export class PaperlessConnector {
             });
 
             request.on('error', (err) => {
-                reject(new Error(`HTTPS request error: ${err.message}`));
+                reject(new Error(`HTTP request error: ${err.message}`));
             });
 
             request.on('timeout', () => {

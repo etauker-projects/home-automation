@@ -9,9 +9,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx --env-file=.env ./src/index.ts",
+    "dev:watch": "tsx watch --env-file-if-exists=.env ./src/index.ts",
     "start": "docker compose up -d controller-prod --build && docker logs home-automation-controller-prod --follow",
     "restart": "docker compose down controller-prod && docker compose up controller-prod -d --build && docker logs home-automation-controller-prod --follow",
-    "build": "tsc"
+    "build": "tsc",
+    "local:up": "docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file local-dev/.env.local --profile local --profile dev up --build",
+    "local:up:prod": "docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file local-dev/.env.local --profile local --profile prod up --build",
+    "local:down": "docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file local-dev/.env.local --profile local --profile dev --profile prod down -v"
   },
   "dependencies": {
     "@angular/cli": "^21.2.2",

@@ -39,9 +39,9 @@ USER node
 # Expose application port
 EXPOSE 3000
 
-# Health check (adjust path as needed)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/status', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+# Health check against the status endpoint
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 8875) + '/status', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))" || exit 1
 
 # Production command
 CMD ["node", "dist/index.js"]

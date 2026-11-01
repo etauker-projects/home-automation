@@ -56,3 +56,6 @@ temp/
 home-automation-controller/node_modules/
 home-automation-controller/dist/
 home-automation-controller/.angular/
+
+# Local dev stack (mounted, not built into images)
+local-dev/

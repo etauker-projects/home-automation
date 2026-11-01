@@ -1,0 +1,165 @@
+# Local dev stack: Authentik + Paperless, pre-seeded with dev users, the OIDC app and a fixed API token.
+# Layered on top of docker-compose.yml; see local-dev/README.md.
+#
+#   npm run local:up        # controller-dev + local stack
+#   npm run local:up:prod   # controller-prod + local stack
+#   npm run local:down      # stop and wipe all local state
+
+x-authentik: &authentik
+  image: ghcr.io/goauthentik/server:2025.12.4
+  profiles:
+    - local
+  restart: unless-stopped
+  environment:
+    AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+    AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+    AUTHENTIK_POSTGRESQL__NAME: authentik
+    AUTHENTIK_POSTGRESQL__USER: authentik
+    AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+    AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+    AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+    AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
+    # read by the blueprint via !Env
+    DEV_USER_PASSWORD: ${DEV_USER_PASSWORD}
+    CONTROLLER_CLIENT_ID: ${AUTHENTIK_CLIENT_ID}
+    CONTROLLER_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET}
+    CONTROLLER_REDIRECT_URI: ${AUTHENTIK_REDIRECT_URI}
+  volumes:
+    - ./local-dev/authentik/blueprints:/blueprints/custom:ro
+  depends_on:
+    authentik-postgres:
+      condition: service_healthy
+
+x-paperless: &paperless
+  image: ghcr.io/paperless-ngx/paperless-ngx:3.0.5
+  profiles:
+    - local
+  environment:
+    PAPERLESS_REDIS: redis://paperless-redis:6379
+    PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+    PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER}
+    PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+    PAPERLESS_URL: http://localhost:8000
+    PAPERLESS_ALLOWED_HOSTS: localhost,paperless
+    PAPERLESS_CSRF_TRUSTED_ORIGINS: http://localhost:8000
+    PAPERLESS_TIME_ZONE: Europe/Dublin
+    PAPERLESS_OCR_LANGUAGE: eng
+    PAPERLESS_DEV_TOKEN: ${PAPERLESS_TOKEN}
+    # inotify events don't cross Docker Desktop bind mounts reliably, so poll the consume folder
+    PAPERLESS_CONSUMER_POLLING: 5
+  volumes:
+    - paperless_data:/usr/src/paperless/data
+    - paperless_media:/usr/src/paperless/media
+    - ${DIR_PAPERLESS_CONSUME:-./data/paperless-consume}:/usr/src/paperless/consume
+
+services:
+
+  # ---- Authentik ----
+  authentik-postgres:
+    image: postgres:15
+    profiles:
+      - local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+    volumes:
+      - authentik_db:/var/lib/postgresql/data
+    networks:
+      - controller-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  authentik-server:
+    <<: *authentik
+    command: server
+    ports:
+      - "9000:9000"
+    networks:
+      controller-network:
+        # The browser and the controller must use the same issuer URL. Browsers resolve *.localhost
+        # to 127.0.0.1 (published port), containers resolve this alias to the Authentik container.
+        aliases:
+          - auth.localhost
+    healthcheck:
+      test: ["CMD", "ak", "healthcheck"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
+
+  authentik-worker:
+    <<: *authentik
+    command: worker
+    networks:
+      - controller-network
+
+  # ---- Paperless ----
+  paperless-redis:
+    image: redis:8
+    profiles:
+      - local
+    restart: unless-stopped
+    networks:
+      - controller-network
+
+  paperless:
+    <<: *paperless
+    restart: unless-stopped
+    depends_on:
+      - paperless-redis
+    ports:
+      - "8000:8000"
+    networks:
+      - controller-network
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "-o", "/dev/null", "http://localhost:8000"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  # One-shot: creates the fixed API token and seeds sample documents (idempotent).
+  # Bypasses the image's s6 entrypoint so it doesn't start a second webserver/consumer.
+  paperless-init:
+    <<: *paperless
+    restart: "no"
+    user: "1000:1000"
+    working_dir: /usr/src/paperless/src
+    entrypoint: ["python3", "manage.py", "shell", "-c", "exec(open('/local-dev/init.py').read())"]
+    volumes:
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
+      - ${DIR_PAPERLESS_CONSUME:-./data/paperless-consume}:/usr/src/paperless/consume
+      - ./local-dev/paperless:/local-dev:ro
+    depends_on:
+      paperless:
+        condition: service_healthy
+    networks:
+      - controller-network
+
+  # ---- Controller wiring ----
+  controller-dev:
+    depends_on: &controller-deps
+      authentik-server:
+        condition: service_healthy
+      paperless-init:
+        condition: service_completed_successfully
+
+  controller-prod:
+    depends_on: *controller-deps
+    environment:
+      # production image, but not a production deployment: allows the plain-http local Authentik
+      - NODE_ENV=local
+
+volumes:
+  authentik_db:
+    name: controller-local-authentik-db
+  paperless_data:
+    name: controller-local-paperless-data
+  paperless_media:
+    name: controller-local-paperless-media

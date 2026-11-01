@@ -77,7 +77,9 @@ export class AuthController extends ApiController implements IController {
             }
         });
 
-        res.redirect('https://auth.security.etauker.com/application/o/home-automation-controller/end-session/');
+        const endSessionUrl = this.oidcConfig.serverMetadata().end_session_endpoint
+            ?? 'https://auth.security.etauker.com/application/o/home-automation-controller/end-session/';
+        res.redirect(endSessionUrl);
         return;
     }
 

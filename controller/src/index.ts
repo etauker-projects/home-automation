@@ -4,6 +4,7 @@ import {
     calculatePKCECodeChallenge,
     buildAuthorizationUrl,
     discovery,
+    allowInsecureRequests,
     type Configuration,
 } from "openid-client";
 import { Server } from './framework/server/server.js';
@@ -25,10 +26,19 @@ import { PowerMonitoringProcessor } from './power-monitoring/power-monitoring.pr
 import { PowerMetric } from './power-monitoring/power-monitoring.interfaces.js';
 
 // TODO: consider moving to separate controller / service
+const isProduction = process.env.NODE_ENV === 'production';
+const issuerUrl = new URL(Extractor.extractString('AUTHENTIK_ISSUER_URL'));
+const isInsecureIssuer = issuerUrl.protocol === 'http:';
+if (isInsecureIssuer && isProduction) {
+    throw new Error(`Refusing plain http AUTHENTIK_ISSUER_URL in production: ${issuerUrl.href}`);
+}
 const oidcConfig: Configuration = await discovery(
-    new URL(Extractor.extractString('AUTHENTIK_ISSUER_URL')),
+    issuerUrl,
     Extractor.extractString('AUTHENTIK_CLIENT_ID'),
     Extractor.extractString('AUTHENTIK_CLIENT_SECRET'),
+    undefined,
+    // plain http is only expected for the local dev stack (see local-dev/README.md)
+    isInsecureIssuer ? { execute: [allowInsecureRequests] } : undefined,
 );
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -57,8 +67,9 @@ const DIR_PAPERLESS_CONSUME = '/app/data/paperless-consume'   // paperless consu
 const DIR_PAPERLESS_EXPORT = '/app/data/paperless-exports'    // paperless export directory (files processed by paperless are exported here)
 const DIR_SYNOLOGY_DOCS = '/app/data/nas'       // doument storage on the NAS
 const DIR_CONFIG = '/app/data/config'   // configuration directory (stores manifests and other config files)
+const PAPERLESS_URL = Extractor.extractString('PAPERLESS_URL', 'https://paperless.office.etauker.com');
 const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
-const paperless = new PaperlessConnector(DIR_PAPERLESS_EXPORT, DIR_CONFIG, PAPERLESS_TOKEN);
+const paperless = new PaperlessConnector(PAPERLESS_URL, DIR_PAPERLESS_EXPORT, DIR_CONFIG, PAPERLESS_TOKEN);
 
 // Power monitoring directories
 const DIR_POWER_MONITORING_INBOX = '/app/data/power-monitoring/inbox'        // CSV files from Home Assistant
@@ -577,7 +588,6 @@ fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
 server.start();
 
 await new Promise(_resolve => {
-    console.log(`Server running on https://localhost:${port}`);
-    console.log(`Login at: https://controller.automation.etauker.com/ui/home`);
+    console.log(`Login at: ${new URL('/ui/home', Extractor.extractString('AUTHENTIK_REDIRECT_URI'))}`);
     // setTimeout(() => _resolve(null), 60000); // Stop server after 180 seconds for testing
 });

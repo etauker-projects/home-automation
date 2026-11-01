@@ -33,7 +33,8 @@ export class Server {
                 resave: false,
                 saveUninitialized: true,  // Must be true to create session before redirect
                 cookie: {
-                    secure: true,      // REQUIRED for HTTPS in production
+                    // always secure in production; elsewhere follow the request protocol so local http works
+                    secure: process.env.NODE_ENV === 'production' ? true : 'auto',
                     httpOnly: true,
                     sameSite: "lax",
                     maxAge: 24 * 60 * 60 * 1000, // 24 hours

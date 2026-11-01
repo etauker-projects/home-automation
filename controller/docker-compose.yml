@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Development Service
   controller-dev:
@@ -12,16 +10,15 @@ services:
       - dev
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:8875"
+      - "${PORT:-8875}:${PORT:-8875}"
       - "9229:9229"  # Debug port
     env_file:
-      - .env
+      - ${CONTROLLER_ENV_FILE:-.env}
     environment:
       - NODE_ENV=development
     volumes:
       # Mount source code for hot-reload
       - ./src:/app/src:ro
-      - ./.env:/app/.env:ro
       # Use named volume for node_modules to avoid conflicts
       - node_modules_dev:/app/node_modules
       # If you need to persist data
@@ -29,13 +26,14 @@ services:
       - ${DIR_PAPERLESS_CONSUME:-./data/paperless-consume}:/app/data/paperless-consume
       - ${DIR_PAPERLESS_EXPORT:-./data/paperless-exports}:/app/data/paperless-exports
       - ${DIR_SYNOLOGY_DOCS:-./data/nas}:/app/data/nas
+      - ${DIR_CONFIG:-./data/config}:/app/data/config
       # Power monitoring directories
       - ${DIR_POWER_MONITORING_INBOX:-./data/power-monitoring/inbox}:/app/data/power-monitoring/inbox
       - ${DIR_POWER_MONITORING_PROCESSED:-./data/power-monitoring/processed}:/app/data/power-monitoring/processed
       - ${DIR_POWER_MONITORING_METADATA:-./data/power-monitoring/metadata}:/app/data/power-monitoring/metadata
     networks:
       - controller-network
-    user: "${UID}:${GID}"
+    user: "${UID:-1000}:${GID:-1000}"
     labels:
       - "app=home-automation-controller"
       - "environment=development"
@@ -53,9 +51,9 @@ services:
       - prod
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:8875"
+      - "${PORT:-8875}:${PORT:-8875}"
     env_file:
-      - .env
+      - ${CONTROLLER_ENV_FILE:-.env}
     environment:
       - NODE_ENV=production
     volumes:
@@ -70,22 +68,14 @@ services:
       - ${DIR_POWER_MONITORING_INBOX:-./data/power-monitoring/inbox}:/app/data/power-monitoring/inbox
       - ${DIR_POWER_MONITORING_PROCESSED:-./data/power-monitoring/processed}:/app/data/power-monitoring/processed
       - ${DIR_POWER_MONITORING_METADATA:-./data/power-monitoring/metadata}:/app/data/power-monitoring/metadata
-      - ./.env:/app/.env:ro
     networks:
       - controller-network
-    user: "${UID}:${GID}"
+    user: "${UID:-1000}:${GID:-1000}"
     labels:
       - "app=home-automation-controller"
       - "environment=production"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # Uncomment for production health monitoring
-    # healthcheck:
-    #   test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/status', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 40s
 
 networks:
   controller-network:
