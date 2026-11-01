@@ -13,7 +13,7 @@ import { AuthController } from './auth/auth.controller.js';
 import { Extractor } from './framework/environment/extractor.js';
 import { FileMonitoringService } from './file-system/file-monitoring.service.js';
 import { FileSystemService } from './file-system/file-system.service.js';
-import { PaperlessConnector } from './paperless/paperless.connector.js';
+import { PaperlessConnector, type DownloadSummary } from './paperless/paperless.connector.js';
 import { NasBackupService } from './backup/nas-backup.service.js';
 import { CronService } from './cron/cron.service.js';
 import { PaperlessPage } from './ui/paperless.page.js';
@@ -24,6 +24,8 @@ import { PowerMonitoringService } from './power-monitoring/power-monitoring.serv
 import { PowerMonitoringHassConnector } from './power-monitoring/power-monitoring.hass-connector.js';
 import { PowerMonitoringProcessor } from './power-monitoring/power-monitoring.processor.js';
 import { PowerMetric } from './power-monitoring/power-monitoring.interfaces.js';
+import { PipelineTracker } from './pipeline/pipeline-tracker.service.js';
+import { PipelinePage } from './ui/pipeline.page.js';
 
 // TODO: consider moving to separate controller / service
 const isProduction = process.env.NODE_ENV === 'production';
@@ -70,6 +72,55 @@ const DIR_CONFIG = '/app/data/config'   // configuration directory (stores manif
 const PAPERLESS_URL = Extractor.extractString('PAPERLESS_URL', 'https://paperless.office.etauker.com');
 const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
 const paperless = new PaperlessConnector(PAPERLESS_URL, DIR_PAPERLESS_EXPORT, DIR_CONFIG, PAPERLESS_TOKEN);
+
+// Pipeline tracking: per-file history + live stage counts (see src/pipeline/README.md)
+const pipeline = new PipelineTracker(
+    {
+        scans: DIR_PRINTER_PAPERLESS,
+        consume: DIR_PAPERLESS_CONSUME,
+        exports: DIR_PAPERLESS_EXPORT,
+        config: DIR_CONFIG,
+    },
+    paperless,
+);
+await pipeline.init();
+
+// Detect paperless ingestion (success / failure) of files moved to the consume directory
+const INGESTION_POLL_MS = 60_000;
+let ingestionSyncRunning = false;
+const syncIngestion = async () => {
+    if (ingestionSyncRunning) return;
+    ingestionSyncRunning = true;
+    try {
+        await pipeline.syncIngestion(paperless);
+    } finally {
+        ingestionSyncRunning = false;
+    }
+};
+void syncIngestion();
+setInterval(() => void syncIngestion(), INGESTION_POLL_MS);
+
+function recordDownloadSummary(summary: DownloadSummary): void {
+    pipeline.invalidatePaperlessCount();
+    for (const result of summary.results) {
+        if (result.success && result.filePath) {
+            pipeline.exported({
+                paperlessId: result.document.paperlessId,
+                title: result.document.title,
+                originalFileName: result.document.originalFileName,
+                filePath: result.filePath,
+            });
+        } else {
+            pipeline.error({
+                stage: 'paperless',
+                paperlessId: result.document.paperlessId,
+                fileName: result.document.originalFileName ?? result.document.title,
+                error: result.error ?? 'Unknown download error',
+                details: 'Export from paperless failed',
+            });
+        }
+    }
+}
 
 // Power monitoring directories
 const DIR_POWER_MONITORING_INBOX = '/app/data/power-monitoring/inbox'        // CSV files from Home Assistant
@@ -403,6 +454,68 @@ uiRouter.get('/power-monitoring/ingestion/stats', async (req, res) => {
     }
 });
 
+// Document pipeline page + data (polled by the page)
+uiRouter.get('/pipeline', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        return res.redirect('/ui/login');
+    }
+
+    try {
+        res.send(PipelinePage.render());
+    } catch (error) {
+        console.error('Error loading pipeline page:', error);
+        res.status(500).send(PipelinePage.renderError(error instanceof Error ? error : String(error)));
+    }
+});
+
+uiRouter.get('/pipeline/stats', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    try {
+        res.json(await pipeline.getStageCounts());
+    } catch (error) {
+        console.error('Error fetching pipeline stats:', error);
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+});
+
+uiRouter.get('/pipeline/files', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 500);
+    res.json({ files: pipeline.listFiles(limit) });
+});
+
+uiRouter.get('/pipeline/files/:id', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    const history = pipeline.getHistory(req.params.id);
+    if (!history) {
+        res.status(404).json({ error: 'File not found' });
+        return;
+    }
+    res.json({ fileId: req.params.id, history });
+});
+
+uiRouter.get('/pipeline/errors', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 500);
+    res.json({ errors: pipeline.listErrors(limit) });
+});
+
 uiRouter.get('/login', async (req, res) => {
     try {
         console.log('=== LOGIN DEBUG INFO ===');
@@ -485,6 +598,7 @@ uiRouter.post('/paperless/download', async (req, res) => {
 
         const summary = await paperless.download(changedSince);
         console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
+        recordDownloadSummary(summary);
 
         res.json({
             success: true,
@@ -496,6 +610,7 @@ uiRouter.post('/paperless/download', async (req, res) => {
         });
     } catch (error) {
         console.error('Error in download endpoint:', error);
+        pipeline.error({ stage: 'paperless', error, details: 'Manual paperless export run failed' });
         res.status(500).json({
             error: error instanceof Error ? error.message : String(error)
         });
@@ -528,12 +643,23 @@ const fileSystem = new FileSystemService();
 fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
     add: async (filePath) => {
         console.log(`New file detected: ${filePath}`);
+        const fileId = pipeline.fileDetected(filePath);
 
         // TODO: consolidate with backup service
         fileSystem.moveFile(filePath, DIR_PAPERLESS_CONSUME)
-            .then((newPath) => console.log(`File moved to paperless consume directory: ${newPath}`))
-            .catch((error) => console.error(`Error moving file to paperless consume directory: ${error}`));
-    }
+            .then((newPath) => {
+                console.log(`File moved to paperless consume directory: ${newPath}`);
+                pipeline.movedToConsume(fileId, newPath);
+            })
+            .catch((error) => {
+                console.error(`Error moving file to paperless consume directory: ${error}`);
+                pipeline.error({ stage: 'scanned', fileId, path: filePath, error, details: 'Move to paperless consume failed' });
+            });
+    },
+    error: (error) => {
+        console.error(`Error monitoring ${DIR_PRINTER_PAPERLESS}:`, error);
+        pipeline.error({ stage: 'scanned', error, details: `Directory monitor error (${DIR_PRINTER_PAPERLESS})` });
+    },
 }, {
     awaitWriteFinish: {
         stabilityThreshold: 180000,
@@ -554,6 +680,7 @@ cronService.schedule(cronPattern, timezone, async () => {
 
         const summary = await paperless.download(changedSince);
         console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
+        recordDownloadSummary(summary);
 
         console.log({
             success: true,
@@ -564,7 +691,8 @@ cronService.schedule(cronPattern, timezone, async () => {
             results: summary.results
         });
     } catch (error) {
-        console.error('Error in download endpoint:', error);
+        console.error('Error in scheduled paperless export:', error);
+        pipeline.error({ stage: 'paperless', error, details: 'Scheduled paperless export run failed' });
     }
 });
 
@@ -573,9 +701,19 @@ fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
     add: async (filePath) => {
         console.log(`New file detected: ${filePath}`);
         backupService.backupFile(filePath)
-            .then((newPath) => console.log(`File backed up to NAS directory`, newPath))
-            .catch((error) => console.error(`Error backing up file to NAS directory: ${error}`));
-    }
+            .then((result) => {
+                console.log(`File backed up to NAS directory`, result);
+                pipeline.backedUp(result);
+            })
+            .catch((error) => {
+                console.error(`Error backing up file to NAS directory: ${error}`);
+                pipeline.error({ stage: 'exported', path: filePath, error, details: 'NAS backup failed' });
+            });
+    },
+    error: (error) => {
+        console.error(`Error monitoring ${DIR_PAPERLESS_EXPORT}:`, error);
+        pipeline.error({ stage: 'exported', error, details: `Directory monitor error (${DIR_PAPERLESS_EXPORT})` });
+    },
 }, {
     awaitWriteFinish: {
         stabilityThreshold: 180000,

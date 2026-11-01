@@ -1,0 +1,360 @@
+export class PipelinePage {
+
+    /**
+     * Renders the Document Pipeline page: live stage counts, recent files with history, recent errors.
+     * Data is polled from /ui/pipeline/{stats,files,errors}.
+     * @returns HTML string for the pipeline page
+     */
+    public static render(): string {
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Document Pipeline</title>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    * { box-sizing: border-box; }
+                    body {
+                        background-color: #121212;
+                        color: #e0e0e0;
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                        margin: 0;
+                    }
+                    h1, h2 { color: #64b5f6; margin-bottom: 10px; }
+                    h2 { font-size: 18px; margin-top: 0; }
+                    nav {
+                        margin: 20px 0;
+                        padding-bottom: 20px;
+                        border-bottom: 1px solid #333;
+                        display: flex;
+                        gap: 20px;
+                    }
+                    a { color: #64b5f6; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+
+                    .section {
+                        background-color: #1e1e1e;
+                        padding: 20px;
+                        margin: 20px 0;
+                        border-radius: 8px;
+                    }
+                    .section-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: baseline;
+                    }
+                    .updated { font-size: 11px; color: #666; }
+
+                    /* ── Stat Cards ─────────────────────────────── */
+                    .stats-grid {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 15px;
+                        margin-top: 15px;
+                        align-items: stretch;
+                    }
+                    .stat-card {
+                        background-color: #2a2a2a;
+                        padding: 15px 25px;
+                        border-radius: 8px;
+                        min-width: 140px;
+                        flex: 1;
+                    }
+                    .stat-arrow {
+                        align-self: center;
+                        color: #555;
+                        font-size: 20px;
+                    }
+                    .stat-value { font-size: 28px; font-weight: bold; color: #64b5f6; }
+                    .stat-value.warning { color: #ff9800; }
+                    .stat-value.success { color: #4caf50; }
+                    .stat-value.error { color: #f44336; }
+                    .stat-value.muted { color: #666; }
+                    .stat-label {
+                        font-size: 12px;
+                        color: #999;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-top: 5px;
+                    }
+                    .stat-sub { font-size: 11px; color: #666; margin-top: 4px; }
+
+                    /* ── Tables ─────────────────────────────────── */
+                    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+                    th {
+                        text-align: left;
+                        color: #999;
+                        font-size: 11px;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        padding: 6px 12px;
+                        border-bottom: 1px solid #444;
+                    }
+                    td { padding: 6px 12px; border-bottom: 1px solid #333; vertical-align: top; }
+                    tr.file-row { cursor: pointer; }
+                    tr.file-row:hover { background-color: #2a2a2a; }
+                    tr.history-row td { background-color: #181818; padding: 10px 24px; }
+                    .empty { color: #666; font-style: italic; }
+                    .badge {
+                        display: inline-block;
+                        padding: 2px 8px;
+                        border-radius: 10px;
+                        font-size: 11px;
+                        background-color: #333;
+                    }
+                    .badge.scanned   { background-color: #37474f; }
+                    .badge.consume   { background-color: #4527a0; }
+                    .badge.paperless { background-color: #1565c0; }
+                    .badge.exported  { background-color: #00695c; }
+                    .badge.archived  { background-color: #2e7d32; }
+                    .err-text { color: #f44336; }
+                    .timeline { list-style: none; margin: 0; padding: 0; }
+                    .timeline li { padding: 3px 0; font-size: 12px; }
+                    .timeline .ts { color: #888; display: inline-block; min-width: 170px; }
+                    .timeline .type { font-weight: bold; display: inline-block; min-width: 140px; }
+                    .timeline .meta { color: #aaa; }
+                    .error-banner {
+                        display: none;
+                        margin-top: 12px;
+                        padding: 12px 16px;
+                        border-left: 4px solid #f44336;
+                        color: #f44336;
+                        background-color: #1e1e1e;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Document Pipeline</h1>
+                <nav>
+                    <a href="/ui/home">← Home</a>
+                    <a href="/ui/paperless">Paperless</a>
+                </nav>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Stages</h2>
+                        <span class="updated" id="statsUpdated">Loading…</span>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value muted" id="statScanned">–</div>
+                            <div class="stat-label">Scanned</div>
+                            <div class="stat-sub">Waiting to stabilise / move</div>
+                        </div>
+                        <div class="stat-arrow">→</div>
+                        <div class="stat-card">
+                            <div class="stat-value muted" id="statConsume">–</div>
+                            <div class="stat-label">Consume</div>
+                            <div class="stat-sub">Awaiting paperless ingestion</div>
+                        </div>
+                        <div class="stat-arrow">→</div>
+                        <div class="stat-card">
+                            <div class="stat-value muted" id="statPaperless">–</div>
+                            <div class="stat-label">Paperless inbox</div>
+                            <div class="stat-sub">Awaiting manual review</div>
+                        </div>
+                        <div class="stat-arrow">→</div>
+                        <div class="stat-card">
+                            <div class="stat-value muted" id="statExported">–</div>
+                            <div class="stat-label">Exported</div>
+                            <div class="stat-sub">Awaiting NAS backup</div>
+                        </div>
+                        <div class="stat-arrow">→</div>
+                        <div class="stat-card">
+                            <div class="stat-value muted" id="statArchived">–</div>
+                            <div class="stat-label">Archived</div>
+                            <div class="stat-sub">Tracked NAS backups</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value muted" id="statErrors">–</div>
+                            <div class="stat-label">Errors (24h)</div>
+                        </div>
+                    </div>
+                    <div class="error-banner" id="loadError"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Recent files</h2>
+                    <table>
+                        <thead>
+                            <tr><th>File</th><th>Stage</th><th>Last event</th><th>When</th><th>Events</th></tr>
+                        </thead>
+                        <tbody id="filesBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <h2>Recent errors</h2>
+                    <table>
+                        <thead>
+                            <tr><th>When</th><th>Stage</th><th>File</th><th>Error</th></tr>
+                        </thead>
+                        <tbody id="errorsBody"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+
+                <script>
+                    const POLL_MS = 5000;
+                    const expanded = new Set();
+
+                    function esc(value) {
+                        return String(value ?? '').replace(/[&<>"']/g, c => ({
+                            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                        })[c]);
+                    }
+
+                    function fmtTime(iso) {
+                        return iso ? new Date(iso).toLocaleString() : '–';
+                    }
+
+                    function setStat(id, value, cls) {
+                        const el = document.getElementById(id);
+                        el.textContent = value === null || value === undefined ? 'n/a' : value;
+                        el.className = 'stat-value ' + (value === null || value === undefined ? 'muted' : cls);
+                    }
+
+                    async function getJson(url) {
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || ('Request failed: ' + url));
+                        return data;
+                    }
+
+                    function pendingCls(n) { return n > 0 ? 'warning' : 'success'; }
+
+                    async function loadStats() {
+                        const s = await getJson('/ui/pipeline/stats');
+                        setStat('statScanned', s.scanned, pendingCls(s.scanned));
+                        setStat('statConsume', s.consume, pendingCls(s.consume));
+                        setStat('statPaperless', s.paperlessInbox, pendingCls(s.paperlessInbox));
+                        setStat('statExported', s.exported, pendingCls(s.exported));
+                        setStat('statArchived', s.archivedTracked, 'success');
+                        setStat('statErrors', s.errors24h, s.errors24h > 0 ? 'error' : 'success');
+                        document.getElementById('statsUpdated').textContent = 'Updated ' + fmtTime(s.lastUpdated);
+                    }
+
+                    function renderTimeline(history) {
+                        return '<ul class="timeline">' + history.map(e =>
+                            '<li>' +
+                                '<span class="ts">' + esc(fmtTime(e.ts)) + '</span>' +
+                                '<span class="type' + (e.type === 'error' ? ' err-text' : '') + '">' + esc(e.type) + '</span>' +
+                                '<span class="badge ' + esc(e.stage) + '">' + esc(e.stage) + '</span> ' +
+                                '<span class="meta">' +
+                                    (e.error ? '<span class="err-text">' + esc(e.error) + '</span> ' : '') +
+                                    (e.details ? esc(e.details) + ' ' : '') +
+                                    (e.path ? '— ' + esc(e.path) : '') +
+                                '</span>' +
+                            '</li>'
+                        ).join('') + '</ul>';
+                    }
+
+                    async function loadFiles() {
+                        const { files } = await getJson('/ui/pipeline/files?limit=50');
+                        const body = document.getElementById('filesBody');
+                        if (files.length === 0) {
+                            body.innerHTML = '<tr><td colspan="5" class="empty">No files tracked yet</td></tr>';
+                            return;
+                        }
+
+                        const histories = await Promise.all(files.map(f =>
+                            expanded.has(f.fileId)
+                                ? getJson('/ui/pipeline/files/' + encodeURIComponent(f.fileId)).then(d => d.history).catch(() => [])
+                                : Promise.resolve(null)
+                        ));
+
+                        body.innerHTML = files.map((f, i) =>
+                            '<tr class="file-row" data-id="' + esc(f.fileId) + '">' +
+                                '<td>' + (expanded.has(f.fileId) ? '▾ ' : '▸ ') + esc(f.fileName) +
+                                    (f.paperlessId !== undefined ? ' <span class="stat-sub">#' + esc(f.paperlessId) + '</span>' : '') + '</td>' +
+                                '<td><span class="badge ' + esc(f.stage) + '">' + esc(f.stage) + '</span></td>' +
+                                '<td class="' + (f.hasError ? 'err-text' : '') + '">' + esc(f.lastEvent) + '</td>' +
+                                '<td>' + esc(fmtTime(f.lastEventAt)) + '</td>' +
+                                '<td>' + esc(f.eventCount) + '</td>' +
+                            '</tr>' +
+                            (histories[i] ? '<tr class="history-row"><td colspan="5">' + renderTimeline(histories[i]) + '</td></tr>' : '')
+                        ).join('');
+                    }
+
+                    async function loadErrors() {
+                        const { errors } = await getJson('/ui/pipeline/errors?limit=50');
+                        const body = document.getElementById('errorsBody');
+                        if (errors.length === 0) {
+                            body.innerHTML = '<tr><td colspan="4" class="empty">No errors recorded</td></tr>';
+                            return;
+                        }
+                        body.innerHTML = errors.map(e =>
+                            '<tr>' +
+                                '<td>' + esc(fmtTime(e.ts)) + '</td>' +
+                                '<td><span class="badge ' + esc(e.stage) + '">' + esc(e.stage) + '</span></td>' +
+                                '<td>' + esc(e.fileName) + '</td>' +
+                                '<td class="err-text">' + esc(e.error) + (e.details ? ' <span class="stat-sub">' + esc(e.details) + '</span>' : '') + '</td>' +
+                            '</tr>'
+                        ).join('');
+                    }
+
+                    async function refresh() {
+                        const banner = document.getElementById('loadError');
+                        const results = await Promise.allSettled([loadStats(), loadFiles(), loadErrors()]);
+                        const failed = results.find(r => r.status === 'rejected');
+                        if (failed) {
+                            banner.textContent = 'Error refreshing: ' + failed.reason.message;
+                            banner.style.display = 'block';
+                        } else {
+                            banner.style.display = 'none';
+                        }
+                    }
+
+                    document.getElementById('filesBody').addEventListener('click', (ev) => {
+                        const row = ev.target.closest('tr.file-row');
+                        if (!row) return;
+                        const id = row.dataset.id;
+                        if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+                        loadFiles().catch(() => {});
+                    });
+
+                    refresh();
+                    setInterval(() => {
+                        if (!document.hidden) refresh();
+                    }, POLL_MS);
+                </script>
+            </body>
+            </html>
+        `;
+    }
+
+    /**
+     * Renders an error page.
+     * @param error - Error object or message
+     * @returns HTML string for the error page
+     */
+    public static renderError(error: Error | string): string {
+        const errorMessage = (error instanceof Error ? error.message : String(error))
+            .replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Error – Document Pipeline</title>
+                <style>
+                    body { background-color: #121212; color: #e0e0e0; font-family: Arial, sans-serif; padding: 20px; }
+                    .error {
+                        color: #f44336;
+                        background-color: #1e1e1e;
+                        padding: 20px;
+                        border-radius: 4px;
+                        border-left: 4px solid #f44336;
+                    }
+                    a { color: #64b5f6; text-decoration: none; }
+                </style>
+            </head>
+            <body>
+                <h1>Error Loading Document Pipeline</h1>
+                <div class="error"><p><strong>Error:</strong> ${errorMessage}</p></div>
+                <p><a href="/ui/home">← Back to Home</a></p>
+            </body>
+            </html>
+        `;
+    }
+}

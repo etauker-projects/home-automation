@@ -79,6 +79,10 @@ export class HomePage {
                         <div class="panel-icon">📄</div>
                         <div class="panel-title">View Paperless Documents</div>
                     </a>
+                    <a href="/ui/pipeline" class="panel">
+                        <div class="panel-icon">🔄</div>
+                        <div class="panel-title">Document Pipeline</div>
+                    </a>
                     <a href="/ui/power-monitoring" class="panel">
                         <div class="panel-icon">⚡</div>
                         <div class="panel-title">Power Monitoring</div>

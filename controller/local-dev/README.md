@@ -21,7 +21,7 @@ All values live in [`.env.local`](.env.local) and are dev-only.
 ## What gets seeded
 
 - **Authentik**: `akadmin` from the `AUTHENTIK_BOOTSTRAP_*` vars. [`authentik/blueprints/controller-dev.yaml`](authentik/blueprints/controller-dev.yaml) adds the `dev` user plus the `home-automation-controller` OIDC provider and app, with the fixed client ID and secret from `.env.local`.
-- **Paperless**: `admin` from `PAPERLESS_ADMIN_*`. The one-shot `paperless-init` service ([`paperless/init.py`](paperless/init.py)) creates the fixed API token (`PAPERLESS_TOKEN`) and queues the PDFs in `paperless/sample-docs/` for consumption, if no documents exist yet.
+- **Paperless**: `admin` from `PAPERLESS_ADMIN_*`. The one-shot `paperless-init` service ([`paperless/init.py`](paperless/init.py)) creates the fixed API token (`PAPERLESS_TOKEN`) and queues the PDFs in `paperless/sample-docs/` for consumption, if no documents exist yet. It also creates an `inbox` tag flagged as Paperless's inbox tag. Newly consumed documents get it automatically and aren't exported until it is removed. Sample documents consumed before the tag existed stay untagged. `npm run local:up` re-runs the seed on an existing stack.
 
 ## Notes
 

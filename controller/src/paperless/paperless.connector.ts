@@ -5,6 +5,7 @@ import { createWriteStream } from 'node:fs';
 import path from 'node:path';
 import * as http from 'http';
 import * as https from 'https';
+import { RestError } from '../framework/rest/rest.error.js';
 
 interface PaperlessCorrespondent {
     id: number;
@@ -97,7 +98,7 @@ interface PaperlessMetadata extends PaperlessIterator {
 /**
  * Paperless result with enhanced metadata, e.g. with linked IDs resolved to actual values.
  */
-interface EnhancedResult {
+export interface EnhancedResult {
     paperlessId: number;
     title: string;
     // content: string;
@@ -108,7 +109,9 @@ interface EnhancedResult {
     archiveSerialNumber?: string | null;
     created: string;
     modified: string;
-    // original_file_name: string;
+    /** True if the document carries any paperless inbox tag (awaiting manual review) */
+    inInbox: boolean;
+    originalFileName?: string;
     // archived_file_name: string;
     // owner: string;
     notes: any[];
@@ -118,14 +121,27 @@ interface EnhancedResult {
     path: string;
 }
 
-interface DownloadResult {
+/**
+ * A paperless consume_file task, normalised across paperless versions
+ * (3.x: task_type/input_data/result_data, 2.x: task_name/task_file_name/result).
+ */
+export interface ConsumeTask {
+    taskId: string;
+    fileName: string;
+    status: 'pending' | 'started' | 'success' | 'failure' | 'other';
+    documentId?: number;
+    error?: string;
+    dateDone?: string;
+}
+
+export interface DownloadResult {
     document: EnhancedResult;
     filePath?: string;
     success: boolean;
     error?: string;
 }
 
-interface DownloadSummary {
+export interface DownloadSummary {
     total: number;
     successful: number;
     failed: number;
@@ -163,7 +179,7 @@ export class PaperlessConnector {
     private documentTypes: { [key: number]: string } = {};
     // private storagePaths: { [key: number]: string } = {};
     private customFields: { [key: string]: string } = {};
-    private tags: { [key: number]: string } = {};
+    private tags: { [key: number]: { name: string; isInbox: boolean } } = {};
     // private users: { [key: number]: string } = {};
 
     public async list(changedSince: string, page: number = 1): Promise<EnhancedResult[]> {
@@ -200,6 +216,87 @@ export class PaperlessConnector {
         return response.data;
     }
 
+    /**
+     * Count documents awaiting manual review, i.e. carrying any tag flagged
+     * as an inbox tag in paperless (regardless of the tag's name).
+     */
+    public async countInbox(): Promise<number> {
+        const response = await this.connector.call<{ count: number }>({
+            method: 'GET',
+            url: '/api/documents/',
+            query: {
+                is_in_inbox: true,
+                page_size: 1,
+            },
+            headers: { 'Authorization': `Token ${this.token}` }
+        });
+
+        return response.data.count;
+    }
+
+    /**
+     * List the most recent consume_file tasks (first page, newest first).
+     * Falls back to an unfiltered request for paperless versions that reject the task_type filter.
+     */
+    public async listConsumeTasks(): Promise<ConsumeTask[]> {
+        const request = (query?: Record<string, string>) => this.connector.call<any>({
+            method: 'GET',
+            url: '/api/tasks/',
+            query,
+            headers: { 'Authorization': `Token ${this.token}` }
+        });
+
+        let data: any;
+        try {
+            data = (await request({ task_type: 'consume_file' })).data;
+        } catch (err) {
+            if (!(err instanceof RestError) || err.code !== 400) throw err;
+            data = (await request()).data;
+        }
+
+        const tasks: any[] = Array.isArray(data) ? data : (data?.results ?? []);
+        return tasks
+            .filter(t => (t.task_type ?? t.task_name ?? t.type) === 'consume_file')
+            .map(t => PaperlessConnector.normaliseConsumeTask(t));
+    }
+
+    private static normaliseConsumeTask(t: any): ConsumeTask {
+        const rawStatus = String(t.status ?? '').toLowerCase();
+        const status: ConsumeTask['status'] =
+            rawStatus === 'success' ? 'success'
+            : rawStatus === 'failure' ? 'failure'
+            : rawStatus === 'pending' ? 'pending'
+            : rawStatus === 'started' ? 'started'
+            : 'other';
+
+        const resultData = t.result_data;
+        const documentIdRaw = resultData?.document_id
+            ?? t.related_document_ids?.[0]
+            ?? t.related_document;
+        const documentId = documentIdRaw !== undefined && documentIdRaw !== null && !isNaN(Number(documentIdRaw))
+            ? Number(documentIdRaw)
+            : undefined;
+
+        let error: string | undefined;
+        if (status === 'failure') {
+            error = (typeof resultData === 'string' ? resultData : undefined)
+                ?? resultData?.error
+                ?? resultData?.message
+                ?? (typeof t.result === 'string' ? t.result : undefined)
+                ?? (resultData ? JSON.stringify(resultData) : undefined)
+                ?? 'Consumption failed';
+        }
+
+        return {
+            taskId: String(t.task_id ?? t.id),
+            fileName: t.input_data?.filename ?? t.task_file_name ?? '',
+            status,
+            ...(documentId !== undefined ? { documentId } : {}),
+            ...(error !== undefined ? { error } : {}),
+            ...(t.date_done ? { dateDone: t.date_done } : {}),
+        };
+    }
+
     public async enhanceResult(result: PaperlessResult): Promise<EnhancedResult> {
 
         const [
@@ -225,9 +322,11 @@ export class PaperlessConnector {
             correspondent: correspondent,
             documentType: documentType,
             // storagePath,
-            tags: tags,
+            tags: tags.names,
+            inInbox: tags.inInbox,
             created: result.created,
             modified: result.modified,
+            originalFileName: result.original_file_name,
             archiveSerialNumber: result.archive_serial_number,
             // owner: this.resolveUserName(result.owner),
             notes: result.notes,
@@ -293,27 +392,32 @@ export class PaperlessConnector {
         });
     }
 
-    private async resolveTagNames(ids: number[]): Promise<string[]> {
+    private async resolveTagNames(ids: number[]): Promise<{ names: string[]; inInbox: boolean }> {
+        const fromCache = () => {
+            const tags = ids.map(id => this.tags[id]).filter(Boolean);
+            return { names: tags.map(t => t.name), inInbox: tags.some(t => t.isInbox) };
+        };
+
         if (ids.every(id => this.tags[id])) {
-            return ids.map(id => this.tags[id]) as string[];
+            return fromCache();
         }
 
         return this.connector.call<{ results: PaperlessTag[] }>({
             method: 'GET',
             url: `/api/tags/`,
+            query: { page_size: 1000 },
             headers: { 'Authorization': `Token ${this.token}` }
         }).then(response => {
-            const results = response.data.results;
-            // console.log('Fetched tags:', results);
-            this.tags = results.reduce((acc, item) => {
-                acc[item.id] = item.name;
+            this.tags = response.data.results.reduce((acc, item) => {
+                acc[item.id] = { name: item.name, isInbox: item.is_inbox_tag };
                 return acc;
-            }, {} as { [key: number]: string });
+            }, {} as { [key: number]: { name: string; isInbox: boolean } });
 
-            return ids.map(id => this.tags[id]) as string[];
+            return fromCache();
         }).catch(err => {
             console.error(`Failed to resolve tag names for IDs ${ids.join(',')}`, err);
-            return [];
+            // Fail safe: unknown tags may include an inbox tag, so treat the document as not yet reviewed
+            return { names: [], inInbox: ids.length > 0 };
         });
     }
 
@@ -422,13 +526,13 @@ export class PaperlessConnector {
     /**
      * Check if a document should be skipped based on the manifest.
      * Returns true if the document already exists with the same modified timestamp
-     * or if it has the "inbox" tag, false otherwise.
+     * or if it carries a paperless inbox tag, false otherwise.
 
      */
     private shouldSkipDocument(doc: EnhancedResult, modified: string): { skip: boolean, reason: string } {
         const manifestEntry = this.manifest[doc.paperlessId];
 
-        if (doc.tags.map(tag => tag.toLowerCase()).includes('inbox')) {
+        if (doc.inInbox) {
             return { skip: true, reason: 'Not ready for exporting, manual processing needed' };
         } else if (!manifestEntry) {
             return { skip: false, reason: 'Not in manifest, not previously exported' };
