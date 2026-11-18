@@ -7,6 +7,15 @@ scans/ ──move──▶ paperless-consume/ ──paperless ingests──▶ p
 scanned          consume                                  paperless                    exported                       archived
 ```
 
+## Code structure
+
+- `document-pipeline.ts`: `DocumentPipeline` runs the steps. `handleScannedFile()`, `syncIngestion()`, `runExport()` and `handleExportedFile()` can each be called and awaited directly. `start()` connects them to the directory watchers, the export cron and the ingestion poll. `stop()` disconnects them again.
+- `document-pipeline.interfaces.ts`: the interfaces it depends on (`DirectoryWatcher`, `Scheduler`, `PipelineFiles`, `NasBackup`, `PaperlessGateway`, `PipelineRecorder`). The production classes match them as-is. A test can pass in small fakes, so no chokidar, cron, network or NAS is needed.
+- `node-scheduler.ts`: the production `Scheduler` (node-cron plus `setInterval`).
+- `pipeline-tracker.service.ts`: `PipelineTracker`, the event history. `now` and `newId` can be passed in for deterministic timestamps and file IDs.
+- `src/config/pipeline-directories.config.ts` / `pipeline-timing.config.ts`: directories and waiting periods, loaded from the environment.
+- `src/index.ts` only builds the real dependencies and calls `documentPipeline.start()`.
+
 ## Events
 
 | Type               | Stage      | Recorded when                                         |
@@ -35,6 +44,8 @@ All set by environment variables (see `.env.template`), validated at startup. An
 | `PAPERLESS_INGESTION_POLL_SECONDS` | 60 (min 5) | How often Paperless consume tasks are polled |
 | `PAPERLESS_INBOX_CACHE_SECONDS` | 60 (0 = no cache) | How long the inbox count is cached |
 | `PIPELINE_UI_REFRESH_SECONDS` | 5 | How often `/ui/pipeline` refreshes |
+
+`PIPELINE_DATA_ROOT` (default `/app/data`) is the folder that holds `scans/`, `paperless-consume/`, `paperless-exports/`, `nas/` and `config/` inside the container.
 
 ## Ingestion
 

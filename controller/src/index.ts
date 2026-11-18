@@ -1,5 +1,4 @@
 import express from "express";
-import path from "node:path";
 import {
     randomPKCECodeVerifier,
     calculatePKCECodeChallenge,
@@ -14,9 +13,8 @@ import { AuthController } from './auth/auth.controller.js';
 import { Extractor } from './framework/environment/extractor.js';
 import { FileMonitoringService } from './file-system/file-monitoring.service.js';
 import { FileSystemService } from './file-system/file-system.service.js';
-import { PaperlessConnector, type DownloadSummary } from './paperless/paperless.connector.js';
+import { PaperlessConnector } from './paperless/paperless.connector.js';
 import { NasBackupService } from './backup/nas-backup.service.js';
-import { CronService } from './cron/cron.service.js';
 import { PaperlessPage } from './ui/paperless.page.js';
 import { HomePage } from './ui/home.page.js';
 import { PowerMonitoringPage } from './ui/power-monitoring.page.js';
@@ -28,6 +26,9 @@ import { PowerMetric } from './power-monitoring/power-monitoring.interfaces.js';
 import { PipelineTracker } from './pipeline/pipeline-tracker.service.js';
 import { PipelinePage } from './ui/pipeline.page.js';
 import { loadPipelineTimingConfig, describePipelineTiming } from './config/pipeline-timing.config.js';
+import { loadPipelineDirectories } from './config/pipeline-directories.config.js';
+import { DocumentPipeline } from './pipeline/document-pipeline.js';
+import { NodeScheduler } from './pipeline/node-scheduler.js';
 
 // TODO: consider moving to separate controller / service
 const isProduction = process.env.NODE_ENV === 'production';
@@ -47,10 +48,6 @@ const oidcConfig: Configuration = await discovery(
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const apiRoot = process.env.API_ROOT || '';
-const logger = {
-    info: (msg: string) => console.log('[Backup]', msg),
-    error: (msg: string, err?: any) => console.error('[Backup]', msg, err),
-}
 
 const server = new Server({ port, apiRoot });
 server.register('/status', StatusController.getInstance());
@@ -65,71 +62,41 @@ server.register('/', {
 
 const uiRouter = express.Router();
 
-// Key directories:
-const DIR_PRINTER_PAPERLESS = '/app/data/scans'   // printer scans to paperless consume directory (monitored by this service)
-const DIR_PAPERLESS_CONSUME = '/app/data/paperless-consume'   // paperless consume directory (paperless detects and processes files here)
-const DIR_PAPERLESS_EXPORT = '/app/data/paperless-exports'    // paperless export directory (files processed by paperless are exported here)
-const DIR_SYNOLOGY_DOCS = '/app/data/nas'       // doument storage on the NAS
-const DIR_CONFIG = '/app/data/config'   // configuration directory (stores manifests and other config files)
-const PAPERLESS_URL = Extractor.extractString('PAPERLESS_URL', 'https://paperless.office.etauker.com');
-const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
-const paperless = new PaperlessConnector(PAPERLESS_URL, DIR_PAPERLESS_EXPORT, DIR_CONFIG, PAPERLESS_TOKEN);
+/* Document pipeline (scans → paperless → NAS), see src/pipeline/README.md */
 
-// Pipeline waiting periods (env-configurable, see .env.template)
+const dirs = loadPipelineDirectories();
 const timing = loadPipelineTimingConfig();
 console.log(`[Pipeline] Timing: ${describePipelineTiming(timing)}`);
 
-// Pipeline tracking: per-file history + live stage counts (see src/pipeline/README.md)
+const PAPERLESS_URL = Extractor.extractString('PAPERLESS_URL', 'https://paperless.office.etauker.com');
+const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
+const paperless = new PaperlessConnector(PAPERLESS_URL, dirs.exports, dirs.config, PAPERLESS_TOKEN);
+
+// Per-file history + live stage counts
 const pipeline = new PipelineTracker(
-    {
-        scans: DIR_PRINTER_PAPERLESS,
-        consume: DIR_PAPERLESS_CONSUME,
-        exports: DIR_PAPERLESS_EXPORT,
-        config: DIR_CONFIG,
-    },
+    { scans: dirs.scans, consume: dirs.consume, exports: dirs.exports, config: dirs.config },
     paperless,
     { inboxCacheMs: timing.inboxCacheMs },
 );
 await pipeline.init();
 
-// Detect paperless ingestion (success / failure) of files moved to the consume directory
-let ingestionSyncRunning = false;
-const syncIngestion = async () => {
-    if (ingestionSyncRunning) return;
-    ingestionSyncRunning = true;
-    try {
-        await pipeline.syncIngestion(paperless);
-    } finally {
-        ingestionSyncRunning = false;
-    }
-};
-void syncIngestion();
-setInterval(() => void syncIngestion(), timing.ingestionPollMs);
-
-function recordDownloadSummary(summary: DownloadSummary): void {
-    pipeline.invalidatePaperlessCount();
-    for (const result of summary.results) {
-        if (result.success && result.filePath) {
-            pipeline.exported({
-                paperlessId: result.document.paperlessId,
-                title: result.document.title,
-                originalFileName: result.document.originalFileName,
-                filePath: result.filePath,
-                reExport: result.reExport,
-                previousPath: result.previousPath,
-                relativePath: result.document.path,
-            });
-        } else {
-            pipeline.error({
-                stage: 'paperless',
-                paperlessId: result.document.paperlessId,
-                fileName: result.document.originalFileName ?? result.document.title,
-                error: result.error ?? 'Unknown download error',
-                details: 'Export from paperless failed',
-            });
-        }
-    }
-}
+const fileSystem = new FileSystemService();
+const documentPipeline = new DocumentPipeline({ dirs, timing }, {
+    watcher: new FileMonitoringService(),
+    scheduler: new NodeScheduler(),
+    files: fileSystem,
+    backup: new NasBackupService(dirs.exports, dirs.nas, {
+        maxConcurrentBackups: 4,
+        retries: 3,
+        retryDelayMs: 2000,
+        logger: {
+            info: (msg: string) => console.log('[Backup]', msg),
+            error: (msg: string, err?: any) => console.error('[Backup]', msg, err),
+        },
+    }, fileSystem),
+    paperless,
+    recorder: pipeline,
+});
 
 // Power monitoring directories
 const DIR_POWER_MONITORING_INBOX = '/app/data/power-monitoring/inbox'        // CSV files from Home Assistant
@@ -602,12 +569,7 @@ uiRouter.post('/paperless/download', async (req, res) => {
     }
 
     try {
-        const changedSince = await paperless.getLastDownloaded();
-        console.log(`Starting download of paperless documents from ${changedSince}...`);
-
-        const summary = await paperless.download(changedSince);
-        console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
-        recordDownloadSummary(summary);
+        const summary = await documentPipeline.runExport('manual');
 
         res.json({
             success: true,
@@ -618,8 +580,7 @@ uiRouter.post('/paperless/download', async (req, res) => {
             results: summary.results
         });
     } catch (error) {
-        console.error('Error in download endpoint:', error);
-        pipeline.error({ stage: 'paperless', error, details: 'Manual paperless export run failed' });
+        // already logged and recorded by runExport
         res.status(500).json({
             error: error instanceof Error ? error.message : String(error)
         });
@@ -632,124 +593,7 @@ server.register('/ui', {
     stop: () => Promise.resolve(true)
 });
 
-/* Document Processing */
-
-const fileMonitor = new FileMonitoringService();
-const cronService = new CronService();
-const backupService = new NasBackupService(
-    DIR_PAPERLESS_EXPORT,
-    DIR_SYNOLOGY_DOCS,
-    {
-        concurrency: 4,
-        retries: 3,
-        retryDelayMs: 2000,
-        logger,
-    }
-);
-const fileSystem = new FileSystemService();
-
-// Step 1: monitor DIR_PRINTER_PAPERLESS and move files to DIR_PAPERLESS_CONSUME
-fileMonitor.monitorDirectory(DIR_PRINTER_PAPERLESS, {
-    add: async (filePath) => {
-        console.log(`New file detected: ${filePath}`);
-        const fileId = pipeline.fileDetected(filePath);
-
-        // TODO: consolidate with backup service
-        fileSystem.moveFile(filePath, DIR_PAPERLESS_CONSUME)
-            .then((newPath) => {
-                console.log(`File moved to paperless consume directory: ${newPath}`);
-                pipeline.movedToConsume(fileId, newPath);
-            })
-            .catch((error) => {
-                console.error(`Error moving file to paperless consume directory: ${error}`);
-                pipeline.error({ stage: 'scanned', fileId, path: filePath, error, details: 'Move to paperless consume failed' });
-            });
-    },
-    error: (error) => {
-        console.error(`Error monitoring ${DIR_PRINTER_PAPERLESS}:`, error);
-        pipeline.error({ stage: 'scanned', error, details: `Directory monitor error (${DIR_PRINTER_PAPERLESS})` });
-    },
-}, {
-    awaitWriteFinish: {
-        stabilityThreshold: timing.scanStabilityMs,
-        pollInterval: 500,
-    },
-});
-
-// Step 2: paperless ingests the files
-
-// Step 3: export from paperless to DIR_PAPERLESS_EXPORT (schedule: PAPERLESS_EXPORT_CRON)
-cronService.schedule(timing.exportCron, timing.exportTimezone, async () => {
-    try {
-        const changedSince = await paperless.getLastDownloaded();
-        console.log(`Starting download of paperless documents since ${changedSince}...`);
-
-        const summary = await paperless.download(changedSince);
-        console.log(`Download complete: ${summary.successful}/${summary.total} successful`);
-        recordDownloadSummary(summary);
-
-        console.log({
-            success: true,
-            total: summary.total,
-            successful: summary.successful,
-            failed: summary.failed,
-            skipped: summary.skipped,
-            results: summary.results
-        });
-    } catch (error) {
-        console.error('Error in scheduled paperless export:', error);
-        pipeline.error({ stage: 'paperless', error, details: 'Scheduled paperless export run failed' });
-    }
-});
-
-// After a document updated in paperless is backed up under a new path, delete its old NAS copy
-async function removeSupersededCopy(exportFilePath: string): Promise<void> {
-    let oldAbsolute: string | undefined;
-    try {
-        const relative = fileSystem.getNestedRelativePath(DIR_PAPERLESS_EXPORT, exportFilePath);
-        const superseded = await paperless.takeSupersededPath(relative);
-        if (!superseded) return;
-
-        oldAbsolute = path.join(DIR_SYNOLOGY_DOCS, superseded);
-        fileSystem.getNestedRelativePath(DIR_SYNOLOGY_DOCS, oldAbsolute); // guard against escaping the NAS root
-        await fileSystem.safeDelete(oldAbsolute);
-        await fileSystem.cleanupEmptyDirectories(path.dirname(oldAbsolute), DIR_SYNOLOGY_DOCS);
-        console.log(`Removed superseded NAS copy: ${oldAbsolute}`);
-        pipeline.supersededRemoved({ exportPath: exportFilePath, removedPath: oldAbsolute });
-    } catch (error) {
-        console.error(`Error removing superseded NAS copy for ${exportFilePath}:`, error);
-        pipeline.error({ stage: 'archived', path: oldAbsolute ?? exportFilePath, error, details: 'Removing superseded NAS copy failed' });
-    }
-}
-
-// Step 4: monitor DIR_PAPERLESS_EXPORT and move files to DIR_SYNOLOGY_DOCS
-fileMonitor.monitorDirectory(DIR_PAPERLESS_EXPORT, {
-    add: async (filePath) => {
-        console.log(`New file detected: ${filePath}`);
-        backupService.backupFile(filePath)
-            .then(async (result) => {
-                console.log(`File backed up to NAS directory`, result);
-                pipeline.backedUp(result);
-                await removeSupersededCopy(filePath);
-            })
-            .catch((error) => {
-                console.error(`Error backing up file to NAS directory: ${error}`);
-                pipeline.error({ stage: 'exported', path: filePath, error, details: 'NAS backup failed' });
-            });
-    },
-    error: (error) => {
-        console.error(`Error monitoring ${DIR_PAPERLESS_EXPORT}:`, error);
-        pipeline.error({ stage: 'exported', error, details: `Directory monitor error (${DIR_PAPERLESS_EXPORT})` });
-    },
-}, {
-    awaitWriteFinish: {
-        stabilityThreshold: timing.exportStabilityMs,
-        pollInterval: 500,
-    },
-    ignoreInitial: false,
-});
-
-
+documentPipeline.start();
 server.start();
 
 await new Promise(_resolve => {

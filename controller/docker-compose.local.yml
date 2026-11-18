@@ -95,8 +95,27 @@ services:
   authentik-worker:
     <<: *authentik
     command: worker
+    # Start after the server has run migrations; on a fresh DB both racing to seed the
+    # default objects causes duplicate-key errors in the logs.
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+      authentik-server:
+        condition: service_healthy
     networks:
       - controller-network
+    # Healthy once the worker has applied the controller blueprint, i.e. the OIDC issuer exists.
+    # The controller runs discovery at startup, so a merely-running server is not enough.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://authentik-server:9000/application/o/home-automation-controller/.well-known/openid-configuration', timeout=5)"
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 30s
 
   # ---- Paperless ----
   paperless-redis:
@@ -145,7 +164,7 @@ services:
   # ---- Controller wiring ----
   controller-dev:
     depends_on: &controller-deps
-      authentik-server:
+      authentik-worker:
         condition: service_healthy
       paperless-init:
         condition: service_completed_successfully

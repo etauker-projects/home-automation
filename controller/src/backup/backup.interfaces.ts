@@ -16,10 +16,9 @@ export interface BackupDirectoryResult {
 }
 
 export interface BackupOptions {
-  concurrency?: number;
   retries?: number;
   retryDelayMs?: number;
-  lockFileName?: string;
+  /** Maximum number of files backed up at the same time (default 4) */
   maxConcurrentBackups?: number;
   logger?: {
     info?: (msg: string) => void;

@@ -26,6 +26,10 @@ export interface PipelineTrackerOptions {
     fileName?: string;
     /** How long the paperless inbox count is cached (default 60s) */
     inboxCacheMs?: number;
+    /** Clock (default: current time), injectable for deterministic tests */
+    now?: () => Date;
+    /** File ID generator (default: random UUID), injectable for deterministic tests */
+    newId?: () => string;
 }
 
 const DEFAULT_INBOX_CACHE_MS = 60_000;
@@ -59,8 +63,10 @@ export class PipelineTracker extends EventEmitter {
     private paperlessCountCache?: { value: number; at: number };
     /** Paperless consume task IDs already recorded (rebuilt from history on init) */
     private readonly seenTaskIds = new Set<string>();
-    private readonly startedAt = new Date().toISOString();
+    private readonly startedAt: string;
     private readonly inboxCacheMs: number;
+    private readonly now: () => Date;
+    private readonly newId: () => string;
 
     constructor(
         private readonly dirs: PipelineDirectories,
@@ -70,6 +76,9 @@ export class PipelineTracker extends EventEmitter {
         super();
         this.logPath = path.join(dirs.config, options.fileName ?? 'pipeline-events.jsonl');
         this.inboxCacheMs = options.inboxCacheMs ?? DEFAULT_INBOX_CACHE_MS;
+        this.now = options.now ?? (() => new Date());
+        this.newId = options.newId ?? randomUUID;
+        this.startedAt = this.now().toISOString();
     }
 
     // -------------------------
@@ -107,7 +116,7 @@ export class PipelineTracker extends EventEmitter {
 
     /** A new file appeared in the scans directory. Returns the new file ID. */
     public fileDetected(filePath: string): string {
-        const fileId = randomUUID();
+        const fileId = this.newId();
         this.record({ fileId, fileName: path.basename(filePath), stage: 'scanned', type: 'detected', path: filePath });
         return fileId;
     }
@@ -266,8 +275,8 @@ export class PipelineTracker extends EventEmitter {
     private record(input: PipelineEventInput): void {
         try {
             const event: PipelineEvent = {
-                ts: new Date().toISOString(),
-                fileId: input.fileId ?? randomUUID(),
+                ts: this.now().toISOString(),
+                fileId: input.fileId ?? this.newId(),
                 ...stripUndefined(input),
             } as PipelineEvent;
 
@@ -423,8 +432,8 @@ export class PipelineTracker extends EventEmitter {
             paperlessInbox: settled(paperlessInbox),
             exported: settled(exported),
             archivedTracked: archived.size,
-            errors24h: this.listErrors(Number.MAX_SAFE_INTEGER, new Date(Date.now() - DAY_MS)).length,
-            lastUpdated: new Date().toISOString(),
+            errors24h: this.listErrors(Number.MAX_SAFE_INTEGER, new Date(this.now().getTime() - DAY_MS)).length,
+            lastUpdated: this.now().toISOString(),
         };
     }
 
@@ -435,7 +444,7 @@ export class PipelineTracker extends EventEmitter {
 
     private async getPaperlessInboxCount(): Promise<number> {
         if (!this.paperless) throw new Error('Paperless not configured');
-        const now = Date.now();
+        const now = this.now().getTime();
         if (this.paperlessCountCache && now - this.paperlessCountCache.at < this.inboxCacheMs) {
             return this.paperlessCountCache.value;
         }

@@ -28,10 +28,11 @@ export class NasBackupService {
   constructor(
     private readonly sourceRoot: string,
     private readonly nasRoot: string,
-    private readonly options: BackupOptions = {}
+    private readonly options: BackupOptions = {},
+    fileSystemService?: FileSystemService,
   ) {
     this.semaphore = new Semaphore(options.maxConcurrentBackups ?? 4);
-    this.fileSystemService = new FileSystemService(options.logger);
+    this.fileSystemService = fileSystemService ?? new FileSystemService(options.logger);
   }
 
   public async backupFile(sourceFile: string): Promise<BackupResult> {
