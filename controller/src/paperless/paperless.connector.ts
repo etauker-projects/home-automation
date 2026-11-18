@@ -351,18 +351,34 @@ export class PaperlessConnector {
         });
     }
 
+    /**
+     * Fetches every page of a paperless list endpoint (paperless pages at 25 items by default).
+     * Pages are requested by number rather than via the `next` URL, which paperless builds from
+     * its public URL and may not be reachable from this service.
+     */
+    private async fetchAll<T>(url: string): Promise<T[]> {
+        const results: T[] = [];
+        for (let page = 1; ; page++) {
+            const response = await this.connector.call<{ results: T[]; next?: string | null }>({
+                method: 'GET',
+                url,
+                query: { page, page_size: 100 },
+                headers: { 'Authorization': `Token ${this.token}` }
+            });
+            results.push(...response.data.results);
+            if (!response.data.next) {
+                return results;
+            }
+        }
+    }
+
     private async resolveCorrespondentName(id: number): Promise<string> {
         if (this.correspondents[id]) {
             return this.correspondents[id];
         }
 
         const fallbackCorrespondent = 'Unknown Correspondent';
-        return this.connector.call<{ results: PaperlessCorrespondent[] }>({
-            method: 'GET',
-            url: `/api/correspondents/`,
-            headers: { 'Authorization': `Token ${this.token}` }
-        }).then(response => {
-            const results = response.data.results;
+        return this.fetchAll<PaperlessCorrespondent>(`/api/correspondents/`).then(results => {
             // console.log('Fetched correspondents:', results);
             this.correspondents = results.reduce((acc, item) => {
                 acc[item.id] = item.name;
@@ -381,12 +397,7 @@ export class PaperlessConnector {
         }
 
         const fallbackDocumentType = 'Unknown Document Type';
-        return this.connector.call<{ results: PaperlessDocumentType[] }>({
-            method: 'GET',
-            url: `/api/document_types/`,
-            headers: { 'Authorization': `Token ${this.token}` }
-        }).then(response => {
-            const results = response.data.results;
+        return this.fetchAll<PaperlessDocumentType>(`/api/document_types/`).then(results => {
             // console.log('Fetched document types:', results);
             this.documentTypes = results.reduce((acc, item) => {
                 acc[item.id] = item.name;
@@ -409,13 +420,8 @@ export class PaperlessConnector {
             return fromCache();
         }
 
-        return this.connector.call<{ results: PaperlessTag[] }>({
-            method: 'GET',
-            url: `/api/tags/`,
-            query: { page_size: 1000 },
-            headers: { 'Authorization': `Token ${this.token}` }
-        }).then(response => {
-            this.tags = response.data.results.reduce((acc, item) => {
+        return this.fetchAll<PaperlessTag>(`/api/tags/`).then(results => {
+            this.tags = results.reduce((acc, item) => {
                 acc[item.id] = { name: item.name, isInbox: item.is_inbox_tag };
                 return acc;
             }, {} as { [key: number]: { name: string; isInbox: boolean } });
@@ -437,12 +443,7 @@ export class PaperlessConnector {
             }, {} as { [key: string]: string });
         }
 
-        return this.connector.call<{ results: PaperlessCustomField[] }>({
-            method: 'GET',
-            url: `/api/custom_fields/`,
-            headers: { 'Authorization': `Token ${this.token}` }
-        }).then(response => {
-            const results = response.data.results;
+        return this.fetchAll<PaperlessCustomField>(`/api/custom_fields/`).then(results => {
             // console.log('Fetched custom fields:', results);
             this.customFields = results.reduce((acc, item) => {
                 acc[item.id] = item.name;
