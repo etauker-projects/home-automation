@@ -15,7 +15,7 @@ services:
     env_file:
       - security-postgres.env
     volumes:
-      - ./data/postgresql/pgdata:/var/lib/postgresql/data
+      - ../data/security/postgresql/pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     # labels:
     #   - authentik
@@ -42,8 +42,8 @@ services:
       - "5002:9000"
       - "5003:9443"
     volumes:
-      - ./data/authentik/media:/media
-      - ./data/authentik/templates:/templates
+      - ../data/security/authentik/media:/media
+      - ../data/security/authentik/templates:/templates
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
