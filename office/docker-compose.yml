@@ -241,9 +241,11 @@ services:
 
   homebox:
     image: ghcr.io/sysadminsmedia/homebox:latest-hardened
+    container_name: homebox
     restart: unless-stopped
     networks:
       - proxy
+      - authentik
       - postgres
     environment:
       - HBOX_LOG_LEVEL=info
@@ -303,6 +305,82 @@ services:
       office-postgres:
         condition: service_healthy
 
+  sure:
+    image: ghcr.io/we-promise/sure:stable
+    container_name: sure
+    restart: unless-stopped
+    ports:
+      - "9005:3000"
+    volumes:
+      - ../data/office/sure/storage:/rails/storage
+    env_file:
+      - sure.env
+      - sure-postgres.env
+    environment:
+      DB_HOST: office-postgres
+      DB_PORT: 5432
+      SELF_HOSTED: "true"
+      RAILS_FORCE_SSL: "false"
+      RAILS_ASSUME_SSL: "true"
+      WEBAUTHN_RP_ID: "etauker.com"
+      WEBAUTHN_ALLOWED_ORIGINS: "https://sure.office.etauker.com"
+      REDIS_URL: redis://sure-redis:6379/1
+      APP_DOMAIN: "sure.office.etauker.com"
+      OIDC_ISSUER: "https://auth.security.etauker.com/application/o/sure/"
+      OIDC_REDIRECT_URI: "https://sure.office.etauker.com/auth/openid_connect/callback"
+      OIDC_ALLOW_SIGNUP: "true"
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - postgres
+      - sure
+      # - authentik
+      - proxy
+    depends_on:
+      office-postgres:
+        condition: service_healthy
+      sure-redis:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/we-promise/sure:stable
+    container_name: sure-worker
+    restart: unless-stopped
+    command: bundle exec sidekiq
+    volumes:
+      - ../data/office/sure/storage:/rails/storage
+    env_file:
+      - sure.env
+      - sure-postgres.env
+    environment:
+      DB_HOST: office-postgres
+      DB_PORT: 5432
+      SELF_HOSTED: "true"
+      REDIS_URL: redis://sure-redis:6379/1
+    networks:
+      - postgres
+      - sure
+    depends_on:
+      office-postgres:
+        condition: service_healthy
+      sure-redis:
+        condition: service_healthy
+
+  sure-redis:
+    image: redis:latest
+    container_name: sure-redis
+    restart: unless-stopped
+    volumes:
+      - sure-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sure
+
 networks:
   postgres:
     name: postgres
@@ -310,10 +388,20 @@ networks:
   paperless:
     name: paperless
     external: false
+  sure:
+    name: sure
+    external: false
   proxy:
     name: proxy
+    external: true
+  authentik:
+    name: authentik
     external: true
 
 volumes:
   homebox-data:
+    driver: local
+  # sure-app-data:
+  #   driver: local
+  sure-redis-data:
     driver: local
