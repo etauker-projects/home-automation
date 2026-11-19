@@ -8,39 +8,6 @@ services:
     environment:
      - PORT=8000
 
-  caddy:
-    build: .
-    container_name: caddy
-    restart: unless-stopped
-    # command: ["caddy", "run", "--watch"]
-    env_file:
-      - ./caddy.env
-    volumes:
-      - ../data/caddy/conf:/etc/caddy
-      # - ../data/caddy/site:/srv
-      - caddy_data:/data
-      - caddy_config:/config
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - proxy
-    ports:
-      - "443:443"
-      - "80:80"
-      # - "2019:2019" # Caddy Admin API
-
-  uptime-kuma:
-    image: louislam/uptime-kuma:2
-    container_name: uptime-kuma
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - PORT=8001
-    volumes:
-      - ../data/automation/uptime-kuma:/app/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
   mosquitto:
     container_name: mqtt-broker
     image: eclipse-mosquitto:latest
@@ -162,7 +129,8 @@ services:
 
   home-assistant:
     container_name: home-assistant
-    image: "ghcr.io/home-assistant/home-assistant:stable"
+    image: "ghcr.io/home-assistant/home-assistant:2026.10.4"
+#    image: "ghcr.io/home-assistant/home-assistant:stable" 
     profiles: [ production ]
     network_mode: host
     restart: unless-stopped
@@ -479,9 +447,19 @@ services:
 #       - experimental
 #       - automation
 
-volumes:
-  caddy_data:
-  caddy_config:
+#   open-webui:
+#     image: ghcr.io/open-webui/open-webui:main
+#     container_name: open-webui
+#     restart: unless-stopped
+#     ports:
+#       - "8010:8080"
+#     volumes:
+#       - open-webui:/app/backend/data
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+
+# volumes:
+#   open-webui:
 
 networks:
   proxy:

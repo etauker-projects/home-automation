@@ -15,7 +15,7 @@ services:
     env_file:
       - security-postgres.env
     volumes:
-      - ./data/postgresql/pgdata:/var/lib/postgresql/data
+      - ../data/security/postgresql/pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     # labels:
     #   - authentik
@@ -31,10 +31,13 @@ services:
     #   timeout: 5s
 
   authentik-server:
-    image: ghcr.io/goauthentik/server:2025.12.4
+    image: ghcr.io/goauthentik/server:2026.2
     container_name: authentik-server
     env_file:
       - authentik.env
+    environment:
+      # For now allowing all traffic from the proxy network to authentik, can check the network with `docker network inspect proxy`.
+      - AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=172.21.0.0/16
     command: "server"
     depends_on:
       - security-postgres
@@ -42,8 +45,8 @@ services:
       - "5002:9000"
       - "5003:9443"
     volumes:
-      - ./data/authentik/media:/media
-      - ./data/authentik/templates:/templates
+      - ../data/security/authentik/media:/media
+      - ../data/security/authentik/templates:/templates
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -52,7 +55,7 @@ services:
       - proxy
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2025.12.4
+    image: ghcr.io/goauthentik/server:2026.2
     container_name: authentik-worker
     env_file:
       - authentik.env
