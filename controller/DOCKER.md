@@ -106,21 +106,25 @@ docker system prune --volumes
 ## Security Notes
 
 ### Non-Root User
-Both containers run as the `node` user (UID 1000) for security. This means:
-- ✅ Files created in mounted volumes will have proper ownership
-- ✅ Container cannot affect host system files
-- ✅ Follows Docker security best practices
+Both containers run as `${UID}:${GID}` from `.env` (falling back to `1000:1000`), never as root.
 
 ### File Permissions
-If you encounter permission issues:
+On a server, run the controller as a dedicated service user, and give data shared between services
+(printer → scans → controller → paperless → NAS) to one shared group:
 
 ```bash
-# Check your user ID
-id -u  # Should output 1000 for most Linux users
-
-# If different, update the Dockerfile:
-# Change USER node to use your UID
+# Creates user 'controller' + group 'homedata', creates and chowns every mounted DIR_*,
+# makes them group-writable (setgid + default ACL), and writes UID/GID into .env
+sudo ./setup-permissions.sh --member printer --member "$USER"
+sudo ./setup-permissions.sh --dry-run          # preview only
+sudo ./setup-permissions.sh --help             # options (--user, --group, --private, ...)
 ```
+
+- Run it **before** the first `docker compose up`. Otherwise docker creates any missing mount directory as `root:root`, and the container can't write to it.
+- CIFS/SMB mounts (e.g. the NAS) are skipped. Their ownership comes from the mount options, and the script prints the ones to use:
+  `uid=<controller uid>,gid=<homedata gid>,rw,nounix,dir_mode=0770,file_mode=0660`.
+  After changing fstab, run `umount` + `mount` (not `-o remount`), then recreate the container.
+- UID/GID in `.env` are used for compose variable substitution. They must be in `controller/.env` (or `--env-file`), not only in a file passed via `CONTROLLER_ENV_FILE`.
 
 ## Troubleshooting
 
@@ -135,12 +139,11 @@ PORT=3001
 
 ### Permission Denied Errors
 ```bash
-# Ensure .env file is readable
-chmod 644 .env
-
-# Rebuild container
-docker compose --profile dev up --build
+docker compose --profile prod config | grep -E 'user:|/app/data'   # effective user and mounts
+docker exec home-automation-controller-prod id                     # should match UID/GID in .env
+docker exec home-automation-controller-prod ls -ldn /app/data/*    # owner/group/mode as seen inside
 ```
+If the ownership is wrong, re-run `sudo ./setup-permissions.sh` and recreate the container.
 
 ### Hot Reload Not Working
 ```bash
