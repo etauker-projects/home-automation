@@ -5,7 +5,9 @@ export class PaperlessPage {
      * @param lastDownloaded - The timestamp of the last document download
      * @returns HTML string for the main page
      */
-    public static render(lastDownloaded: string): string {
+    public static render(lastDownloaded: string, paperlessUrl: string = ''): string {
+        // safe to embed in <script>: JSON string with '<' escaped
+        const paperlessJs = JSON.stringify(paperlessUrl.replace(/\/+$/, '')).replace(/</g, '\\u003c');
         return `
             <!DOCTYPE html>
             <html>
@@ -166,6 +168,16 @@ export class PaperlessPage {
                 </div>
 
                 <script>
+                    const PAPERLESS_URL = ${paperlessJs};
+                    /** Document ID, linked to the document in paperless when its URL is known */
+                    function paperlessLink(id) {
+                        if (!id) return '<em>N/A</em>';
+                        const safeId = encodeURIComponent(id);
+                        return PAPERLESS_URL
+                            ? '<a href="' + PAPERLESS_URL + '/documents/' + safeId + '/details" target="_blank" rel="noopener">#' + safeId + ' ↗</a>'
+                            : '#' + safeId;
+                    }
+
                     const statusMessage = document.getElementById('statusMessage');
                     const previewBtn = document.getElementById('previewBtn');
                     const downloadBtn = document.getElementById('downloadBtn');
@@ -220,7 +232,7 @@ export class PaperlessPage {
 
                                     const row = document.createElement('tr');
                                     row.innerHTML = \`
-                                        <td>\${doc.paperlessId || '<em>N/A</em>'}</td>
+                                        <td>\${paperlessLink(doc.paperlessId)}</td>
                                         <td>\${doc.title || '<em>N/A</em>'}</td>
                                         <td>\${doc.correspondent || '<em>N/A</em>'}</td>
                                         <td>\${doc.documentType || '<em>N/A</em>'}</td>

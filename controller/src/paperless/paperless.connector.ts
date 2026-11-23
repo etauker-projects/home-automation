@@ -637,6 +637,57 @@ export class PaperlessConnector {
 
         console.log(`${documentsToDownload.length} documents to download, ${documents.length - documentsToDownload.length} skipped`);
 
+        const results = await this.downloadDocuments(documentsToDownload);
+
+        // Save the updated manifest
+        await this.saveManifest();
+
+        // Calculate summary
+        const successful = results.filter(r => r.success).length;
+        const failed = results.filter(r => !r.success).length;
+        const skipped = documents.length - documentsToDownload.length;
+
+        const summary: DownloadSummary = {
+            total: documents.length,
+            successful,
+            failed,
+            skipped,
+            results
+        };
+
+        console.log(`Download complete: ${successful} successful, ${failed} failed, ${skipped} skipped`);
+        return summary;
+    }
+
+    /**
+     * Export a single document by ID, regardless of the export window and of whether it was exported before.
+     * Used to retry a failed export. Documents still in the paperless inbox are skipped.
+     * Does not move `lastDownloaded`, so the next scheduled run is unaffected.
+     */
+    public async downloadOne(paperlessId: number): Promise<DownloadSummary> {
+        await this.loadManifest();
+
+        const response = await this.connector.call<PaperlessResult>({
+            method: 'GET',
+            url: `/api/documents/${paperlessId}/`,
+            headers: { 'Authorization': `Token ${this.token}` }
+        });
+        const doc = await this.enhanceResult(response.data);
+
+        if (doc.inInbox) {
+            console.log(`Skipping document ${doc.paperlessId} (${doc.title}) - Not ready for exporting, manual processing needed`);
+            return { total: 1, successful: 0, failed: 0, skipped: 1, results: [] };
+        }
+
+        const results = await this.downloadDocuments([doc]);
+        await this.saveManifest(false);
+
+        const successful = results.filter(r => r.success).length;
+        return { total: 1, successful, failed: results.length - successful, skipped: 0, results };
+    }
+
+    /** Download documents (with concurrency control), resolving unique export paths first. */
+    private async downloadDocuments(documentsToDownload: EnhancedResult[]): Promise<DownloadResult[]> {
         // Resolve unique export paths up front (sequentially, so collisions within the batch are detected)
         const previousEntries = new Map<number, ManifestEntry | undefined>();
         const claimed = new Map<string, number>();
@@ -661,24 +712,7 @@ export class PaperlessConnector {
             )
         );
 
-        // Save the updated manifest
-        await this.saveManifest();
-
-        // Calculate summary
-        const successful = results.filter(r => r.success).length;
-        const failed = results.filter(r => !r.success).length;
-        const skipped = documents.length - documentsToDownload.length;
-
-        const summary: DownloadSummary = {
-            total: documents.length,
-            successful,
-            failed,
-            skipped,
-            results
-        };
-
-        console.log(`Download complete: ${successful} successful, ${failed} failed, ${skipped} skipped`);
-        return summary;
+        return results;
     }
 
     private async downloadDocument(doc: EnhancedResult): Promise<DownloadResult> {

@@ -39,6 +39,26 @@ export interface PipelineEvent {
 /** Input to PipelineTracker.record() — fileId and ts are resolved by the tracker when omitted */
 export type PipelineEventInput = Omit<PipelineEvent, 'ts' | 'fileId'> & { fileId?: string };
 
+/**
+ * How a file whose latest event is an error can be retried (re-running the stage that failed):
+ *   move_to_consume → move the scan to paperless consume again
+ *   export          → export the paperless document again
+ *   backup          → back the exported file up to the NAS again
+ * Ingestion failures (stage `consume`) are not retryable here: they have to be fixed in paperless.
+ */
+export type RetryAction = 'move_to_consume' | 'export' | 'backup';
+
+export type RetryTarget =
+    | { action: 'move_to_consume'; path: string }
+    | { action: 'export'; paperlessId: number }
+    | { action: 'backup'; path: string };
+
+/** Error event as listed on the pipeline page */
+export interface PipelineErrorSummary extends PipelineEvent {
+    /** Set when this error is still the file's latest event and its stage can be retried */
+    retryAction?: RetryAction;
+}
+
 export interface StageCounts {
     /** Files currently in the scans directory (incl. those still stabilising) */
     scanned: number | null;
@@ -65,6 +85,8 @@ export interface PipelineFileSummary {
     eventCount: number;
     hasError: boolean;
     paperlessId?: number;
+    /** Set when the latest event is an error whose stage can be retried */
+    retryAction?: RetryAction;
 }
 
 export interface PipelineDirectories {

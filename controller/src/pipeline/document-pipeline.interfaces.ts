@@ -15,6 +15,7 @@ import type { DownloadSummary } from '../paperless/paperless.connector.js';
 import type { PipelineDirectoriesConfig } from '../config/pipeline-directories.config.js';
 import type { PipelineTimingConfig } from '../config/pipeline-timing.config.js';
 import type { PaperlessTaskSource, PipelineTracker } from './pipeline-tracker.service.js';
+import type { RetryAction } from './pipeline.interfaces.js';
 
 export interface Stoppable {
     stop(): unknown | Promise<unknown>;
@@ -61,6 +62,8 @@ export interface NasBackup {
 export interface PaperlessGateway extends PaperlessTaskSource {
     getLastDownloaded(): Promise<string>;
     download(changedSince: string): Promise<DownloadSummary>;
+    /** Export one document regardless of the export window (used for retries). */
+    downloadOne(paperlessId: number): Promise<DownloadSummary>;
     /** Returns (and forgets) the relative NAS path superseded by the export at `exportRelativePath`, if any. */
     takeSupersededPath(exportRelativePath: string): Promise<string | undefined>;
 }
@@ -74,6 +77,7 @@ export type PipelineRecorder = Pick<PipelineTracker,
     | 'error'
     | 'syncIngestion'
     | 'invalidatePaperlessCount'
+    | 'getRetryTarget'
 >;
 
 export interface DocumentPipelineConfig {
@@ -92,3 +96,18 @@ export interface DocumentPipelineDeps {
 }
 
 export type ExportTrigger = 'scheduled' | 'manual';
+
+export interface RetryResult {
+    action: RetryAction;
+    /** True if the retried stage succeeded (the outcome is also recorded as an event) */
+    success: boolean;
+    message: string;
+}
+
+/** Thrown by DocumentPipeline.retry() when the file is unknown or its current state can't be retried. */
+export class NotRetryableError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'NotRetryableError';
+    }
+}

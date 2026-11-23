@@ -4,8 +4,10 @@ import type {
     DocumentPipelineConfig,
     DocumentPipelineDeps,
     ExportTrigger,
+    RetryResult,
     Stoppable,
 } from './document-pipeline.interfaces.js';
+import { NotRetryableError } from './document-pipeline.interfaces.js';
 
 const WATCH_POLL_INTERVAL_MS = 500;
 
@@ -19,7 +21,9 @@ const WATCH_POLL_INTERVAL_MS = 500;
  *
  * All I/O goes through the injected ports, so every step can be called and awaited directly with fakes.
  * `start()` only wires the steps to the watchers and schedules.
- * The step methods record failures with the recorder and never throw, except `runExport()`, which rethrows so a manual caller can report the failure.
+ * The step methods record failures with the recorder and never throw (they resolve to false instead), except
+ * `runExport()` / `exportDocument()`, which rethrow so a manual caller can report the failure.
+ * `retry()` re-runs the stage a file failed at.
  */
 export class DocumentPipeline {
     private readonly handles: Stoppable[] = [];
@@ -90,19 +94,25 @@ export class DocumentPipeline {
     // STEPS
     // -------------------------
 
-    /** Step 1: a file finished writing in the scans directory. Move it to paperless consume. */
-    public async handleScannedFile(filePath: string): Promise<void> {
+    /**
+     * Step 1: a file finished writing in the scans directory. Move it to paperless consume.
+     * Pass `fileId` to retry a file that is already tracked instead of recording a new detection.
+     * Resolves to true if the file was moved.
+     */
+    public async handleScannedFile(filePath: string, fileId?: string): Promise<boolean> {
         const { files, recorder } = this.deps;
-        this.log.log(`New file detected: ${filePath}`);
-        const fileId = recorder.fileDetected(filePath);
+        this.log.log(fileId ? `Retrying move to consume: ${filePath}` : `New file detected: ${filePath}`);
+        fileId ??= recorder.fileDetected(filePath);
 
         try {
             const newPath = await files.moveFile(filePath, this.config.dirs.consume);
             this.log.log(`File moved to paperless consume directory: ${newPath}`);
             recorder.movedToConsume(fileId, newPath);
+            return true;
         } catch (error) {
             this.log.error(`Error moving file to paperless consume directory: ${error}`);
             recorder.error({ stage: 'scanned', fileId, path: filePath, error, details: 'Move to paperless consume failed' });
+            return false;
         }
     }
 
@@ -139,8 +149,26 @@ export class DocumentPipeline {
         }
     }
 
-    /** Step 4: a file finished writing in the exports directory. Back it up to the NAS. */
-    public async handleExportedFile(filePath: string): Promise<void> {
+    /**
+     * Step 3 for a single document: export it regardless of the export window (used for retries).
+     * Failures are logged and recorded, then rethrown.
+     */
+    public async exportDocument(paperlessId: number): Promise<DownloadSummary> {
+        const { paperless, recorder } = this.deps;
+        try {
+            this.log.log(`Exporting paperless document #${paperlessId}...`);
+            const summary = await paperless.downloadOne(paperlessId);
+            this.recordDownloadSummary(summary);
+            return summary;
+        } catch (error) {
+            this.log.error(`Error exporting paperless document #${paperlessId}:`, error);
+            recorder.error({ stage: 'paperless', paperlessId, error, details: 'Export from paperless failed' });
+            throw error;
+        }
+    }
+
+    /** Step 4: a file finished writing in the exports directory. Back it up to the NAS. Resolves to true if backed up. */
+    public async handleExportedFile(filePath: string): Promise<boolean> {
         const { backup, recorder } = this.deps;
         this.log.log(`New file detected: ${filePath}`);
 
@@ -151,10 +179,49 @@ export class DocumentPipeline {
         } catch (error) {
             this.log.error(`Error backing up file to NAS directory: ${error}`);
             recorder.error({ stage: 'exported', path: filePath, error, details: 'NAS backup failed' });
-            return;
+            return false;
         }
 
         await this.removeSupersededCopy(filePath);
+        return true;
+    }
+
+    /**
+     * Re-run the stage a file failed at (see PipelineTracker.getRetryTarget()).
+     * The outcome is recorded like a normal run; the result says whether it worked.
+     * Throws NotRetryableError if the file is unknown or its latest event isn't a retryable error.
+     */
+    public async retry(fileId: string): Promise<RetryResult> {
+        const target = this.deps.recorder.getRetryTarget(fileId);
+        if (!target) {
+            throw new NotRetryableError(`File ${fileId} has nothing to retry: it is unknown, not in an error state, or failed at a stage that can't be retried here`);
+        }
+
+        switch (target.action) {
+            case 'move_to_consume': {
+                const success = await this.handleScannedFile(target.path, fileId);
+                return { action: target.action, success, message: success ? 'Moved to paperless consume' : 'Move to paperless consume failed again' };
+            }
+            case 'backup': {
+                const success = await this.handleExportedFile(target.path);
+                return { action: target.action, success, message: success ? 'Backed up to NAS' : 'NAS backup failed again' };
+            }
+            case 'export': {
+                let summary: DownloadSummary;
+                try {
+                    summary = await this.exportDocument(target.paperlessId);
+                } catch (error) {
+                    return { action: target.action, success: false, message: `Export failed again: ${error instanceof Error ? error.message : error}` };
+                }
+                if (summary.skipped) {
+                    return { action: target.action, success: false, message: `Document #${target.paperlessId} is still in the paperless inbox; review it in paperless first` };
+                }
+                const failure = summary.results.find(r => !r.success);
+                return failure
+                    ? { action: target.action, success: false, message: `Export failed again: ${failure.error ?? 'Unknown error'}` }
+                    : { action: target.action, success: true, message: `Exported paperless document #${target.paperlessId}` };
+            }
+        }
     }
 
     // -------------------------

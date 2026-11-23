@@ -73,6 +73,24 @@ Known limitations:
 - Documents that collided before this existed have already overwritten each other on the NAS.
 - If a path changes twice within one backup window (`EXPORT_STABILITY_SECONDS`), the intermediate copy may be left behind.
 
+## Retrying failed files
+
+On `/ui/pipeline`, a file whose latest event is an `error` gets a retry button, in both the files and the errors table. It re-runs the stage that failed (`POST /ui/pipeline/files/:id/retry`, `DocumentPipeline.retry()`). The outcome is recorded in the file's history like a normal run.
+
+| Failed stage | Button | Does |
+|---|---|---|
+| `scanned` | Retry move | Moves the scan to `paperless-consume/` again, under the same file ID |
+| `paperless` | Retry export | Exports that one document from Paperless (`PaperlessConnector.downloadOne()`). This ignores the export window and the manifest's "already downloaded" check, and doesn't move `lastDownloaded`. Documents still in the Paperless inbox are skipped |
+| `exported` | Retry backup | Backs the file in `paperless-exports/` up to the NAS again |
+
+These can't be retried here:
+- **Ingestion failures** (`consume`, e.g. duplicates) have to be fixed in Paperless. The error links to the Paperless tasks page.
+- **Run-level errors** (file ID `system`): use **Run export now** instead, which runs the same export as the cron.
+
+## Links to Paperless
+
+Paperless document IDs on `/ui/pipeline` and `/ui/paperless` link to the document in Paperless. The stage cards link to Paperless's tasks page and inbox view. Links use `PAPERLESS_PUBLIC_URL`, which falls back to `PAPERLESS_URL`.
+
 ## Stage counts
 
 `scanned`, `consume` and `exported` are live counts of the files in each directory. `.lock`, `.part` and dotfiles are skipped. `paperlessInbox` is the number of Paperless documents with any inbox-flagged tag (`is_in_inbox=true`, regardless of the tag's name). These are the same documents the export skips. It is read on demand, cached for `PAPERLESS_INBOX_CACHE_SECONDS` (default 60s), and the cache is cleared after each export run. `archivedTracked` counts the files with a backup event in the history. A count that can't be read shows as `null`.

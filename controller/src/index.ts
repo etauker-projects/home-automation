@@ -28,6 +28,7 @@ import { PipelinePage } from './ui/pipeline.page.js';
 import { loadPipelineTimingConfig, describePipelineTiming } from './config/pipeline-timing.config.js';
 import { loadPipelineDirectories } from './config/pipeline-directories.config.js';
 import { DocumentPipeline } from './pipeline/document-pipeline.js';
+import { NotRetryableError } from './pipeline/document-pipeline.interfaces.js';
 import { NodeScheduler } from './pipeline/node-scheduler.js';
 
 // TODO: consider moving to separate controller / service
@@ -70,6 +71,8 @@ console.log(`[Pipeline] Timing: ${describePipelineTiming(timing)}`);
 
 const PAPERLESS_URL = Extractor.extractString('PAPERLESS_URL', 'https://paperless.office.etauker.com');
 const PAPERLESS_TOKEN = Extractor.extractString('PAPERLESS_TOKEN');
+// Paperless as reached from the browser, for links in the UI (PAPERLESS_URL may be an internal address)
+const PAPERLESS_PUBLIC_URL = Extractor.extractString('PAPERLESS_PUBLIC_URL', PAPERLESS_URL).replace(/\/+$/, '');
 const paperless = new PaperlessConnector(PAPERLESS_URL, dirs.exports, dirs.config, PAPERLESS_TOKEN);
 
 // Per-file history + live stage counts
@@ -147,7 +150,7 @@ uiRouter.get('/paperless', async (req, res) => {
 
     try {
         const lastDownloaded = await paperless.getLastDownloaded();
-        res.send(PaperlessPage.render(lastDownloaded));
+        res.send(PaperlessPage.render(lastDownloaded, PAPERLESS_PUBLIC_URL));
     } catch (error) {
         console.error('Error fetching paperless documents:', error);
         res.status(500).send(PaperlessPage.renderError(error instanceof Error ? error : String(error)));
@@ -437,7 +440,7 @@ uiRouter.get('/pipeline', async (req, res) => {
     }
 
     try {
-        res.send(PipelinePage.render(timing.uiRefreshMs));
+        res.send(PipelinePage.render(timing.uiRefreshMs, PAPERLESS_PUBLIC_URL));
     } catch (error) {
         console.error('Error loading pipeline page:', error);
         res.status(500).send(PipelinePage.renderError(error instanceof Error ? error : String(error)));
@@ -480,6 +483,25 @@ uiRouter.get('/pipeline/files/:id', async (req, res) => {
         return;
     }
     res.json({ fileId: req.params.id, history });
+});
+
+// Re-run the stage a file failed at (move to consume / export from paperless / NAS backup)
+uiRouter.post('/pipeline/files/:id/retry', async (req, res) => {
+    if (!(req.session as any).accessToken) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    try {
+        res.json(await documentPipeline.retry(req.params.id));
+    } catch (error) {
+        if (error instanceof NotRetryableError) {
+            res.status(409).json({ error: error.message });
+            return;
+        }
+        console.error(`Error retrying pipeline file ${req.params.id}:`, error);
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
 });
 
 uiRouter.get('/pipeline/errors', async (req, res) => {

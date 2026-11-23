@@ -7,7 +7,7 @@
   "type": "module",
   "main": "auth-test.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "tsx --test src/pipeline/*.test.ts",
     "dev": "tsx --env-file=.env ./src/index.ts",
     "dev:watch": "tsx watch --env-file-if-exists=.env ./src/index.ts",
     "start": "docker compose up -d controller-prod --build && docker logs home-automation-controller-prod --follow",

@@ -5,8 +5,10 @@ import path from 'node:path';
 import type {
     PipelineDirectories,
     PipelineEvent,
+    PipelineErrorSummary,
     PipelineEventInput,
     PipelineFileSummary,
+    RetryTarget,
     PipelineStage,
     StageCounts,
 } from './pipeline.interfaces.js';
@@ -390,6 +392,7 @@ export class PipelineTracker extends EventEmitter {
                 eventCount: history.length,
                 hasError: last.type === 'error',
                 ...(paperlessId !== undefined ? { paperlessId } : {}),
+                ...retryActionOf(this.getRetryTarget(fileId)),
             });
         }
         return summaries
@@ -402,15 +405,42 @@ export class PipelineTracker extends EventEmitter {
         return history ? [...history] : undefined;
     }
 
-    public listErrors(limit: number = 50, since?: Date): PipelineEvent[] {
+    public listErrors(limit: number = 50, since?: Date): PipelineErrorSummary[] {
         const sinceIso = since?.toISOString();
-        const errors: PipelineEvent[] = [];
+        const errors: PipelineErrorSummary[] = [];
         for (let i = this.events.length - 1; i >= 0 && errors.length < limit; i--) {
             const event = this.events[i];
             if (sinceIso && event.ts < sinceIso) break;
-            if (event.type === 'error') errors.push(event);
+            if (event.type !== 'error') continue;
+            const isLatest = this.byFileId.get(event.fileId)?.at(-1) === event;
+            errors.push({ ...event, ...(isLatest ? retryActionOf(this.getRetryTarget(event.fileId)) : {}) });
         }
         return errors;
+    }
+
+    /**
+     * What retrying this file would do, or undefined if it can't be retried.
+     * Only files whose latest event is an error are retryable; the failed stage decides the action.
+     * Run-level errors (file ID 'system') are not retryable per file: run the export again instead.
+     */
+    public getRetryTarget(fileId: string): RetryTarget | undefined {
+        if (fileId === 'system') return undefined;
+        const history = this.byFileId.get(fileId);
+        const last = history?.at(-1);
+        if (!history || last?.type !== 'error') return undefined;
+
+        switch (last.stage) {
+            case 'scanned':
+                return last.path ? { action: 'move_to_consume', path: last.path } : undefined;
+            case 'paperless': {
+                const paperlessId = last.paperlessId ?? [...history].reverse().find(e => e.paperlessId !== undefined)?.paperlessId;
+                return paperlessId !== undefined ? { action: 'export', paperlessId } : undefined;
+            }
+            case 'exported':
+                return last.path ? { action: 'backup', path: last.path } : undefined;
+            default:
+                return undefined;
+        }
     }
 
     public async getStageCounts(): Promise<StageCounts> {
@@ -471,6 +501,10 @@ async function countFiles(dir: string): Promise<number> {
         }
     }
     return count;
+}
+
+function retryActionOf(target: RetryTarget | undefined): { retryAction?: RetryTarget['action'] } {
+    return target ? { retryAction: target.action } : {};
 }
 
 function settled<T>(result: PromiseSettledResult<T>): T | null {
